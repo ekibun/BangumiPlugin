@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:id="@+id/item_layout"
+        android:layout_width="wrap_content"
+        android:paddingStart="4dp"
+        android:paddingBottom="4dp"
+        android:layout_height="65dp"
+        tools:ignore="RtlSymmetry">
+    <LinearLayout
+            android:id="@+id/item_container"
+            android:layout_width="120dp"
+            android:padding="8dp"
+            android:layout_height="wrap_content"
+            android:backgroundTint="?android:textColorSecondary"
+            tools:backgroundTint="?colorAccent"
+            android:backgroundTintMode="src_in"
+            android:background="@drawable/bg_episode_outline"
+            android:orientation="vertical"
+            android:layout_marginEnd="4dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_marginBottom="4dp"
+            android:clickable="true"
+            android:focusable="true">
+        <TextView
+                android:id="@+id/item_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                tools:text="第 1 话"
+                android:textSize="@dimen/textSizeSmall"/>
+
+        <TextView
+                android:id="@+id/item_desc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="@dimen/textSizeMedium"
+                android:ellipsize="end"
+                android:paddingTop="4dp"
+                tools:text="Episode Name"
+                android:maxLines="1"/>
+    </LinearLayout>
+    <TextView
+            android:id="@+id/item_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:background="@drawable/bg_episode_badge"
+            android:paddingLeft="6dp"
+            android:paddingRight="6dp"
+            android:paddingTop="1dp"
+            android:paddingBottom="1dp"
+            android:textColor="@android:color/white"
+            android:backgroundTintMode="src_in"
+            android:backgroundTint="?colorAccent"
+            app:layout_constraintTop_toTopOf="@+id/item_container"
+            app:layout_constraintRight_toRightOf="@+id/item_container"
+            tools:text="看过"
+            android:textSize="@dimen/textSizeSmall"/>
+    <ImageView
+            android:id="@+id/item_icon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            tools:src="@drawable/ic_episode_download_ok"
+            tools:ignore="ContentDescription"/>
+</androidx.constraintlayout.widget.ConstraintLayout>

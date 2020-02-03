@@ -1,0 +1,19 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools" package="soko.ekibun.bangumi.plugins"
+          android:sharedUserId="soko.ekibun.bangumi.share"
+          android:sharedUserLabel="@string/share_label">
+
+    <application
+            android:allowBackup="true"
+            android:label="@string/app_name"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:supportsRtl="true"
+            android:theme="@style/AppTheme"
+            tools:ignore="AllowBackup,GoogleAppIndexingWarning">
+        <activity
+                android:name=".ui.provider.ProviderActivity"
+                android:label="@string/provide_activity_label">
+        </activity>
+    </application>
+</manifest>
