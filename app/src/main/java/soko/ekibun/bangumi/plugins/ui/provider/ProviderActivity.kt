@@ -5,19 +5,18 @@ import android.app.AlertDialog
 import android.content.*
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.Rect
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
+import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
 import com.jaredrummler.android.colorpicker.ColorPickerDialogListener
 import kotlinx.android.synthetic.main.activity_provider.*
+import kotlinx.android.synthetic.main.activity_provider.view.*
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
@@ -29,11 +28,13 @@ class ProviderActivity : AppCompatActivity(), ColorPickerDialogListener {
     }
 
     override fun onColorSelected(dialogId: Int, color: Int) {
-        item_provider_color_hex.text = colorToString(color)
-        item_provider_color_prev.backgroundTintList = ColorStateList.valueOf(color)
+        header.item_provider_color_hex.text = colorToString(color)
+        header.item_provider_color_prev.backgroundTintList = ColorStateList.valueOf(color)
     }
 
-    val color get() = Color.parseColor(item_provider_color_hex.text.toString())
+    val color get() = Color.parseColor(header.item_provider_color_hex.text.toString())
+
+    val header by lazy { item_header }
 
     private fun colorToString(color: Int): String {
         return "#" + String.format("%08x", color).substring(2)
@@ -46,42 +47,25 @@ class ProviderActivity : AppCompatActivity(), ColorPickerDialogListener {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        val listPaddingBottom = detail_container.paddingBottom
+        val listPaddingBottom = item_codes.paddingBottom
         root_layout.setOnApplyWindowInsetsListener { _, insets ->
-            detail_container.setPadding(
-                detail_container.paddingLeft,
-                detail_container.paddingTop,
-                detail_container.paddingRight,
+            item_codes.setPadding(
+                item_codes.paddingLeft,
+                item_codes.paddingTop,
+                item_codes.paddingRight,
                 listPaddingBottom + insets.systemWindowInsetBottom
             )
             insets
         }
+        item_codes.layoutManager = LinearLayoutManager(this)
+        item_codes.adapter = adapter
+        (header.parent as ViewGroup).removeView(header)
+        adapter.setHeaderView(header)
 
-        item_codes.layoutManager = object : LinearLayoutManager(this) {
-            override fun requestChildRectangleOnScreen(
-                parent: RecyclerView,
-                child: View,
-                rect: Rect,
-                immediate: Boolean
-            ): Boolean {
-                return false
-            }
-
-            override fun requestChildRectangleOnScreen(
-                parent: RecyclerView,
-                child: View,
-                rect: Rect,
-                immediate: Boolean,
-                focusedChildVisible: Boolean
-            ): Boolean {
-                return false
-            }
-        }
-
-        item_provider_color_hex.text = colorToString(0)
+        header.item_provider_color_hex.text = colorToString(0)
         setProvider(intent?.getStringExtra(EXTRA_PROVIDER_INFO))
 
-        item_provider_color.setOnClickListener {
+        header.item_provider_color.setOnClickListener {
             ColorPickerDialog.newBuilder().setColor(color)
                 .setDialogType(ColorPickerDialog.TYPE_CUSTOM)
                 .setAllowPresets(false)
@@ -90,23 +74,23 @@ class ProviderActivity : AppCompatActivity(), ColorPickerDialogListener {
         }
     }
 
-    var adapter: CodeAdapter? = null
+    val adapter: CodeAdapter by lazy {
+        CodeAdapter(ReflectUtil.newInstance(typeClass), ReflectUtil.getAllFields(typeClass).filter {
+            it.isAnnotationPresent(Provider.Code::class.java)
+        }.sortedBy { it.getAnnotation(Provider.Code::class.java)!!.index })
+    }
     val type by lazy { intent.getStringExtra(EXTRA_PROVIDER_TYPE)!! }
     val typeClass by lazy { Provider.providers[type]!! }
     private fun setProvider(info: String?) {
         val provider = JsonUtil.toEntity<LineProvider.ProviderInfo>(info ?: "")
             ?: LineProvider.ProviderInfo("", 0 ,"", type)
-        val providerCode = JsonUtil.toEntity(provider.code, typeClass) ?: ReflectUtil.newInstance(typeClass)
-        adapter = adapter ?: CodeAdapter(providerCode, ReflectUtil.getAllFields(typeClass).filter {
-            it.isAnnotationPresent(Provider.Code::class.java)
-        }.sortedBy { it.getAnnotation(Provider.Code::class.java)!!.index })
-        adapter?.provider = providerCode
-        item_codes.adapter = adapter
+        adapter.provider = JsonUtil.toEntity(provider.code, typeClass) ?: ReflectUtil.newInstance(typeClass)
+        adapter.notifyDataSetChanged()
 
-        item_provider_site.setText(provider.site)
-        item_provider_color_hex.text = colorToString(provider.color)
-        item_provider_color_prev.backgroundTintList = ColorStateList.valueOf(color)
-        item_provider_title.setText(provider.title)
+        header.item_provider_site.setText(provider.site)
+        header.item_provider_color_hex.text = colorToString(provider.color)
+        header.item_provider_color_prev.backgroundTintList = ColorStateList.valueOf(color)
+        header.item_provider_title.setText(provider.title)
     }
 
     private fun processBack() {
@@ -128,11 +112,11 @@ class ProviderActivity : AppCompatActivity(), ColorPickerDialogListener {
 
     private fun getProvider(): LineProvider.ProviderInfo {
         return LineProvider.ProviderInfo(
-            site = item_provider_site.text.toString(),
-            title = item_provider_title.text.toString(),
+            site = header.item_provider_site.text.toString(),
+            title = header.item_provider_title.text.toString(),
             color = color,
             type = type,
-            code = JsonUtil.toJson(adapter?.provider)
+            code = JsonUtil.toJson(adapter.provider)
         )
     }
 
