@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:id="@+id/item_layout"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp"
+        android:paddingBottom="4dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:clickable="true"
+        android:background="?android:attr/selectableItemBackground"
+        android:focusable="true">
+
+    <ImageButton
+            android:id="@+id/item_download"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:srcCompat="@drawable/ic_download"
+            android:tintMode="src_in"
+            android:tint="?android:textColorSecondary"
+            android:padding="8dp"
+            tools:ignore="RtlHardcoded,RtlSymmetry"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            android:background="?attr/selectableItemBackgroundBorderless"/>
+
+    <TextView
+            android:id="@+id/item_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textSize="@dimen/textSizeMedium"
+            tools:text="第 1 话"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toLeftOf="@+id/item_download"
+            app:layout_constraintTop_toTopOf="parent"/>
+
+    <TextView
+            android:id="@+id/item_desc"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textSize="@dimen/textSizeSmall"
+            android:ellipsize="end"
+            android:paddingBottom="4dp"
+            android:maxLines="1"
+            tools:text="Episode Name"
+            app:layout_constraintLeft_toLeftOf="@+id/item_title"
+            app:layout_constraintRight_toLeftOf="@+id/item_download_info"
+            app:layout_constraintTop_toBottomOf="@id/item_title"/>
+    <TextView
+            android:id="@+id/item_download_info"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:paddingBottom="4dp"
+            android:maxLines="1"
+            tools:text="10.12 MB/20.24 MB"
+            app:layout_constraintRight_toLeftOf="@+id/item_download"
+            app:layout_constraintTop_toBottomOf="@id/item_title"/>
+
+    <ProgressBar
+            android:visibility="invisible"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:id="@+id/item_progress"
+            tools:visibility="visible"
+            tools:progress="50"
+            app:layout_constraintTop_toBottomOf="@+id/item_desc"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

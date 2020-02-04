@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:gravity="center"
+              android:orientation="horizontal"
+              android:background="?android:selectableItemBackground">
+
+    <ImageView
+            android:id="@+id/item_progress"
+            android:layout_margin="6dp"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            tools:ignore="ContentDescription"/>
+
+    <TextView
+            android:id="@+id/item_hint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            tools:text="加载中..."
+            android:textSize="16sp" 
+            android:paddingEnd="20dp"/>
+
+</LinearLayout>

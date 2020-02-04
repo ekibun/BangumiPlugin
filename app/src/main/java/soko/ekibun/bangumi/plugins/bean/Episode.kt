@@ -5,6 +5,7 @@ import androidx.annotation.IntDef
 import androidx.annotation.StringDef
 import androidx.annotation.StringRes
 import soko.ekibun.bangumi.plugins.R
+import soko.ekibun.bangumi.plugins.provider.manga.MangaProvider
 import java.text.DecimalFormat
 
 data class Episode(
@@ -15,16 +16,17 @@ data class Episode(
     var name_cn: String? = null,
     @EpisodeStatus var status: String? = null,
     @ProgressType var progress: String? = null,
-    var category: String? = null
-){
-    val displayName get() = if (name_cn.isNullOrEmpty()) name else name_cn
-    val isAir get() = status == STATUS_AIR || progress == PROGRESS_WATCH || (category?.startsWith("Disc") ?: false)
+    var category: String? = null,
+    var manga: MangaProvider.MangaEpisode? = null
+) {
+    val displayName get() = manga?.title?: if (name_cn.isNullOrEmpty()) name else name_cn
+    val isAir get() = manga != null || status == STATUS_AIR || progress == PROGRESS_WATCH || (category?.startsWith("Disc") ?: false)
 
     /**
      * 第*话
      */
     fun parseSort(context: Context): String {
-        return if (type == TYPE_MAIN)
+        return manga?.sort ?: if (type == TYPE_MAIN)
             context.getString(R.string.parse_sort_ep, DecimalFormat("#.##").format(sort))
         else
             (category ?: context.getString(getTypeRes(type))) + " ${DecimalFormat("#.##").format(sort)}"

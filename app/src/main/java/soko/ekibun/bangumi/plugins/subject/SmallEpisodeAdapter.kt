@@ -1,6 +1,5 @@
 package soko.ekibun.bangumi.plugins.subject
 
-import android.content.Context
 import android.content.res.ColorStateList
 import android.view.View
 import com.chad.library.adapter.base.BaseQuickAdapter
@@ -10,15 +9,14 @@ import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
-class SmallEpisodeAdapter(private val context: Context, data: MutableList<Episode>? = null) :
+class SmallEpisodeAdapter(data: MutableList<Episode>? = null) :
     BaseQuickAdapter<Episode, BaseViewHolder>(R.layout.item_episode_small, data) {
-    // private val videoCacheModel by lazy{ App.from(context).videoCacheModel }
 
     override fun convert(helper: BaseViewHolder, item: Episode) {
-        helper.itemView.item_title.text = item.parseSort(context)
+        helper.itemView.item_title.text = item.parseSort(helper.itemView.context)
         helper.itemView.item_desc.text = item.displayName
         val color = ResourceUtil.resolveColorAttr(
-            context,
+            helper.itemView.context,
             when (item.progress) {
                 Episode.PROGRESS_WATCH -> R.attr.colorPrimary
                 else -> android.R.attr.textColorSecondary

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:background="#55000000"
+        android:clickable="true"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:ignore="KeyboardInaccessibleWidget">
+    <TextView android:id="@+id/item_error_hint"
+              tools:text="error message"
+              android:gravity="center"
+              android:textColor="@android:color/white"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              app:layout_constraintVertical_chainStyle="packed"
+              app:layout_constraintTop_toTopOf="parent"
+              app:layout_constraintBottom_toTopOf="@+id/item_retry_button"
+              app:layout_constraintStart_toStartOf="parent"
+              android:padding="8dp"
+              app:layout_constraintEnd_toEndOf="parent"/>
+
+    <TextView android:id="@+id/item_retry_button"
+              tools:text="retry"
+              android:background="@drawable/bg_round_rect_outline"
+              android:backgroundTint="@android:color/white"
+              android:textColor="@android:color/white"
+              android:padding="8dp"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              app:layout_constraintStart_toStartOf="parent"
+              app:layout_constraintEnd_toEndOf="parent"
+              app:layout_constraintBottom_toBottomOf="parent"
+              app:layout_constraintTop_toBottomOf="@+id/item_error_hint"/>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -50,7 +50,7 @@ object ReflectUtil {
 
     private fun getLoaderClasses(classLoader: ClassLoader, classes: Array<out Class<*>>): Array<Class<*>> {
         return classes.map {
-            if(it in arrayOf(Int::class.java)) it
+            if(it.isPrimitive) it
             else classLoader.loadClass(it.name)
         }.toTypedArray()
     }

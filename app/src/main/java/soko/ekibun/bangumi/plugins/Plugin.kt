@@ -2,6 +2,7 @@ package soko.ekibun.bangumi.plugins
 
 import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.util.Log
 import androidx.annotation.Keep
 import soko.ekibun.bangumi.plugins.subject.SubjectActivityPlugin
@@ -18,7 +19,11 @@ object Plugin {
         Log.v("plugin", activity.javaClass.name)
         try {
             context.setTheme(R.style.AppTheme)
-            pluginList[activity.javaClass.name]?.setUpPlugins(activity, context)
+            pluginList[activity.javaClass.name]?.setUpPlugins(activity, object: ContextWrapper(context){
+                override fun getApplicationContext(): Context {
+                    return activity.applicationContext
+                }
+            })
         } catch (e: Exception) {
             Log.e("plugin", Log.getStackTraceString(e))
         }

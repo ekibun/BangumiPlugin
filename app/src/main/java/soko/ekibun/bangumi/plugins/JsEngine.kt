@@ -15,19 +15,25 @@ import kotlin.collections.HashMap
 class JsEngine(val app: App) {
     private val webviewList = WeakHashMap<String, BackgroundWebView>()
     @Keep
-    fun webviewload(key: String, url: String, header: Map<String, String>, script: String, onInterceptRequest: (WebResourceRequest)->HttpUtil.HttpRequest?): HttpUtil.HttpRequest?{
+    fun webviewload(
+        key: String,
+        url: String,
+        header: Map<String, String>,
+        script: String,
+        onInterceptRequest: (WebResourceRequest) -> HttpUtil.HttpRequest?
+    ): HttpUtil.HttpRequest? {
         var ret: HttpUtil.HttpRequest? = null
         var finished = false
         var pageFinish = false
         var lastTime = System.currentTimeMillis()
         app.handler.post {
-            val webview = webviewList.getOrPut(key){ BackgroundWebView(app.context) }
-            webview.settings.userAgentString = header["User-Agent"]?:webview.settings.userAgentString
+            val webview = webviewList.getOrPut(key) { BackgroundWebView(app.context) }
+            webview.settings.userAgentString = header["User-Agent"] ?: webview.settings.userAgentString
             val map = HashMap<String, String>()
-            map["referer"]=url
+            map["referer"] = url
             map.putAll(header)
             webview.onInterceptRequest = {
-                onInterceptRequest(it)?.let{
+                onInterceptRequest(it)?.let {
                     ret = it
                     finished = true
                     webview.onInterceptRequest = {}
@@ -38,7 +44,7 @@ class JsEngine(val app: App) {
             webview.onPageFinished = {
                 webview.evaluateJavascript(script) {
                     Log.v("javascript", it.toString())
-                    JsonUtil.toEntity<HttpUtil.HttpRequest>(it)?.let{
+                    JsonUtil.toEntity<HttpUtil.HttpRequest>(it)?.let {
                         ret = it
                         finished = true
                         webview.onInterceptRequest = {}
@@ -50,16 +56,16 @@ class JsEngine(val app: App) {
             }
             webview.loadUrl(url, map)
         }
-        while(!finished){
+        while (!finished) {
             Thread.sleep(1000)
-            if(pageFinish && System.currentTimeMillis() - lastTime > 30 * 1000){//30sec Timeout
+            if (pageFinish && System.currentTimeMillis() - lastTime > 30 * 1000) {//30sec Timeout
                 return ret
             }
         }
         return ret
     }
 
-    fun runScript(script: String, key: String): String{
+    fun runScript(script: String, key: String): String {
         val methods = """
             |var _http = Packages.${HttpUtil.javaClass.name}.INSTANCE;
             |var _json = Packages.${JsonUtil.javaClass.name}.INSTANCE;
@@ -87,7 +93,7 @@ class JsEngine(val app: App) {
             |       return _http.makeRequest(request);
             |   },
             |   load(url, header, script, onInterceptRequest){
-            |       return _jsEngine.webviewload(${ JsonUtil.toJson(key) }, url||"", header||{}, script||"", onInterceptRequest||function(request){
+            |       return _jsEngine.webviewload(${JsonUtil.toJson(key)}, url||"", header||{}, script||"", onInterceptRequest||function(request){
             |           if(request.getRequestHeaders().get("Range") != null) return webview.toRequest(request);
             |           else return null;
             |       });
@@ -105,7 +111,7 @@ class JsEngine(val app: App) {
             |   return JSON.parse(data)
             |}
             |function print(obj){
-            |   _jsEngine.print(${ JsonUtil.toJson(key) } + ":\n" + obj);
+            |   _jsEngine.print(${JsonUtil.toJson(key)} + ":\n" + obj);
             |}
         """.trimMargin()
 
@@ -116,41 +122,58 @@ class JsEngine(val app: App) {
             val scope = rhino.initStandardObjects()
             ScriptableObject.putProperty(scope, "_jsEngine", Context.javaToJS(this, scope))
             rhino.evaluateString(scope, methods, "header", 1, null)
-            rhino.evaluateString(scope, """(function(){var _ret = (function(){$script
+            rhino.evaluateString(
+                scope, """(function(){var _ret = (function(){$script
                 |   }());
                 |   if(_ret instanceof Packages.java.lang.Object) return _json.toJson(_ret);
                 |   else return JSON.stringify(_ret);
-                |}())""".trimMargin(), "script", 0, null).toString()
-        }finally {
+                |}())""".trimMargin(), "script", 0, null
+            ).toString()
+        } finally {
             webviewList.remove(key)?.finish()
             Context.exit()
         }
     }
 
-    class ScriptTask<T>(private val jsEngine: JsEngine, private val script: String, private val key: String, val converter: (String)->T): AsyncTask<String, Unit, String>(){
-        var onFinish: (T)->Unit = {}
-        var onReject: (Exception)->Unit = {}
+    class ScriptTask<T>(
+        private val jsEngine: JsEngine,
+        private val script: String,
+        private val key: String,
+        val converter: (String) -> T
+    ) : AsyncTask<String, Unit, String>() {
+        var onFinish: (T) -> Unit = {}
+        var onReject: (Exception) -> Unit = {}
         var exception: Exception? = null
         override fun doInBackground(vararg params: String?): String? {
-            return try{ jsEngine.runScript(script, key) }
-            catch (e: InterruptedException) { null }
-            catch(e: Exception){ exception = e; null }
+            return try {
+                jsEngine.runScript(script, key)
+            } catch (e: InterruptedException) {
+                null
+            } catch (e: Exception) {
+                exception = e; null
+            }
         }
+
         override fun onPostExecute(result: String?) {
-            result?.let { try{ onFinish(converter(it)) }
-                catch(e: Exception){ exception = e } }
-            exception?.let { Log.e("JsEngine",it.localizedMessage?:it.message?:""); onReject(it) }
+            result?.let {
+                try {
+                    onFinish(converter(it))
+                } catch (e: Exception) {
+                    exception = e
+                }
+            }
+            exception?.let { Log.e("JsEngine", Log.getStackTraceString(it)); onReject(it) }
             super.onPostExecute(result)
         }
 
-        fun enqueue(onFinish: (T)->Unit, onReject: (Exception)->Unit){
+        fun enqueue(onFinish: (T) -> Unit, onReject: (Exception) -> Unit) {
             this.onFinish = onFinish
             this.onReject = onReject
             this.executeOnExecutor(App.cachedThreadPool)
         }
     }
 
-    class JsAsyncTask(val js: (Any)-> Any): AsyncTask<Any, Unit, Any>() {
+    class JsAsyncTask(val js: (Any) -> Any) : AsyncTask<Any, Unit, Any>() {
         override fun doInBackground(vararg params: Any?): Any {
             return js(params)
         }
