@@ -1,10 +1,18 @@
 package soko.ekibun.bangumi.plugins.provider.video
 
 import android.annotation.SuppressLint
+import android.app.PendingIntent
+import android.app.PictureInPictureParams
+import android.app.RemoteAction
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
+import android.graphics.drawable.Icon
 import android.net.Uri
+import android.os.Build
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.Toast
@@ -21,8 +29,10 @@ import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.VideoModel
 import soko.ekibun.bangumi.plugins.provider.Provider
+import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.ui.view.VideoController
+import soko.ekibun.bangumi.plugins.util.JsonUtil
 import soko.ekibun.bangumi.plugins.util.NetworkUtil
 import java.util.*
 
@@ -37,10 +47,14 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         linePresenter.proxy.item_plugin.requestApplyInsets()
         view.post {
             resizeVideoSurface()
+            danmakuPresenter.sizeScale = when {
+                Build.VERSION.SDK_INT >= 24 && linePresenter.activity.isInPictureInPictureMode -> 0.7f
+                isLandscape -> 1.1f
+                else -> 0.8f
+            }
+            showInfo(false)
         }
-        linePresenter.proxy.item_mask.visibility = View.INVISIBLE
-        linePresenter.proxy.subjectPresenter.subjectView.behavior.state =
-            if (isLandscape) BottomSheetBehavior.STATE_HIDDEN else BottomSheetBehavior.STATE_COLLAPSED
+        showInfo(false)
         controller.doShowHide(false)
     }
 
@@ -55,8 +69,8 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         linePresenter.proxy.subjectPresenter.subjectView.behavior.state =
             if (!show && isLandscape) BottomSheetBehavior.STATE_HIDDEN else BottomSheetBehavior.STATE_COLLAPSED
         linePresenter.proxy.item_mask.visibility = if (show) View.VISIBLE else View.INVISIBLE
-        linePresenter.proxy.app_bar.visibility = linePresenter.proxy.item_mask.visibility
         controller.doShowHide(false)
+        updateActionBar()
     }
 
     val controller: VideoController by lazy {
@@ -110,10 +124,25 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
                     } else {
                         view.item_mask.visibility = View.INVISIBLE
                     }
-//                    context.systemUIPresenter.updateSystemUI()
+                    updateActionBar()
                 }
             }
         }) { linePresenter.activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE }
+    }
+
+    fun updateActionBar() {
+        val maskShown =
+            view.item_mask.visibility == View.VISIBLE || linePresenter.proxy.item_mask.visibility == View.VISIBLE
+        linePresenter.proxy.app_bar.visibility = if (maskShown) View.VISIBLE else View.INVISIBLE
+        linePresenter.activity.window.decorView.systemUiVisibility = if (maskShown) View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                (if (Build.VERSION.SDK_INT >= 26) View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION else 0)
+        else (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION // hide nav bar
+                or View.SYSTEM_UI_FLAG_FULLSCREEN // hide status bar
+                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+
     }
 
     var loadVideoInfo: Boolean? = null
@@ -271,7 +300,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     private fun updatePauseResume() {
         linePresenter.activity.runOnUiThread {
             controller.updatePauseResume(videoModel.player.playWhenReady)
-//            context.setPictureInPictureParams(!videoModel.player.playWhenReady)
+            setPictureInPictureParams(!videoModel.player.playWhenReady)
         }
     }
 
@@ -341,23 +370,24 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
 
     var nextEpisode: () -> Episode? = { null }
     var prevEpisode: () -> Episode? = { null }
-    override fun loadEp(ep: Episode) {
+    override fun loadEp(episode: Episode) {
+        initPlayer()
         val infos = linePresenter.app.lineInfoModel.getInfos(linePresenter.subject)
         infos?.getDefaultProvider()?.let {
             prevEpisode = {
                 val position =
-                    linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst { it.t?.id == ep.id || (it.t?.type == ep.type && it.t?.sort == ep.sort) }
-                val episode = linePresenter.subjectView.episodeDetailAdapter.data.getOrNull(position - 1)?.t
-                if ((episode?.status ?: "") !in listOf("Air")) null else episode
+                    linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst { it.t?.id == episode.id || (it.t?.type == episode.type && it.t?.sort == episode.sort) }
+                val ep = linePresenter.subjectView.episodeDetailAdapter.data.getOrNull(position - 1)?.t
+                if ((ep?.status ?: "") !in listOf("Air")) null else ep
             }
             nextEpisode = {
                 val position =
-                    linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst { it.t?.id == ep.id || (it.t?.type == ep.type && it.t?.sort == ep.sort) }
-                val episode = linePresenter.subjectView.episodeDetailAdapter.data.getOrNull(position + 1)?.t
-                if ((episode?.status ?: "") !in listOf("Air")) null else episode
+                    linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst { it.t?.id == episode.id || (it.t?.type == episode.type && it.t?.sort == episode.sort) }
+                val ep = linePresenter.subjectView.episodeDetailAdapter.data.getOrNull(position + 1)?.t
+                if ((ep?.status ?: "") !in listOf("Air")) null else ep
             }
             startAt = null
-            linePresenter.activity.runOnUiThread { play(ep, it, infos.providers) }
+            linePresenter.activity.runOnUiThread { play(episode, it, infos.providers) }
         } ?: Toast.makeText(linePresenter.pluginContext, "请先添加播放源", Toast.LENGTH_SHORT).show()
     }
 
@@ -429,7 +459,154 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         })
     }
 
+    private fun setPictureInPictureParams(playPause: Boolean) {
+        if (Build.VERSION.SDK_INT >= 26) {
+            val actionPrev = RemoteAction(
+                Icon.createWithResource(linePresenter.pluginContext, R.drawable.ic_prev), "上一集", "上一集",
+                PendingIntent.getBroadcast(
+                    linePresenter.activity,
+                    CONTROL_TYPE_PREV,
+                    Intent(ACTION_MEDIA_CONTROL + linePresenter.subject.id).putExtra(
+                        EXTRA_CONTROL_TYPE,
+                        CONTROL_TYPE_PREV
+                    ),
+                    PendingIntent.FLAG_UPDATE_CURRENT
+                )
+            )
+            actionPrev.isEnabled = prevEpisode() != null
+            val actionNext = RemoteAction(
+                Icon.createWithResource(linePresenter.pluginContext, R.drawable.ic_next), "下一集", "下一集",
+                PendingIntent.getBroadcast(
+                    linePresenter.activity,
+                    CONTROL_TYPE_NEXT,
+                    Intent(ACTION_MEDIA_CONTROL + linePresenter.subject.id).putExtra(
+                        EXTRA_CONTROL_TYPE,
+                        CONTROL_TYPE_NEXT
+                    ),
+                    PendingIntent.FLAG_UPDATE_CURRENT
+                )
+            )
+            actionNext.isEnabled = nextEpisode() != null
+            try {
+                linePresenter.activity.setPictureInPictureParams(
+                    PictureInPictureParams.Builder().setActions(
+                        listOf(
+                            actionPrev,
+                            RemoteAction(
+                                Icon.createWithResource(
+                                    linePresenter.pluginContext,
+                                    if (playPause) R.drawable.ic_play else R.drawable.ic_pause
+                                ), if (playPause) "播放" else "暂停", if (playPause) "播放" else "暂停",
+                                PendingIntent.getBroadcast(
+                                    linePresenter.activity,
+                                    CONTROL_TYPE_PLAY,
+                                    Intent(ACTION_MEDIA_CONTROL + linePresenter.subject.id).putExtra(
+                                        EXTRA_CONTROL_TYPE,
+                                        if (playPause) CONTROL_TYPE_PLAY else CONTROL_TYPE_PAUSE
+                                    ),
+                                    PendingIntent.FLAG_UPDATE_CURRENT
+                                )
+                            ),
+                            actionNext
+                        )
+                    ).build()
+                )
+            } catch (e: Exception) {
+            }
+        }
+    }
+
+    private val receiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.getIntExtra(EXTRA_CONTROL_TYPE, 0)) {
+                CONTROL_TYPE_PAUSE -> {
+                    doPlayPause(false)
+                }
+                CONTROL_TYPE_PLAY -> {
+                    doPlayPause(true)
+                }
+                CONTROL_TYPE_NEXT -> {
+                    nextEpisode()?.let { loadEp(it) }
+                }
+                CONTROL_TYPE_PREV -> {
+                    prevEpisode()?.let { loadEp(it) }
+                }
+            }
+        }
+    }
+
+    private val downloadReceiver = object: BroadcastReceiver(){
+        override fun onReceive(context: Context, intent: Intent) {
+            try{
+                val episode = JsonUtil.toEntity<Episode>(intent.getStringExtra(DownloadService.EXTRA_EPISODE)?:"")!!
+                val percent = intent.getFloatExtra(DownloadService.EXTRA_PERCENT, Float.NaN)
+                val bytes = intent.getLongExtra(DownloadService.EXTRA_BYTES, 0L)
+
+                val index = linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst { it.t?.id == episode.id }
+                linePresenter.subjectView.episodeDetailAdapter.getViewByPosition(index, R.id.item_layout)?.let{
+                    linePresenter.subjectView.episodeDetailAdapter.updateDownload(it, percent, bytes, intent.getBooleanExtra(DownloadService.EXTRA_CANCEL, true), !intent.hasExtra(DownloadService.EXTRA_CANCEL))
+                }
+
+                val epIndex = linePresenter.subjectView.episodeAdapter.data.indexOfFirst { it.id == episode.id }
+                linePresenter.subjectView.episodeAdapter.getViewByPosition(epIndex, R.id.item_layout)?.let{
+                    linePresenter.subjectView.episodeAdapter.updateDownload(it, percent, bytes, intent.getBooleanExtra(DownloadService.EXTRA_CANCEL, true), !intent.hasExtra(DownloadService.EXTRA_CANCEL))
+                }
+            }catch (e: Exception){
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private val networkReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (!NetworkUtil.isWifiConnected(context) && videoModel.player.playWhenReady) {
+                doPlayPause(true)
+                Toast.makeText(context, "正在使用非wifi网络", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     init {
+        linePresenter.activity.registerReceiver(receiver, IntentFilter(ACTION_MEDIA_CONTROL + linePresenter.subject.id))
+        linePresenter.activity.registerReceiver(downloadReceiver, IntentFilter(DownloadService.getBroadcastAction(linePresenter.subject)))
+        linePresenter.activity.registerReceiver(networkReceiver, IntentFilter("android.net.conn.CONNECTIVITY_CHANGE"))
+        linePresenter.proxy.onDestroyListener = {
+            linePresenter.activity.unregisterReceiver(receiver)
+            linePresenter.activity.unregisterReceiver(downloadReceiver)
+            linePresenter.activity.unregisterReceiver(networkReceiver)
+        }
+    }
+
+    private var inited = false
+    private fun initPlayer() {
+        if(inited) return
+        inited = true
+
+        view.visibility = View.VISIBLE
+
+        var pauseOnStop = false
+        linePresenter.proxy.onStartListener = {
+            if (videoModel.player.duration > 0 && pauseOnStop)
+                doPlayPause(true)
+            pauseOnStop = false
+        }
+        linePresenter.proxy.onStopListener = {
+            pauseOnStop = videoModel.player.playWhenReady
+            doPlayPause(false)
+        }
+
+        linePresenter.proxy.onBackListener = {
+            if (isLandscape) {
+                linePresenter.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                true
+            } else false
+        }
+        linePresenter.proxy.onUserLeaveHintListener = {
+            if (isLandscape && videoModel.player.playWhenReady && Build.VERSION.SDK_INT >= 24) {
+                @Suppress("DEPRECATION") linePresenter.activity.enterPictureInPictureMode()
+                setPictureInPictureParams(false)
+            }
+        }
         linePresenter.proxy.app_bar.visibility = View.INVISIBLE
         linePresenter.proxy.item_plugin.setOnApplyWindowInsetsListener { _, insets ->
             view.setPadding(
@@ -438,6 +615,8 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
                 0,
                 if (isLandscape) 0 else insets.systemWindowInsetBottom
             )
+            view.controller_frame.setPadding(0, 0, 0,
+                if (!isLandscape) 0 else insets.systemWindowInsetBottom)
             insets.consumeSystemWindowInsets()
         }
         view.hide_danmaku_panel.setOnClickListener {
@@ -451,5 +630,14 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             if (isLandscape) showInfo(false)
         }
         updateView()
+    }
+
+    companion object {
+        const val ACTION_MEDIA_CONTROL = "soko.ekibun.bangumi.plugin.video.mediaControl"
+        const val EXTRA_CONTROL_TYPE = "extraControlType"
+        const val CONTROL_TYPE_PAUSE = 1
+        const val CONTROL_TYPE_PLAY = 2
+        const val CONTROL_TYPE_NEXT = 3
+        const val CONTROL_TYPE_PREV = 4
     }
 }

@@ -35,7 +35,7 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
 
     val proxy = ReflectUtil.proxyObject(activity, ISubjectActivity::class.java)!!
 
-    val episodeAdapter = SmallEpisodeAdapter()
+    val episodeAdapter = SmallEpisodeAdapter(this)
     val emptyView = {
         val view = TextView(pluginContext)
         view.gravity = Gravity.CENTER
@@ -61,7 +61,7 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
     init {
         episodeAdapter.emptyView = emptyView
         // 添加自己的view
-        epView.episode_list.adapter = subjectView.episodeAdapter
+        subjectView.episodeAdapter.bindToRecyclerView(epView.episode_list)
         epView.episode_list.layoutManager = LinearLayoutManager(pluginContext, LinearLayoutManager.HORIZONTAL, false)
         epLayout.addView(
             epView, 2,
@@ -69,10 +69,15 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
         )
         subjectView.updateEpisode(subject)
         epView.btn_detail.setOnClickListener {
-            proxy.subjectPresenter.showEpisodeListDialog()
+            EpisodeListDialog.showDialog(this)
         }
         proxy.subjectPresenter.subjectRefreshListener = { data ->
-            subjectView.updateEpisode(proxy.subjectPresenter.subject)
+            val newSubject = proxy.subjectPresenter.subject
+            subject.type = newSubject.type
+            subject.eps = if(newSubject.eps?.size?:0 > 0) newSubject.eps else subject.eps
+            subject.eps_count = newSubject.eps_count
+            subject.ep_status = newSubject.ep_status
+            subjectView.updateEpisode(subject)
             refreshLines()
         }
         proxy.onActivityResultListener = { requestCode: Int, resultCode: Int, data: Intent? ->
@@ -109,10 +114,20 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
             infos?.getDefaultProvider()?.let {
                 pluginView.loadEp(subjectView.episodeAdapter.data[position])
             } ?: Toast.makeText(pluginContext, "请先添加播放源", Toast.LENGTH_SHORT).show()
-
         }
         subjectView.episodeAdapter.setOnItemChildLongClickListener { _, _, position ->
             proxy.subjectPresenter.showEpisodeDialog(subjectView.episodeAdapter.data[position].id)
+            true
+        }
+        subjectView.episodeDetailAdapter.setOnItemClickListener { _, _, position ->
+            infos?.getDefaultProvider()?.let {
+                subjectView.episodeDetailAdapter.data[position].t?.let { pluginView.loadEp(it) }
+            } ?: Toast.makeText(pluginContext, "请先添加播放源", Toast.LENGTH_SHORT).show()
+        }
+        subjectView.episodeDetailAdapter.setOnItemLongClickListener { _, _, position ->
+            subjectView.episodeDetailAdapter.data[position].t?.let {
+                proxy.subjectPresenter.showEpisodeDialog(it.id)
+            }
             true
         }
 
@@ -194,8 +209,8 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
                     episodeAdapter.setNewData(null)
                     epCall = provider to it.getEpisode("loadEps", app.jsEngine, defaultLine)
                     epCall?.second?.enqueue({ eps ->
-                        if (epCall?.first == provider)
-                            episodeAdapter.setNewData(eps.map { mangaEpisode ->
+                        if (epCall?.first == provider){
+                            subject.eps = eps.map { mangaEpisode ->
                                 val sort = Regex("(\\d+)").find(
                                     mangaEpisode.sort
                                 )?.groupValues?.getOrNull(1)?.toFloatOrNull() ?: 0f
@@ -204,7 +219,11 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
                                     progress = if (sort > subject.ep_status) Episode.PROGRESS_REMOVE else Episode.PROGRESS_WATCH,
                                     manga = mangaEpisode
                                 )
-                            })
+                            }
+                            episodeAdapter.setNewData(subject.eps)
+                            subjectView.updateEpisode(subject)
+                        }
+
                         (epView.episode_list.layoutManager as LinearLayoutManager)
                             .scrollToPositionWithOffset(
                                 episodeAdapter.data.indexOfLast { it.sort <= subject.ep_status },

@@ -277,7 +277,7 @@ class DanmakuPresenter(
         danmakuInfo.info = " 加载弹幕..."
         linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
         call.enqueue({
-            it.minus(ArrayList(danmakuInfo.danmakus)).forEach {
+            it.forEach {
                 danmakuInfo.danmakus.add(it)
 
                 val danmaku = danmakuContext.mDanmakuFactory.createDanmaku(it.type, danmakuContext) ?: return@forEach

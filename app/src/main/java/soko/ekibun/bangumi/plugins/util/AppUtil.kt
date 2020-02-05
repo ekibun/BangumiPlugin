@@ -2,6 +2,7 @@ package soko.ekibun.bangumi.plugins.util
 
 import android.Manifest
 import android.app.Activity
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -9,9 +10,17 @@ import android.graphics.Point
 import android.os.Build
 import android.util.Size
 import android.view.WindowManager
+import soko.ekibun.bangumi.plugins.bean.Subject
 
 
 object AppUtil {
+    fun parseSubjectActivityIntent(subject: Subject): Intent {
+        val intent = Intent()
+        intent.component = ComponentName("soko.ekibun.bangumi", "soko.ekibun.bangumi.ui.subject.SubjectActivity")
+        intent.putExtra("extraSubject", JsonUtil.toJson(subject))
+        return intent
+    }
+
     fun getScreenSize(context: Context): Size{
         val p = Point()
         (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.getRealSize(p)

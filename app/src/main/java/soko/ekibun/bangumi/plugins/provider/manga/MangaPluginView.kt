@@ -16,7 +16,8 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
 
     init {
         linePresenter.proxy.subjectPresenter.subjectView.onStateChangedListener = { state ->
-            linePresenter.proxy.item_mask.visibility = if (state == BottomSheetBehavior.STATE_HIDDEN) View.INVISIBLE else View.VISIBLE
+            linePresenter.proxy.item_mask.visibility =
+                if (state == BottomSheetBehavior.STATE_HIDDEN) View.INVISIBLE else View.VISIBLE
             linePresenter.proxy.app_bar.visibility = linePresenter.proxy.item_mask.visibility
         }
         layoutManager.setupWithRecyclerView(view.item_manga) { _, _ ->
@@ -52,6 +53,7 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         mangaAdapter.setNewData(null)
         view.item_pull_layout.responseRefresh(false)
         view.item_pull_layout.responseload(false)
+        view.visibility = View.VISIBLE
         loadEp(episode, false) {}
     }
 
@@ -60,12 +62,11 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         val provider =
             linePresenter.app.lineProvider.getProvider(Provider.TYPE_MANGA, ep?.site ?: "")?.provider as? MangaProvider
         if (ep == null || provider == null) {
-            linePresenter.activity.runOnUiThread {
+            view.item_manga.post {
                 callback(false)
             }
             return
         }
-        view.visibility = View.VISIBLE
         layoutManager.reset()
         provider.getManga("getManga", linePresenter.app.jsEngine, ep).enqueue({
             if (isPrev) {

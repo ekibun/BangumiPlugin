@@ -10,7 +10,8 @@ class LineInfoModel(context: Context){
     data class LineInfo(
         var site: String,
         var id: String,
-        var title: String = ""
+        var title: String = "",
+        var extra: String = ""
     )
 
     data class LineInfoList(

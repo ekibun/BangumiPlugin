@@ -6,20 +6,31 @@ import androidx.recyclerview.widget.RecyclerView
 import com.chad.library.adapter.base.BaseSectionQuickAdapter
 import com.chad.library.adapter.base.BaseViewHolder
 import com.chad.library.adapter.base.entity.SectionEntity
+import com.oushangfeng.pinnedsectionitemdecoration.PinnedHeaderItemDecoration
 import com.oushangfeng.pinnedsectionitemdecoration.utils.FullSpanUtil
 import kotlinx.android.synthetic.main.item_episode.view.*
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.VideoCacheModel
+import soko.ekibun.bangumi.plugins.provider.Provider
+import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
 class EpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<SectionEntity<Episode>>? = null) :
         BaseSectionQuickAdapter<SectionEntity<Episode>, BaseViewHolder>
-        (R.layout.item_episode, R.layout.header_episode, data) {
+        (R.layout.item_episode, R.layout.item_episode_header, data) {
 
     override fun convertHead(helper: BaseViewHolder, item: SectionEntity<Episode>) {
         //helper.getView<TextView>(R.id.item_header).visibility = if(data.indexOf(item) == 0) View.GONE else View.VISIBLE
         helper.setText(R.id.item_header, item.header)
+    }
+
+    /**
+     * 关联RecyclerView
+     */
+    fun setUpWithRecyclerView(recyclerView: RecyclerView) {
+        bindToRecyclerView(recyclerView)
+        recyclerView.addItemDecoration(PinnedHeaderItemDecoration.Builder(SECTION_HEADER_VIEW).create())
     }
 
     override fun convert(helper: BaseViewHolder, item: SectionEntity<Episode>) {
@@ -31,11 +42,13 @@ class EpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<Section
                     !item.t.progress.isNullOrEmpty() -> R.attr.colorPrimary
                     else -> android.R.attr.textColorSecondary
                 })
-        val alpha = if((item.t.status?:"") in listOf("Air"))1f else 0.6f
+        val alpha = if(item.t.isAir)1f else 0.6f
         helper.itemView.item_title.setTextColor(color)
         helper.itemView.item_title.alpha = alpha
         helper.itemView.item_desc.setTextColor(color)
         helper.itemView.item_desc.alpha = alpha
+
+        helper.itemView.item_download.visibility = if(linePresenter.type == Provider.TYPE_VIDEO) View.VISIBLE else View.GONE
 
         helper.addOnClickListener(R.id.item_download)
         helper.addOnLongClickListener(R.id.item_download)
@@ -48,7 +61,7 @@ class EpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<Section
         if(hasCache && !VideoCacheModel.isFinished(percent)){
             itemView.item_progress.max = 10000
             itemView.item_progress.progress = (percent * 100).toInt()
-//            itemView.item_download_info.text = DownloadService.parseDownloadInfo(itemView.context, percent, bytes)
+            itemView.item_download_info.text = DownloadService.parseDownloadInfo(itemView.context, percent, bytes)
             itemView.item_progress.isEnabled = download
             itemView.item_progress.visibility = View.VISIBLE
         }else{

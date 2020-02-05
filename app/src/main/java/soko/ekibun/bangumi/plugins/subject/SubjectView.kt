@@ -9,7 +9,7 @@ import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.Subject
 
 class SubjectView(private val linePresenter: LinePresenter, private val detail: View) {
-    val episodeAdapter = SmallEpisodeAdapter()
+    val episodeAdapter = SmallEpisodeAdapter(linePresenter)
     val episodeDetailAdapter = EpisodeAdapter(linePresenter)
 
     /**
