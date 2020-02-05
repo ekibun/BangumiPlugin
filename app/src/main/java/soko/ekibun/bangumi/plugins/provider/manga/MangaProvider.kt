@@ -8,7 +8,7 @@ import soko.ekibun.bangumi.plugins.util.HttpUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 
 class MangaProvider(
-    search: String,
+    search: String? = null,
     @Code("获取剧集列表", 1) val getEpisode: String = "", // (line: LineInfo) -> List<MangaEpisode>
     @Code("获取图片列表", 2) val getManga: String = "",   // (episode: MangaEpisode) -> List<ImageInfo>
     @Code("获取图片", 3) val getImage: String = ""        // (image: ImageInfo) -> HttpRequest

@@ -27,33 +27,36 @@ import soko.ekibun.bangumi.plugins.util.NetworkUtil
 import java.util.*
 
 class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_video) {
-    val isLandscape get() = linePresenter.context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isLandscape get() = linePresenter.activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     private fun updateView() {
-        linePresenter.setHideable(isLandscape)
+        linePresenter.proxy.subjectPresenter.subjectView.behavior.isHideable = isLandscape
         view.player_container.layoutParams = (view.player_container.layoutParams as ConstraintLayout.LayoutParams).let {
             it.dimensionRatio = if (isLandscape) "" else "h,16:9"
             it
         }
-        linePresenter.pluginContainer.requestApplyInsets()
+        linePresenter.proxy.item_plugin.requestApplyInsets()
         view.post {
             resizeVideoSurface()
         }
-        linePresenter.maskView.visibility = View.INVISIBLE
-        linePresenter.setState(if(isLandscape) BottomSheetBehavior.STATE_HIDDEN else BottomSheetBehavior.STATE_COLLAPSED)
+        linePresenter.proxy.item_mask.visibility = View.INVISIBLE
+        linePresenter.proxy.subjectPresenter.subjectView.behavior.state =
+            if (isLandscape) BottomSheetBehavior.STATE_HIDDEN else BottomSheetBehavior.STATE_COLLAPSED
         controller.doShowHide(false)
     }
 
-    val danmakuPresenter: DanmakuPresenter by lazy{
+    val danmakuPresenter: DanmakuPresenter by lazy {
         DanmakuPresenter(linePresenter) {
-            exception = it?:exception
+            exception = it ?: exception
             loadDanmaku = it == null
         }
     }
 
-    fun showInfo(show: Boolean){
-        linePresenter.setState(if (!show && isLandscape) BottomSheetBehavior.STATE_HIDDEN else BottomSheetBehavior.STATE_COLLAPSED)
-        linePresenter.maskView.visibility = if(show) View.VISIBLE else View.INVISIBLE
-        linePresenter.appbar.visibility = linePresenter.maskView.visibility
+    fun showInfo(show: Boolean) {
+        linePresenter.proxy.subjectPresenter.subjectView.behavior.state =
+            if (!show && isLandscape) BottomSheetBehavior.STATE_HIDDEN else BottomSheetBehavior.STATE_COLLAPSED
+        linePresenter.proxy.item_mask.visibility = if (show) View.VISIBLE else View.INVISIBLE
+        linePresenter.proxy.app_bar.visibility = linePresenter.proxy.item_mask.visibility
+        controller.doShowHide(false)
     }
 
     val controller: VideoController by lazy {
@@ -63,20 +66,20 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             }
 
             override fun onFullscreen() {
-                linePresenter.context.requestedOrientation = if(isLandscape)
-                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                linePresenter.activity.requestedOrientation = if (isLandscape)
+                    ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             }
 
             override fun onNext() {
-                nextEpisode()?.let{ loadEp(it) }
+                nextEpisode()?.let { loadEp(it) }
             }
 
             override fun onPrev() {
-                prevEpisode()?.let{ loadEp(it) }
+                prevEpisode()?.let { loadEp(it) }
             }
 
             override fun onDanmaku() {
-                if(view.danmaku_flame.isShown)
+                if (view.danmaku_flame.isShown)
                     view.danmaku_flame.hide() else view.danmaku_flame.show()
                 controller.updateDanmaku(view.danmaku_flame.isShown)
             }
@@ -98,7 +101,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             }
 
             override fun onShowHide(show: Boolean) {
-                linePresenter.context.runOnUiThread {
+                linePresenter.activity.runOnUiThread {
                     if (show) {
                         updatePauseResume()
                         updateProgress()
@@ -110,7 +113,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
 //                    context.systemUIPresenter.updateSystemUI()
                 }
             }
-        }) { linePresenter.context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE }
+        }) { linePresenter.activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE }
     }
 
     var loadVideoInfo: Boolean? = null
@@ -136,7 +139,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
 
     @SuppressLint("SetTextI18n")
     private fun parseLogcat() {
-        linePresenter.context.runOnUiThread {
+        linePresenter.activity.runOnUiThread {
             if (loadVideoInfo == false || loadVideo == false || exception != null)
                 controller.updateLoading(false)
             view.item_logcat.text = "获取视频信息…" + if (loadVideoInfo == null) "" else (
@@ -150,7 +153,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
 
     var startAt: Long? = null
     var endFlag = false
-    val videoModel: VideoModel by lazy{
+    val videoModel: VideoModel by lazy {
         VideoModel(linePresenter, object : VideoModel.Listener {
             override fun onReady(playWhenReady: Boolean) {
                 if (!controller.ctrVisibility) {
@@ -160,7 +163,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
                 }
                 if (playWhenReady) {
                     doPlayPause(true)
-                    startAt?.let{
+                    startAt?.let {
                         videoModel.player.seekTo(it)
                         startAt = null
                     }
@@ -178,13 +181,18 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
 
             override fun onEnded() {
                 doPlayPause(false)
-                if(endFlag) {
+                if (endFlag) {
                     endFlag = false
                     nextEpisode()?.let { loadEp(it) }
                 }
             }
 
-            override fun onVideoSizeChange(width: Int, height: Int, unappliedRotationDegrees: Int, pixelWidthHeightRatio: Float) {
+            override fun onVideoSizeChange(
+                width: Int,
+                height: Int,
+                unappliedRotationDegrees: Int,
+                pixelWidthHeightRatio: Float
+            ) {
                 videoWidth = (width * pixelWidthHeightRatio).toInt()
                 videoHeight = height
                 resizeVideoSurface()
@@ -201,7 +209,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     }
 
     fun showVideoError(error: String, retry: String, callback: () -> Unit) {
-        linePresenter.context.runOnUiThread {
+        linePresenter.activity.runOnUiThread {
             //            context.videoPresenter.doPlayPause(false)
             controller.doShowHide(false)
             view.item_error_hint.text = error
@@ -215,51 +223,53 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     }
 
     private var playLoopTask: TimerTask? = null
-    fun doPlayPause(play: Boolean){
+    fun doPlayPause(play: Boolean) {
         videoModel.player.playWhenReady = play
         updatePauseResume()
         playLoopTask?.cancel()
 
         val doPlay = {
-            playLoopTask = object: TimerTask(){ override fun run() {
-                linePresenter.context.runOnUiThread {
-                    updateProgress()
+            playLoopTask = object : TimerTask() {
+                override fun run() {
+                    linePresenter.activity.runOnUiThread {
+                        updateProgress()
 //                    updatePlayProgress((videoModel.player.currentPosition/ 10).toInt())
-                    danmakuPresenter.add(videoModel.player.currentPosition)
-                    if(view.danmaku_flame.isShown && !view.danmaku_flame.isPaused){
-                        view.danmaku_flame.start(videoModel.player.currentPosition)
+                        danmakuPresenter.add(videoModel.player.currentPosition)
+                        if (view.danmaku_flame.isShown && !view.danmaku_flame.isPaused) {
+                            view.danmaku_flame.start(videoModel.player.currentPosition)
+                        }
                     }
                 }
-            } }
+            }
             controller.timer.schedule(playLoopTask, 0, 1000)
             view.video_surface.keepScreenOn = true
-            if(videoModel.player.playbackState == Player.STATE_READY)
+            if (videoModel.player.playbackState == Player.STATE_READY)
                 view.danmaku_flame.resume()
         }
-        if(play){
-            if(NetworkUtil.isWifiConnected(linePresenter.context) || ignoreNetwork) doPlay()
-            else showVideoError("正在使用非wifi网络", "继续播放"){
+        if (play) {
+            if (NetworkUtil.isWifiConnected(linePresenter.activity) || ignoreNetwork) doPlay()
+            else showVideoError("正在使用非wifi网络", "继续播放") {
                 videoModel.player.playWhenReady = true
                 updatePauseResume()
                 ignoreNetwork = true
                 doPlay()
             }
-        }else{
+        } else {
             view.video_surface.keepScreenOn = false
             view.danmaku_flame.pause()
         }
     }
 
-    private fun updateProgress(){
-        linePresenter.context.runOnUiThread {
-            controller.duration = videoModel.player.duration.toInt() /10
-            controller.buffedPosition = videoModel.player.bufferedPosition.toInt() /10
+    private fun updateProgress() {
+        linePresenter.activity.runOnUiThread {
+            controller.duration = videoModel.player.duration.toInt() / 10
+            controller.buffedPosition = videoModel.player.bufferedPosition.toInt() / 10
             controller.updateProgress(videoModel.player.currentPosition)
         }
     }
 
     private fun updatePauseResume() {
-        linePresenter.context.runOnUiThread {
+        linePresenter.activity.runOnUiThread {
             controller.updatePauseResume(videoModel.player.playWhenReady)
 //            context.setPictureInPictureParams(!videoModel.player.playWhenReady)
         }
@@ -267,28 +277,55 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
 
     var videoWidth = 0
     var videoHeight = 0
-    fun resizeVideoSurface(){
-        if(videoWidth * videoHeight == 0) return
-        when(PreferenceManager.getDefaultSharedPreferences(linePresenter.pluginContext).getInt(DanmakuPresenter.VIDEO_FRAME, DanmakuPresenter.VIDEO_FRAME_AUTO)){
+    fun resizeVideoSurface() {
+        if (videoWidth * videoHeight == 0) return
+        when (PreferenceManager.getDefaultSharedPreferences(linePresenter.pluginContext).getInt(
+            DanmakuPresenter.VIDEO_FRAME,
+            DanmakuPresenter.VIDEO_FRAME_AUTO
+        )) {
             DanmakuPresenter.VIDEO_FRAME_AUTO -> {
-                view.video_surface.scaleX = Math.min(view.video_surface.measuredWidth.toFloat(), (view.video_surface.measuredHeight * videoWidth / videoHeight).toFloat()) / view.video_surface.measuredWidth
-                view.video_surface.scaleY = Math.min(view.video_surface.measuredHeight.toFloat(), (view.video_surface.measuredWidth * videoHeight / videoWidth).toFloat()) / view.video_surface.measuredHeight
+                view.video_surface.scaleX = Math.min(
+                    view.video_surface.measuredWidth.toFloat(),
+                    (view.video_surface.measuredHeight * videoWidth / videoHeight).toFloat()
+                ) / view.video_surface.measuredWidth
+                view.video_surface.scaleY = Math.min(
+                    view.video_surface.measuredHeight.toFloat(),
+                    (view.video_surface.measuredWidth * videoHeight / videoWidth).toFloat()
+                ) / view.video_surface.measuredHeight
             }
             DanmakuPresenter.VIDEO_FRAME_STRENTCH -> {
                 view.video_surface.scaleX = 1f
                 view.video_surface.scaleY = 1f
             }
             DanmakuPresenter.VIDEO_FRAME_FILL -> {
-                view.video_surface.scaleX = Math.max(view.video_surface.measuredWidth.toFloat(), (view.video_surface.measuredHeight * videoWidth / videoHeight).toFloat()) / view.video_surface.measuredWidth
-                view.video_surface.scaleY = Math.max(view.video_surface.measuredHeight.toFloat(), (view.video_surface.measuredWidth * videoHeight / videoWidth).toFloat()) / view.video_surface.measuredHeight
+                view.video_surface.scaleX = Math.max(
+                    view.video_surface.measuredWidth.toFloat(),
+                    (view.video_surface.measuredHeight * videoWidth / videoHeight).toFloat()
+                ) / view.video_surface.measuredWidth
+                view.video_surface.scaleY = Math.max(
+                    view.video_surface.measuredHeight.toFloat(),
+                    (view.video_surface.measuredWidth * videoHeight / videoWidth).toFloat()
+                ) / view.video_surface.measuredHeight
             }
             DanmakuPresenter.VIDEO_FRAME_16_9 -> {
-                view.video_surface.scaleX = Math.min(view.video_surface.measuredWidth.toFloat(), (view.video_surface.measuredHeight * 16 / 9).toFloat()) / view.video_surface.measuredWidth
-                view.video_surface.scaleY = Math.min(view.video_surface.measuredHeight.toFloat(), (view.video_surface.measuredWidth * 9 / 16).toFloat()) / view.video_surface.measuredHeight
+                view.video_surface.scaleX = Math.min(
+                    view.video_surface.measuredWidth.toFloat(),
+                    (view.video_surface.measuredHeight * 16 / 9).toFloat()
+                ) / view.video_surface.measuredWidth
+                view.video_surface.scaleY = Math.min(
+                    view.video_surface.measuredHeight.toFloat(),
+                    (view.video_surface.measuredWidth * 9 / 16).toFloat()
+                ) / view.video_surface.measuredHeight
             }
             DanmakuPresenter.VIDEO_FRAME_4_3 -> {
-                view.video_surface.scaleX = Math.min(view.video_surface.measuredWidth.toFloat(), (view.video_surface.measuredHeight * 4 / 3).toFloat()) / view.video_surface.measuredWidth
-                view.video_surface.scaleY = Math.min(view.video_surface.measuredHeight.toFloat(), (view.video_surface.measuredWidth * 3 / 4).toFloat()) / view.video_surface.measuredHeight
+                view.video_surface.scaleX = Math.min(
+                    view.video_surface.measuredWidth.toFloat(),
+                    (view.video_surface.measuredHeight * 4 / 3).toFloat()
+                ) / view.video_surface.measuredWidth
+                view.video_surface.scaleY = Math.min(
+                    view.video_surface.measuredHeight.toFloat(),
+                    (view.video_surface.measuredWidth * 3 / 4).toFloat()
+                ) / view.video_surface.measuredHeight
             }
         }
     }
@@ -302,24 +339,26 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         )
     }
 
-    var nextEpisode: ()->Episode? = { null }
-    var prevEpisode: ()->Episode? = { null }
-    override fun loadEp(ep: Episode){
-        val infos = linePresenter.app.lineInfoModel.getInfos(linePresenter.subject())
-        infos?.getDefaultProvider()?.let{
+    var nextEpisode: () -> Episode? = { null }
+    var prevEpisode: () -> Episode? = { null }
+    override fun loadEp(ep: Episode) {
+        val infos = linePresenter.app.lineInfoModel.getInfos(linePresenter.subject)
+        infos?.getDefaultProvider()?.let {
             prevEpisode = {
-                val position = linePresenter.mySubjectView.episodeDetailAdapter.data.indexOfFirst { it.t?.id == ep.id || (it.t?.type == ep.type && it.t?.sort == ep.sort) }
-                val episode = linePresenter.mySubjectView.episodeDetailAdapter.data.getOrNull(position-1)?.t
-                if((episode?.status?:"") !in listOf("Air")) null else episode
+                val position =
+                    linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst { it.t?.id == ep.id || (it.t?.type == ep.type && it.t?.sort == ep.sort) }
+                val episode = linePresenter.subjectView.episodeDetailAdapter.data.getOrNull(position - 1)?.t
+                if ((episode?.status ?: "") !in listOf("Air")) null else episode
             }
             nextEpisode = {
-                val position = linePresenter.mySubjectView.episodeDetailAdapter.data.indexOfFirst { it.t?.id == ep.id || (it.t?.type == ep.type && it.t?.sort == ep.sort) }
-                val episode = linePresenter.mySubjectView.episodeDetailAdapter.data.getOrNull(position+1)?.t
-                if((episode?.status?:"") !in listOf("Air")) null else episode
+                val position =
+                    linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst { it.t?.id == ep.id || (it.t?.type == ep.type && it.t?.sort == ep.sort) }
+                val episode = linePresenter.subjectView.episodeDetailAdapter.data.getOrNull(position + 1)?.t
+                if ((episode?.status ?: "") !in listOf("Air")) null else episode
             }
             startAt = null
-            linePresenter.context.runOnUiThread { play(ep, it, infos.providers) }
-        }?: Toast.makeText(linePresenter.context, "请先添加播放源", Toast.LENGTH_SHORT).show()
+            linePresenter.activity.runOnUiThread { play(ep, it, infos.providers) }
+        } ?: Toast.makeText(linePresenter.pluginContext, "请先添加播放源", Toast.LENGTH_SHORT).show()
     }
 
     var ignoreNetwork = false
@@ -332,7 +371,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         loadDanmaku = null
         exception = null
         showDanmakuSetting(false)
-        linePresenter.context.runOnUiThread {
+        linePresenter.activity.runOnUiThread {
             view.error_frame.visibility = View.INVISIBLE
 //            view.toolbar_layout.isTitleEnabled = false
 //            view.video_surface_container.visibility = View.VISIBLE
@@ -350,25 +389,37 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         view.danmaku_flame.pause()
         view.item_logcat.setOnClickListener {}
 
-        videoModel.getVideo("play", episode, info, {videoInfo, error->
-            exception = error?:exception
+        videoModel.getVideo("play", episode, info, { videoInfo, error ->
+            exception = error ?: exception
             loadVideoInfo = videoInfo != null
-            if(videoInfo != null) linePresenter.context.runOnUiThread {
+            if (videoInfo != null) linePresenter.activity.runOnUiThread {
                 view.item_logcat.setOnClickListener {
-                    try{ linePresenter.context.startActivity(Intent.createChooser(Intent(Intent.ACTION_VIEW, Uri.parse(videoInfo.url)), videoInfo.url)) }
-                    catch (e: Exception){ e.printStackTrace() }}
-                danmakuPresenter.loadDanmaku(infos, episode) }
-        },{request, streamKeys, error ->
-            exception = error?:exception
-            if(linePresenter.context.isDestroyed) return@getVideo
+                    try {
+                        linePresenter.activity.startActivity(
+                            Intent.createChooser(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse(videoInfo.url)
+                                ), videoInfo.url
+                            )
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                danmakuPresenter.loadDanmaku(infos, episode)
+            }
+        }, { request, streamKeys, error ->
+            exception = error ?: exception
+            if (linePresenter.activity.isDestroyed) return@getVideo
             loadVideo = request != null
             ignoreNetwork = streamKeys != null
-            if(request != null) videoModel.play(request, view.video_surface, streamKeys)
+            if (request != null) videoModel.play(request, view.video_surface, streamKeys)
         }, {
             controller.updateLoading(false)
             view.item_logcat.visibility = View.INVISIBLE
             controller.doShowHide(false)
-            showVideoError("正在使用非wifi网络", "继续加载"){
+            showVideoError("正在使用非wifi网络", "继续加载") {
                 ignoreNetwork = true
                 controller.updateLoading(true)
                 controller.doShowHide(true)
@@ -379,8 +430,8 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     }
 
     init {
-        linePresenter.appbar.visibility = View.INVISIBLE
-        linePresenter.pluginContainer.setOnApplyWindowInsetsListener { _, insets ->
+        linePresenter.proxy.app_bar.visibility = View.INVISIBLE
+        linePresenter.proxy.item_plugin.setOnApplyWindowInsetsListener { _, insets ->
             view.setPadding(
                 0,
                 if (isLandscape) 0 else insets.systemWindowInsetTop,
@@ -392,12 +443,12 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         view.hide_danmaku_panel.setOnClickListener {
             showDanmakuSetting(false)
         }
-        linePresenter.setPeakMargin(9 / 16f)
+        linePresenter.proxy.subjectPresenter.subjectView.peakMargin = 9 / 16f
         view.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob ->
-            if(l != ol || t != ot || r != or || b != ob) updateView()
+            if (l != ol || t != ot || r != or || b != ob) updateView()
         }
-        linePresenter.maskView.setOnClickListener {
-            if(isLandscape) showInfo(false)
+        linePresenter.proxy.item_mask.setOnClickListener {
+            if (isLandscape) showInfo(false)
         }
         updateView()
     }

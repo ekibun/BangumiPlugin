@@ -75,7 +75,7 @@ class ProviderActivity : AppCompatActivity(), ColorPickerDialogListener {
     }
 
     val adapter: CodeAdapter by lazy {
-        CodeAdapter(ReflectUtil.newInstance(typeClass), ReflectUtil.getAllFields(typeClass).filter {
+        CodeAdapter(typeClass.newInstance(), ReflectUtil.getAllFields(typeClass).filter {
             it.isAnnotationPresent(Provider.Code::class.java)
         }.sortedBy { it.getAnnotation(Provider.Code::class.java)!!.index })
     }
@@ -84,7 +84,7 @@ class ProviderActivity : AppCompatActivity(), ColorPickerDialogListener {
     private fun setProvider(info: String?) {
         val provider = JsonUtil.toEntity<LineProvider.ProviderInfo>(info ?: "")
             ?: LineProvider.ProviderInfo("", 0 ,"", type)
-        adapter.provider = JsonUtil.toEntity(provider.code, typeClass) ?: ReflectUtil.newInstance(typeClass)
+        adapter.provider = JsonUtil.toEntity(provider.code, typeClass) ?: typeClass.newInstance()
         adapter.notifyDataSetChanged()
 
         header.item_provider_site.setText(provider.site)

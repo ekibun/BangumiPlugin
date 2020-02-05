@@ -10,7 +10,7 @@ import soko.ekibun.bangumi.plugins.util.HttpUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 
 class VideoProvider(
-    search: String,
+    search: String? = null,
     @Code("获取剧集信息", 1) val getVideoInfo: String? = "",  // (line: LineInfo, episode: VideoEpisode) -> VideoInfo
     @Code("获取视频信息", 2) val getVideo: String? = "",      // (video: VideoInfo) -> HttpRequest
     @Code("获取弹幕信息", 3) val getDanmakuKey: String? = "", // (video: VideoInfo) -> Object

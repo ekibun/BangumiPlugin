@@ -39,7 +39,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
     }
 
     val player: SimpleExoPlayer by lazy {
-        val player = SimpleExoPlayer.Builder(linePresenter.context).build()
+        val player = SimpleExoPlayer.Builder(linePresenter.activity).build()
         player.addListener(object : Player.EventListener {
             override fun onSeekProcessed() {}
             override fun onPlayerError(error: ExoPlaybackException) {
@@ -84,7 +84,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
         onCheckNetwork: (() -> Unit) -> Unit
     ) {
         //val videoCache = videoCacheModel.getCache(episode, subject)
-        val videoCache = linePresenter.app.videoCacheModel.getVideoCache(episode, linePresenter.subject())
+        val videoCache = linePresenter.app.videoCacheModel.getVideoCache(episode, linePresenter.subject)
         if (videoCache != null) {
             onGetVideoInfo(VideoProvider.VideoInfo("", videoCache.video.url, videoCache.video.url), null)
             onGetVideo(videoCache.video, videoCache.streamKeys, null)
@@ -129,7 +129,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
                     }, { onGetVideo(null, null, it) })
                 }, { onGetVideoInfo(null, it) })
             }
-            if (!NetworkUtil.isWifiConnected(linePresenter.context)) onCheckNetwork(loadFromNetwork) else loadFromNetwork()
+            if (!NetworkUtil.isWifiConnected(linePresenter.activity)) onCheckNetwork(loadFromNetwork) else loadFromNetwork()
         }
     }
 

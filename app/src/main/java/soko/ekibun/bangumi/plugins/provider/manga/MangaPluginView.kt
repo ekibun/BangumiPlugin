@@ -5,28 +5,26 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.android.synthetic.main.plugin_manga.view.*
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.ui.view.ScalableLayoutManager
 import soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadLayout
-import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
 class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_manga) {
     val layoutManager = ScalableLayoutManager(linePresenter.pluginContext)
     val mangaAdapter = MangaAdapter(linePresenter)
 
     init {
-        linePresenter.onStateChangedListener = { state ->
-            linePresenter.maskView.visibility = if (state == BottomSheetBehavior.STATE_HIDDEN) View.INVISIBLE else View.VISIBLE
-            linePresenter.appbar.visibility = linePresenter.maskView.visibility
+        linePresenter.proxy.subjectPresenter.subjectView.onStateChangedListener = { state ->
+            linePresenter.proxy.item_mask.visibility = if (state == BottomSheetBehavior.STATE_HIDDEN) View.INVISIBLE else View.VISIBLE
+            linePresenter.proxy.app_bar.visibility = linePresenter.proxy.item_mask.visibility
         }
         layoutManager.setupWithRecyclerView(view.item_manga) { _, _ ->
-            linePresenter.setState(BottomSheetBehavior.STATE_COLLAPSED)
+            linePresenter.proxy.subjectPresenter.subjectView.behavior.state = BottomSheetBehavior.STATE_COLLAPSED
         }
-        linePresenter.setHideable(true)
-        linePresenter.setPeakRatio(1 / 3f)
-        linePresenter.setState(BottomSheetBehavior.STATE_COLLAPSED)
+        linePresenter.proxy.subjectPresenter.subjectView.behavior.isHideable = true
+        linePresenter.proxy.subjectPresenter.subjectView.peakRatio = 1 / 3f
+        linePresenter.proxy.subjectPresenter.subjectView.behavior.state = BottomSheetBehavior.STATE_COLLAPSED
         view.item_manga.adapter = mangaAdapter
 
         view.item_pull_layout.setOnPullListener(object : PullLoadLayout.OnPullListener {
@@ -62,7 +60,7 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         val provider =
             linePresenter.app.lineProvider.getProvider(Provider.TYPE_MANGA, ep?.site ?: "")?.provider as? MangaProvider
         if (ep == null || provider == null) {
-            linePresenter.context.runOnUiThread {
+            linePresenter.activity.runOnUiThread {
                 callback(false)
             }
             return

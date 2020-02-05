@@ -226,7 +226,7 @@ class DanmakuPresenter(
         when {
             danmakuInfo.videoInfo == null -> {
                 danmakuInfo.info = " 获取视频信息..."
-                linePresenter.context.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+                linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
                 val videoCall = provider.getVideoInfo(
                     "getVideoInfo(${danmakuInfo.line}, ${episode.id})",
                     linePresenter.app.jsEngine,
@@ -239,13 +239,13 @@ class DanmakuPresenter(
                     loadDanmaku(danmakuInfo, episode)
                 }, {
                     danmakuInfo.info = " 获取视频信息出错: $it"
-                    linePresenter.context.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+                    linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
                     onFinish(it)
                 })
             }
             danmakuInfo.key == null -> {
                 danmakuInfo.info = " 获取弹幕信息..."
-                linePresenter.context.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+                linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
                 val call = provider.getDanmakuKey(
                     "getDanmakuKey(${danmakuInfo.videoInfo})",
                     linePresenter.app.jsEngine,
@@ -257,7 +257,7 @@ class DanmakuPresenter(
                     doAdd(Math.max(lastPos, 0) * 1000L * 300L, danmakuInfo)
                 }, {
                     danmakuInfo.info = " 获取弹幕信息出错: $it"
-                    linePresenter.context.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+                    linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
                     onFinish(it)
                 })
             }
@@ -275,7 +275,7 @@ class DanmakuPresenter(
             (pos / 1000).toInt()
         )
         danmakuInfo.info = " 加载弹幕..."
-        linePresenter.context.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+        linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
         call.enqueue({
             it.minus(ArrayList(danmakuInfo.danmakus)).forEach {
                 danmakuInfo.danmakus.add(it)
@@ -289,11 +289,11 @@ class DanmakuPresenter(
                 linePresenter.pluginView.view.danmaku_flame.addDanmaku(danmaku)
             }
             danmakuInfo.info = ""
-            linePresenter.context.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+            linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
             onFinish(null)
         }, {
             danmakuInfo.info = " 加载弹幕出错: $it"
-            linePresenter.context.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+            linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
             onFinish(it)
         })
     }

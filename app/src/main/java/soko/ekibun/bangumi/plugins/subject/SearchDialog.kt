@@ -15,7 +15,7 @@ import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.ui.view.BasePluginDialog
 
 class SearchDialog(private val linePresenter: LinePresenter) :
-    BasePluginDialog(linePresenter.context, linePresenter.pluginContext, R.layout.dialog_search) {
+    BasePluginDialog(linePresenter.activity, linePresenter.pluginContext, R.layout.dialog_search) {
     override val title: String get() = "搜索"
 
     companion object {
@@ -31,7 +31,7 @@ class SearchDialog(private val linePresenter: LinePresenter) :
 
     lateinit var callback: (LineInfoModel.LineInfo?, LineInfoModel.LineInfo?) -> Unit
     override fun onViewCreated(view: View) {
-        val subject = linePresenter.subject()
+        val subject = linePresenter.subject
         view.item_search_key.setText(subject.displayName)
         view.list_search.layoutManager = LinearLayoutManager(context)
 

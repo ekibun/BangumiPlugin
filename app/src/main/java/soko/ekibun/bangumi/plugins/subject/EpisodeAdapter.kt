@@ -40,7 +40,7 @@ class EpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<Section
         helper.addOnClickListener(R.id.item_download)
         helper.addOnLongClickListener(R.id.item_download)
 
-        val videoCache = linePresenter.app.videoCacheModel.getVideoCache(item.t, linePresenter.subject())
+        val videoCache = linePresenter.app.videoCacheModel.getVideoCache(item.t, linePresenter.subject)
         updateDownload(helper.itemView, videoCache?.percentDownloaded?: Float.NaN, videoCache?.bytesDownloaded?:0L, videoCache != null)
     }
 

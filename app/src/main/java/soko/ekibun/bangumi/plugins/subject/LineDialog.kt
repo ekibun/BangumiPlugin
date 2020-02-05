@@ -18,7 +18,7 @@ import soko.ekibun.bangumi.plugins.ui.view.BasePluginDialog
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 
 class LineDialog(private val linePresenter: LinePresenter) :
-    BasePluginDialog(linePresenter.context, linePresenter.pluginContext, R.layout.base_dialog) {
+    BasePluginDialog(linePresenter.activity, linePresenter.pluginContext, R.layout.base_dialog) {
     override val title: String get() = if (info == null) "添加线路" else "编辑线路"
 
     companion object {
