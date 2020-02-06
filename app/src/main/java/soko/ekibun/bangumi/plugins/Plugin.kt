@@ -2,11 +2,11 @@ package soko.ekibun.bangumi.plugins
 
 import android.app.Activity
 import android.content.Context
-import android.content.ContextWrapper
 import android.util.Log
 import androidx.annotation.Keep
+import androidx.appcompat.view.ContextThemeWrapper
+import com.pl.sphelper.SPHelper
 import soko.ekibun.bangumi.plugins.subject.SubjectActivityPlugin
-import java.lang.Exception
 
 @Keep
 object Plugin {
@@ -16,14 +16,15 @@ object Plugin {
 
     @Keep
     fun setUpPlugins(activity: Activity, context: Context) {
+        SPHelper.init(context)
         Log.v("plugin", activity.javaClass.name)
         try {
-            context.setTheme(R.style.AppTheme)
-            pluginList[activity.javaClass.name]?.setUpPlugins(activity, object: ContextWrapper(context){
-                override fun getApplicationContext(): Context {
-                    return activity.applicationContext
-                }
-            })
+            val themeContext = object: ContextThemeWrapper(context, R.style.AppTheme){
+                override fun getApplicationContext(): Context { return context }
+            }
+            themeContext.applyOverrideConfiguration(activity.resources.configuration)
+
+            pluginList[activity.javaClass.name]?.setUpPlugins(activity, themeContext)
         } catch (e: Exception) {
             Log.e("plugin", Log.getStackTraceString(e))
         }

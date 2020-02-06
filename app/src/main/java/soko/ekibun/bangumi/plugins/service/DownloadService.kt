@@ -10,7 +10,11 @@ import android.os.AsyncTask
 import android.os.IBinder
 import android.text.format.Formatter
 import android.util.Log
-import com.google.android.exoplayer2.offline.*
+import com.google.android.exoplayer2.offline.DefaultDownloaderFactory
+import com.google.android.exoplayer2.offline.DownloadRequest
+import com.google.android.exoplayer2.offline.Downloader
+import com.google.android.exoplayer2.offline.DownloaderConstructorHelper
+import com.pl.sphelper.SPHelper
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
@@ -24,7 +28,6 @@ import soko.ekibun.bangumi.plugins.util.NotificationUtil
 
 class DownloadService : Service() {
     private val manager by lazy { getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager }
-    private val videoCacheModel by lazy { App.from(this@DownloadService).videoCacheModel }
     private val taskCollection = HashMap<String, DownloadTask>()
 
     override fun onBind(intent: Intent?): IBinder? {
@@ -52,6 +55,7 @@ class DownloadService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        SPHelper.init(applicationContext)
         intent?.let {request ->
             val episode = JsonUtil.toEntity<Episode>(request.getStringExtra(EXTRA_EPISODE)?:"")?:return@let
             val subject = JsonUtil.toEntity<Subject>(request.getStringExtra(EXTRA_SUBJECT)?:"")?:return@let
@@ -76,7 +80,7 @@ class DownloadService : Service() {
                             .setContentIntent(pIntent).build())
                     }else{
                         val videoCache = JsonUtil.toEntity<VideoCache>(intent.getStringExtra(EXTRA_VIDEO_CACHE)?:"")?:return@let
-                        App.from(this@DownloadService).videoCacheModel.addVideoCache(subject, videoCache)
+                        VideoCacheModel.addVideoCache(subject, videoCache)
                         val newTask = DownloadTask(createDownloader(videoCache)) {mTask ->
                             val status = taskCollection.filter { !VideoCacheModel.isFinished(it.value.percentDownloaded) }.size
 
@@ -87,7 +91,7 @@ class DownloadService : Service() {
                             videoCache.bytesDownloaded = mTask.bytesDownloaded
                             videoCache.percentDownloaded = mTask.percentDownloaded
 
-                            videoCacheModel.addVideoCache(subject, videoCache)
+                            VideoCacheModel.addVideoCache(subject, videoCache)
 
                             sendBroadcast(episode, subject, mTask.percentDownloaded, mTask.bytesDownloaded)
                             val pIntent = PendingIntent.getActivity(this@DownloadService, taskKey.hashCode(),
@@ -116,9 +120,9 @@ class DownloadService : Service() {
                     if(taskCollection.isEmpty())
                         manager.cancel(0)
 
-                    val videoCache = videoCacheModel.getVideoCache(episode, subject)?:return@let
+                    val videoCache = VideoCacheModel.getVideoCache(episode, subject)?:return@let
                     createDownloader(videoCache).remove()
-                    videoCacheModel.removeVideoCache(episode, subject)
+                    VideoCacheModel.removeVideoCache(episode, subject)
 
                     sendBroadcast(episode, subject, Float.NaN, 0, false)
                 }

@@ -2,9 +2,9 @@ package soko.ekibun.bangumi.plugins.provider.video
 
 import android.annotation.SuppressLint
 import android.graphics.Color
-import androidx.preference.PreferenceManager
 import android.view.View
 import android.widget.SeekBar
+import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.android.synthetic.main.danmaku_setting.view.*
 import kotlinx.android.synthetic.main.plugin_video.view.*
@@ -17,6 +17,7 @@ import soko.ekibun.bangumi.plugins.JsEngine
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
+import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
@@ -222,7 +223,7 @@ class DanmakuPresenter(
     }
 
     private fun loadDanmaku(danmakuInfo: DanmakuListAdapter.DanmakuInfo, episode: Episode) {
-        val provider = linePresenter.app.lineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider ?: return
+        val provider = LineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider ?: return
         when {
             danmakuInfo.videoInfo == null -> {
                 danmakuInfo.info = " 获取视频信息..."
@@ -266,7 +267,7 @@ class DanmakuPresenter(
     }
 
     private fun doAdd(pos: Long, danmakuInfo: DanmakuListAdapter.DanmakuInfo) {
-        val provider = linePresenter.app.lineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider ?: return
+        val provider = LineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider ?: return
         val call = provider.getDanmaku(
             "getDanmakuKey(${danmakuInfo.videoInfo}, ${danmakuInfo.key}, ${pos / 1000})",
             linePresenter.app.jsEngine,

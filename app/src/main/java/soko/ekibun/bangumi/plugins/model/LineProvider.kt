@@ -1,12 +1,10 @@
 package soko.ekibun.bangumi.plugins.model
 
-import android.content.Context
-import android.content.SharedPreferences
-import androidx.preference.PreferenceManager
+import com.pl.sphelper.SPHelper
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 
-class LineProvider(context: Context) {
+object LineProvider {
 
     class ProviderInfo(
         var site: String,
@@ -14,7 +12,7 @@ class LineProvider(context: Context) {
         var title: String,
         var type: String = "",
         var code: String = ""
-    ){
+    ) {
         val prefKey get() = "${type}_${site}"
 
         val provider get() = Provider.providers[type]?.let { JsonUtil.toEntity(code, it) }
@@ -31,27 +29,27 @@ class LineProvider(context: Context) {
         }
     }
 
-    val sp: SharedPreferences by lazy{ PreferenceManager.getDefaultSharedPreferences(context) }
-    val providerList by lazy { JsonUtil.toEntity<HashMap<String, ProviderInfo>>(sp.getString(
-        PREF_PROVIDER, JsonUtil.toJson(HashMap<String, ProviderInfo>()))!!)?: HashMap() }
+    val providerList = {
+        JsonUtil.toEntity<HashMap<String, ProviderInfo>>(
+            SPHelper.getString(PREF_PROVIDER, JsonUtil.toJson(HashMap<String, ProviderInfo>()))!!
+        ) ?: HashMap()
+    }
 
     fun getProvider(type: String, site: String): ProviderInfo? {
-        return providerList["${type}_${site}"]
-    }
-    fun addProvider(provider: ProviderInfo){
-        val editor = sp.edit()
-        providerList[provider.prefKey] = provider
-        editor.putString(PREF_PROVIDER, JsonUtil.toJson(providerList))
-        editor.apply()
-    }
-    fun removeProvider(provider: ProviderInfo){
-        val editor = sp.edit()
-        providerList.remove(provider.prefKey)
-        editor.putString(PREF_PROVIDER, JsonUtil.toJson(providerList))
-        editor.apply()
+        return providerList()["${type}_${site}"]
     }
 
-    companion object{
-        const val PREF_PROVIDER="mangaProvider"
+    fun addProvider(provider: ProviderInfo) {
+        val providerList = providerList()
+        providerList[provider.prefKey] = provider
+        SPHelper.save(PREF_PROVIDER, JsonUtil.toJson(providerList))
     }
+
+    fun removeProvider(provider: ProviderInfo) {
+        val providerList = providerList()
+        providerList.remove(provider.prefKey)
+        SPHelper.save(PREF_PROVIDER, JsonUtil.toJson(providerList))
+    }
+
+    const val PREF_PROVIDER = "mangaProvider"
 }

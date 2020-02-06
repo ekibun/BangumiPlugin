@@ -1,7 +1,5 @@
 package soko.ekibun.bangumi.plugins.bean
 
-import android.os.Parcel
-import android.os.Parcelable
 import com.google.android.exoplayer2.offline.StreamKey
 import soko.ekibun.bangumi.plugins.util.HttpUtil
 

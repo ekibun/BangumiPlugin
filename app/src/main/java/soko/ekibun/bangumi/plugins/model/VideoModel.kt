@@ -8,7 +8,6 @@ import com.google.android.exoplayer2.*
 import com.google.android.exoplayer2.offline.DownloadHelper
 import com.google.android.exoplayer2.offline.StreamKey
 import com.google.android.exoplayer2.source.MediaSource
-import com.google.android.exoplayer2.source.MediaSourceFactory
 import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.source.dash.DashMediaSource
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
@@ -84,12 +83,12 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
         onCheckNetwork: (() -> Unit) -> Unit
     ) {
         //val videoCache = videoCacheModel.getCache(episode, subject)
-        val videoCache = linePresenter.app.videoCacheModel.getVideoCache(episode, linePresenter.subject)
+        val videoCache = VideoCacheModel.getVideoCache(episode, linePresenter.subject)
         if (videoCache != null) {
             onGetVideoInfo(VideoProvider.VideoInfo("", videoCache.video.url, videoCache.video.url), null)
             onGetVideo(videoCache.video, videoCache.streamKeys, null)
         } else {
-            val provider = linePresenter.app.lineProvider.getProvider(
+            val provider = LineProvider.getProvider(
                 Provider.TYPE_VIDEO,
                 info?.site ?: ""
             )?.provider as? VideoProvider
@@ -119,7 +118,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
                         onGetVideo(HttpUtil.HttpRequest(video.url), null, null)
                         return@enqueue
                     }
-                    val videoProvider = linePresenter.app.lineProvider.getProvider(
+                    val videoProvider = LineProvider.getProvider(
                         Provider.TYPE_VIDEO,
                         video.site
                     )?.provider as VideoProvider
@@ -129,11 +128,11 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
                     }, { onGetVideo(null, null, it) })
                 }, { onGetVideoInfo(null, it) })
             }
-            if (!NetworkUtil.isWifiConnected(linePresenter.activity)) onCheckNetwork(loadFromNetwork) else loadFromNetwork()
+            if (!NetworkUtil.isWifiConnected(linePresenter.pluginContext)) onCheckNetwork(loadFromNetwork) else loadFromNetwork()
         }
     }
 
-    fun createMediaSource(request: HttpUtil.HttpRequest, streamKeys: List<StreamKey>? = null): MediaSource {
+    private fun createMediaSource(request: HttpUtil.HttpRequest, streamKeys: List<StreamKey>? = null): MediaSource {
         val uri = Uri.parse(request.url)
         val dataSourceFactory = createDataSourceFactory(linePresenter.pluginContext, request, streamKeys != null)
         return when (@C.ContentType Util.inferContentType(uri, request.overrideExtension)) {

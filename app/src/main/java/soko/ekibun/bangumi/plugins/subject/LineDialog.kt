@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.ListPopupWindow
 import android.widget.Toast
+import com.google.gson.JsonObject
 import kotlinx.android.synthetic.main.base_dialog.view.*
 import kotlinx.android.synthetic.main.dialog_add_line.view.*
 import soko.ekibun.bangumi.plugins.R
@@ -90,7 +91,7 @@ class LineDialog(private val linePresenter: LinePresenter) :
             val popList = ListPopupWindow(context)
             popList.anchorView = view.item_line
             val providerList: ArrayList<LineProvider.ProviderInfo> =
-                ArrayList(linePresenter.app.lineProvider.providerList.values.filter { it.type == linePresenter.type })
+                ArrayList(LineProvider.providerList().values.filter { it.type == linePresenter.type })
 
             providerList.add(0, emptyProvider)
             providerList.add(LineProvider.ProviderInfo("", 0, "添加..."))
@@ -106,7 +107,7 @@ class LineDialog(private val linePresenter: LinePresenter) :
                         //doAdd
                         linePresenter.loadProvider(linePresenter.type, null) {
                             if (it == null) return@loadProvider
-                            linePresenter.app.lineProvider.addProvider(it)
+                            LineProvider.addProvider(it)
                             view.item_line.text = it.title
                             view.item_line.tag = it
                             updateProvider(view)
@@ -117,27 +118,33 @@ class LineDialog(private val linePresenter: LinePresenter) :
                         clipboardManager.setPrimaryClip(
                             ClipData.newPlainText(
                                 "videoplayer.providerInfo",
-                                JsonUtil.toJson(linePresenter.app.lineProvider.providerList.values)
+                                JsonUtil.toJson(LineProvider.providerList().values)
                             )
                         )
                         Toast.makeText(view.context, "数据已导出至剪贴板", Toast.LENGTH_SHORT).show()
                     }
                     providerList.size - 1 -> {
-                        val addProvider = { it: LineProvider.ProviderInfo ->
-                            val oldProvider = linePresenter.app.lineProvider.getProvider(linePresenter.type, it.site)
+                        val addProvider = { obj: JsonObject ->
+                            val providerInfo = JsonUtil.toEntity<LineProvider.ProviderInfo>(JsonUtil.toJson(obj))!!.also { info ->
+                                if (!obj.has("type")){
+                                    info.code = JsonUtil.toJson(obj)
+                                    info.type = linePresenter.type
+                                }
+                            }
+                            val oldProvider = LineProvider.getProvider(linePresenter.type, providerInfo.site)
                             if (oldProvider != null)
-                                AlertDialog.Builder(context).setMessage("接口 ${it.title}(${it.site}) 与现有接口 ${oldProvider.title}(${oldProvider.site}) 重复")
+                                AlertDialog.Builder(context).setMessage("接口 ${providerInfo.title}(${providerInfo.site}) 与现有接口 ${oldProvider.title}(${oldProvider.site}) 重复")
                                     .setPositiveButton("替换") { _: DialogInterface, _: Int ->
-                                        linePresenter.app.lineProvider.addProvider(it)
+                                        LineProvider.addProvider(providerInfo)
                                     }.setNegativeButton("取消") { _: DialogInterface, _: Int -> }.show()
-                            else linePresenter.app.lineProvider.addProvider(it)
+                            else LineProvider.addProvider(providerInfo)
                         }
                         //inport
-                        JsonUtil.toEntity<List<LineProvider.ProviderInfo>>(
+                        JsonUtil.toEntity<List<JsonObject>>(
                             clipboardManager.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
                         )?.let { list ->
                             list.forEach { addProvider(it) }
-                        } ?: JsonUtil.toEntity<LineProvider.ProviderInfo>(
+                        } ?: JsonUtil.toEntity<JsonObject>(
                             clipboardManager.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
                         )?.let {
                             addProvider(it)
@@ -158,8 +165,8 @@ class LineDialog(private val linePresenter: LinePresenter) :
                 //edit
                 val info = providerList[position]
                 linePresenter.loadProvider(linePresenter.type, info) {
-                    linePresenter.app.lineProvider.removeProvider(info)
-                    if (it != null) linePresenter.app.lineProvider.addProvider(it)
+                    LineProvider.removeProvider(info)
+                    if (it != null) LineProvider.addProvider(it)
                     updateProvider(view)
                 }
                 true
@@ -169,7 +176,7 @@ class LineDialog(private val linePresenter: LinePresenter) :
     }
 
     private fun updateInfo(view: View, info: LineInfoModel.LineInfo) {
-        val provider = linePresenter.app.lineProvider.getProvider(linePresenter.type, info.site) ?: emptyProvider
+        val provider = LineProvider.getProvider(linePresenter.type, info.site) ?: emptyProvider
         view.item_line.text = provider.title
         view.item_line.tag = provider
         view.item_video_id.setText(info.id)

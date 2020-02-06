@@ -371,7 +371,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     var prevEpisode: () -> Episode? = { null }
     override fun loadEp(episode: Episode) {
         initPlayer()
-        val infos = linePresenter.app.lineInfoModel.getInfos(linePresenter.subject)
+        val infos = LineInfoModel.getInfos(linePresenter.subject)
         infos?.getDefaultProvider()?.let {
             prevEpisode = {
                 val position =
@@ -606,7 +606,6 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
                 setPictureInPictureParams(false)
             }
         }
-        linePresenter.proxy.app_bar.visibility = View.INVISIBLE
         linePresenter.proxy.item_plugin.setOnApplyWindowInsetsListener { _, insets ->
             view.setPadding(
                 0,

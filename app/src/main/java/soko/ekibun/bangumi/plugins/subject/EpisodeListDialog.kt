@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.util.Log
 import android.view.View
-import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.exoplayer2.offline.DownloadHelper
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -12,6 +11,8 @@ import kotlinx.android.synthetic.main.dialog_episode_list.view.*
 import kotlinx.android.synthetic.main.item_episode.view.*
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.VideoCache
+import soko.ekibun.bangumi.plugins.model.LineInfoModel
+import soko.ekibun.bangumi.plugins.model.VideoCacheModel
 import soko.ekibun.bangumi.plugins.provider.video.VideoPluginView
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.ui.view.BasePluginDialog
@@ -59,14 +60,14 @@ class EpisodeListDialog(private val linePresenter: LinePresenter, val adapter: E
 
         adapter.setOnItemChildLongClickListener { _, _, position ->
             val item = linePresenter.subjectView.episodeDetailAdapter.data[position]
-            val videoCache = linePresenter.app.videoCacheModel.getVideoCache(item.t, linePresenter.subject)
+            val videoCache = VideoCacheModel.getVideoCache(item.t, linePresenter.subject)
             if(videoCache != null) DownloadService.remove(linePresenter.pluginContext, item.t, linePresenter.subject)
             true
         }
 
         adapter.setOnItemChildClickListener { _, _, position ->
             val item = linePresenter.subjectView.episodeDetailAdapter.data[position]
-            val info = linePresenter.app.lineInfoModel.getInfos(linePresenter.subject)?.getDefaultProvider()?:return@setOnItemChildClickListener
+            val info = LineInfoModel.getInfos(linePresenter.subject)?.getDefaultProvider()?:return@setOnItemChildClickListener
             linePresenter.subjectView.episodeDetailAdapter.getViewByPosition(position, R.id.item_layout)?.let{
                 it.item_download_info.text = "获取视频信息"
             }

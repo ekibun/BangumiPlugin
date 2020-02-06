@@ -6,6 +6,7 @@ import com.chad.library.adapter.base.BaseViewHolder
 import kotlinx.android.synthetic.main.item_image.view.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
+import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.util.GlideUtil
@@ -15,7 +16,6 @@ class MangaAdapter(private val linePresenter: LinePresenter, data: MutableList<M
     BaseQuickAdapter<MangaProvider.ImageInfo, BaseViewHolder>(R.layout.item_image, data) {
     val requests = HashMap<MangaProvider.ImageInfo, HttpUtil.HttpRequest>()
     val jsEngine by lazy { App.from(linePresenter.pluginContext).jsEngine }
-    val mangaProvider by lazy { App.from(linePresenter.pluginContext).lineProvider }
 
     override fun convert(helper: BaseViewHolder, item: MangaProvider.ImageInfo) {
         helper.itemView.image_sort.text = item.index.toString()
@@ -37,7 +37,7 @@ class MangaAdapter(private val linePresenter: LinePresenter, data: MutableList<M
         if(imageRequest != null){
             setImage(helper, item, imageRequest)
         }else{
-            (mangaProvider.getProvider(Provider.TYPE_MANGA, item.site?:"")?.provider as? MangaProvider)?.getImage("${item.site}_${item.id}", jsEngine, item)?.enqueue({
+            (LineProvider.getProvider(Provider.TYPE_MANGA, item.site?:"")?.provider as? MangaProvider)?.getImage("${item.site}_${item.id}", jsEngine, item)?.enqueue({
                 requests[item] = it
                 setImage(helper, item, it)
             }, {
@@ -59,7 +59,7 @@ class MangaAdapter(private val linePresenter: LinePresenter, data: MutableList<M
 
     private fun setImage(helper: BaseViewHolder, item: MangaProvider.ImageInfo, imageRequest: HttpUtil.HttpRequest){
         helper.itemView.loading_progress.progress = 0
-        GlideUtil.loadWithProgress(imageRequest, linePresenter.pluginContext, helper.itemView.item_image,  {
+        GlideUtil.loadWithProgress(imageRequest, linePresenter.activity, helper.itemView.item_image,  {
             helper.itemView.loading_progress.isIndeterminate = false
             if(helper.itemView.tag == item) helper.itemView.loading_progress.progress = (it * 100).toInt()
         }, { type, drawable ->

@@ -3,7 +3,6 @@ package soko.ekibun.bangumi.plugins.subject
 import android.content.Intent
 import android.view.View
 import android.widget.FrameLayout
-import android.widget.LinearLayout
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import soko.ekibun.bangumi.plugins.bean.Subject
 
@@ -26,13 +25,13 @@ interface ISubjectActivity {
 
         val subject: Subject
 
-        fun showEpisodeListDialog()
         fun showEpisodeDialog(id: Int)
 
         var subjectRefreshListener: (Any?) -> Unit
 
         interface ISubjectView {
             val behavior: IBottomSheetBehavior
+            val collapsibleAppBarHelper: ICollapsibleAppBarHelper
 
             var onStateChangedListener: (Int) -> Unit
 
@@ -46,6 +45,10 @@ interface ISubjectActivity {
 
                 @BottomSheetBehavior.State
                 var state: Int
+            }
+
+            interface ICollapsibleAppBarHelper {
+                fun setTitle(title: String?, subTitle: String? = null, group: String? = null)
             }
         }
     }

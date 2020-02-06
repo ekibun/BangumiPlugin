@@ -3,14 +3,12 @@ package soko.ekibun.bangumi.plugins.subject
 import android.content.Context
 import android.content.res.ColorStateList
 import android.view.View
-import com.chad.library.adapter.base.BaseQuickAdapter
-import com.chad.library.adapter.base.BaseViewHolder
 import com.zhy.adapter.abslistview.CommonAdapter
 import com.zhy.adapter.abslistview.ViewHolder
 import kotlinx.android.synthetic.main.item_provider.view.*
-import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
+import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
 class LineAdapter(val type: String, context: Context?, data: List<LineInfoModel.LineInfo>?) :
@@ -23,7 +21,7 @@ class LineAdapter(val type: String, context: Context?, data: List<LineInfoModel.
             if (position == selectIndex) R.attr.colorPrimary else android.R.attr.textColorSecondary)
         viewHolder.convertView.item_title.setTextColor(color)
         viewHolder.convertView.item_title.text = if(item.title.isEmpty()) item.id else item.title
-        val provider = App.from(viewHolder.convertView.context).lineProvider.getProvider(type, item.site)
+        val provider = LineProvider.getProvider(type, item.site)
         viewHolder.convertView.item_switch.visibility = View.GONE
         if(position<count-1){
             viewHolder.convertView.item_site.visibility = View.VISIBLE

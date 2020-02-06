@@ -5,9 +5,9 @@ import android.view.View
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.BaseViewHolder
 import kotlinx.android.synthetic.main.item_provider.view.*
-import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
+import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
 
 class DanmakuListAdapter(data: MutableList<DanmakuInfo>? = null) :
@@ -15,7 +15,7 @@ class DanmakuListAdapter(data: MutableList<DanmakuInfo>? = null) :
 
     override fun convert(helper: BaseViewHolder, item: DanmakuInfo) {
         helper.itemView.item_title.text = item.line.id
-        val providerInfo = App.from(helper.itemView.context).lineProvider.getProvider(Provider.TYPE_VIDEO, item.line.site)?:return
+        val providerInfo = LineProvider.getProvider(Provider.TYPE_VIDEO, item.line.site)?:return
         helper.itemView.item_switch.visibility = View.GONE
         helper.itemView.item_site.backgroundTintList = ColorStateList.valueOf((0xff000000 + providerInfo.color).toInt())
         helper.itemView.item_site.text = providerInfo.title

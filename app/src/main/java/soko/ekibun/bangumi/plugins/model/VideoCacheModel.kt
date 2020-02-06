@@ -1,19 +1,16 @@
 package soko.ekibun.bangumi.plugins.model
 
-import android.content.Context
-import androidx.preference.PreferenceManager
+import com.pl.sphelper.SPHelper
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.Subject
 import soko.ekibun.bangumi.plugins.bean.SubjectCache
 import soko.ekibun.bangumi.plugins.bean.VideoCache
 import soko.ekibun.bangumi.plugins.util.JsonUtil
-import kotlin.collections.HashMap
 
-class VideoCacheModel(context: Context) {
-    private val sp by lazy { PreferenceManager.getDefaultSharedPreferences(context)!! }
-    private val cacheList by lazy {
+object VideoCacheModel {
+    private val cacheList = {
         JsonUtil.toEntity<HashMap<String, SubjectCache>>(
-            sp.getString(
+            SPHelper.getString(
                 PREF_VIDEO_CACHE,
                 JsonUtil.toJson(HashMap<String, SubjectCache>())
             )!!
@@ -21,11 +18,11 @@ class VideoCacheModel(context: Context) {
     }
 
     fun getCacheList(site: String): List<SubjectCache> {
-        return cacheList.filter { it.key.startsWith(site) }.values.toList()
+        return cacheList().filter { it.key.startsWith(site) }.values.toList()
     }
 
     fun getSubjectCacheList(subject: Subject): SubjectCache? {
-        return cacheList[subject.prefKey]
+        return cacheList()[subject.prefKey]
     }
 
     fun getVideoCache(episode: Episode, subject: Subject): VideoCache? {
@@ -33,34 +30,30 @@ class VideoCacheModel(context: Context) {
     }
 
     fun addVideoCache(subject: Subject, cache: VideoCache) {
-        val editor = sp.edit()
+        val cacheList = cacheList()
         cacheList[subject.prefKey] = SubjectCache(
             subject,
             (cacheList[subject.prefKey]?.videoList ?: ArrayList()).filterNot { it.episode.id == cache.episode.id }.plus(
                 cache
             )
         )
-        editor.putString(PREF_VIDEO_CACHE, JsonUtil.toJson(cacheList))
-        editor.apply()
+        SPHelper.save(PREF_VIDEO_CACHE, JsonUtil.toJson(cacheList))
     }
 
     fun removeVideoCache(episode: Episode, subject: Subject) {
-        val editor = sp.edit()
+        val cacheList = cacheList()
         cacheList[subject.prefKey] = SubjectCache(
             subject,
             (cacheList[subject.prefKey]?.videoList ?: ArrayList()).filterNot { it.episode.id == episode.id })
         cacheList[subject.prefKey]?.let {
             if (it.videoList.isEmpty()) cacheList.remove(subject.prefKey)
         }
-        editor.putString(PREF_VIDEO_CACHE, JsonUtil.toJson(cacheList))
-        editor.apply()
+        SPHelper.save(PREF_VIDEO_CACHE, JsonUtil.toJson(cacheList))
     }
 
-    companion object {
-        const val PREF_VIDEO_CACHE = "videoCache"
+    const val PREF_VIDEO_CACHE = "videoCache"
 
-        fun isFinished(downloadPercentage: Float): Boolean {
-            return Math.abs(downloadPercentage - 100f) < 0.001f
-        }
+    fun isFinished(downloadPercentage: Float): Boolean {
+        return Math.abs(downloadPercentage - 100f) < 0.001f
     }
 }

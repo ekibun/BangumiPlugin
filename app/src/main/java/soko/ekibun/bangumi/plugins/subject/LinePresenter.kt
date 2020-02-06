@@ -105,7 +105,7 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
 
     var epCall: Pair<LineProvider.ProviderInfo, JsEngine.ScriptTask<List<MangaProvider.MangaEpisode>>>? = null
     fun refreshLines() {
-        val infos = app.lineInfoModel.getInfos(subject)
+        val infos = LineInfoModel.getInfos(subject)
 
         episodeAdapter.setOnItemChildClickListener { _, _, position ->
             pluginView.loadEp(episodeAdapter.data[position])
@@ -147,7 +147,7 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
                 position >= 0 -> infos.providers[position] = newInfo
                 else -> infos.providers.add(newInfo)
             }
-            app.lineInfoModel.saveInfos(subject, infos)
+            LineInfoModel.saveInfos(subject, infos)
         }
 
         val editLines = { info: LineInfoModel.LineInfo? ->
@@ -169,7 +169,7 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
             epLayout.visibility = if (showPlugin || subject.eps?.size ?: 0 > 0) View.VISIBLE else View.GONE
 
             if (defaultLine != null) {
-                val provider = app.lineProvider.getProvider(type, defaultLine.site)
+                val provider = LineProvider.getProvider(type, defaultLine.site)
                 epView.episodes_line_id.text = if (defaultLine.title.isEmpty()) defaultLine.id else defaultLine.title
                 epView.episodes_line_site.backgroundTintList =
                     ColorStateList.valueOf(((provider?.color ?: 0) + 0xff000000).toInt())
@@ -191,7 +191,7 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
                         if (position == lines.size - 1) editLines(null)
                         else {
                             infos.defaultProvider = position
-                            app.lineInfoModel.saveInfos(subject, infos)
+                            LineInfoModel.saveInfos(subject, infos)
                             epCall = null
                             refreshLines()
                         }
