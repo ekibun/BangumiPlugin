@@ -34,15 +34,15 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
                     linePresenter.episodeAdapter.data.indexOfFirst { it.manga == mangaAdapter.data.lastOrNull()?.ep }
                 linePresenter.episodeAdapter.data.getOrNull(curIndex - 1)?.let { ep ->
                     loadEp(ep, true) { view.item_pull_layout.responseRefresh(it) }
-                }
+                }?: view.item_pull_layout.responseRefresh(false)
             }
 
             override fun onLoadStart(pullLayout: PullLoadLayout?) {
                 val curIndex =
                     linePresenter.episodeAdapter.data.indexOfFirst { it.manga == mangaAdapter.data.lastOrNull()?.ep }
                 linePresenter.episodeAdapter.data.getOrNull(curIndex + 1)?.let { ep ->
-                    loadEp(ep, false) { view.item_pull_layout.responseload(it) }
-                }
+                    loadEp(ep, false) { view.item_pull_layout.responseLoad(it) }
+                }?: view.item_pull_layout.responseLoad(false)
 
             }
 
@@ -52,7 +52,7 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     override fun loadEp(episode: Episode) {
         mangaAdapter.setNewData(null)
         view.item_pull_layout.responseRefresh(false)
-        view.item_pull_layout.responseload(false)
+        view.item_pull_layout.responseLoad(false)
         view.visibility = View.VISIBLE
         loadEp(episode, false) {}
     }
@@ -62,9 +62,7 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         val provider =
             linePresenter.app.lineProvider.getProvider(Provider.TYPE_MANGA, ep?.site ?: "")?.provider as? MangaProvider
         if (ep == null || provider == null) {
-            view.item_manga.post {
-                callback(false)
-            }
+            callback(false)
             return
         }
         layoutManager.reset()

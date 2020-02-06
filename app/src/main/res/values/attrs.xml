@@ -1,5 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <attr name="colorPrimaryForeground" format="color" />
-    <attr name="colorPrimaryBackground" format="color" />
+    <attr name="colorPrimaryForeground" format="color"/>
+    <attr name="colorPrimaryBackground" format="color"/>
+
+    <declare-styleable name="PullLoadLayout">
+        <attr format="enum" name="refresh_mode">
+            <enum name="pull" value="0"/>
+            <enum name="flex" value="1"/>
+            <enum name="layer" value="2"/>
+            <enum name="dst" value="3"/>
+        </attr>
+        <attr format="enum" name="load_mode">
+            <enum name="pull" value="0"/>
+            <enum name="flex" value="1"/>
+            <enum name="layer" value="2"/>
+            <enum name="dst" value="3"/>
+        </attr>
+        <attr format="float" name="refresh_resistance"/>
+        <attr format="float" name="load_resistance"/>
+        <attr format="integer" name="refresh_close_during"/>
+        <attr format="integer" name="load_close_during"/>
+        <attr format="integer" name="refresh_result_during"/>
+        <attr format="integer" name="load_result_during"/>
+        <attr format="boolean" name="refresh_fixed"/>
+        <attr format="boolean" name="load_fixed"/>
+        <attr format="boolean" name="refresh_enable"/>
+        <attr format="boolean" name="load_enable"/>
+    </declare-styleable>
 </resources>

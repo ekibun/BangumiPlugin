@@ -51,7 +51,6 @@ dependencies {
     annotationProcessor 'com.github.bumptech.glide:compiler:4.10.0'
     implementation 'com.github.bumptech.glide:okhttp3-integration:4.10.0'
     implementation 'com.github.ctiao:DanmakuFlameMaster:0.9.25'
-    implementation 'com.tk.anythingpull:library:1.1'
     implementation 'com.google.android.exoplayer:exoplayer-core:2.11.1'
     implementation 'com.google.android.exoplayer:exoplayer-dash:2.11.1'
     implementation 'com.google.android.exoplayer:exoplayer-hls:2.11.1'

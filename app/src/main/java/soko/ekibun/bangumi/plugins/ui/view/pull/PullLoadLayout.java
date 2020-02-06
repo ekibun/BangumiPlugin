@@ -12,10 +12,8 @@ import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import androidx.annotation.IntDef;
-import com.tk.anythingpull.ILoad;
-import com.tk.anythingpull.IRefresh;
-import com.tk.anythingpull.Utils;
 import soko.ekibun.bangumi.plugins.R;
+import soko.ekibun.bangumi.plugins.util.ResourceUtil;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -180,24 +178,24 @@ public class PullLoadLayout extends ViewGroup {
 
     public PullLoadLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        @SuppressLint("CustomViewStyleable") TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.AnythingPullLayout);
+        @SuppressLint("CustomViewStyleable") TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.PullLoadLayout);
 
-        refreshMode = array.getInt(R.styleable.AnythingPullLayout_refresh_mode, MODE_PULL);
-        refreshResistance = array.getFloat(R.styleable.AnythingPullLayout_refresh_resistance, 1.6F);
-        refreshCloseDuring = array.getInt(R.styleable.AnythingPullLayout_refresh_close_during, 300);
-        refreshResultDuring = array.getInt(R.styleable.AnythingPullLayout_refresh_result_during, 750);
-        refreshFixed = array.getBoolean(R.styleable.AnythingPullLayout_refresh_fixed, false);
-        refreshEnable = array.getBoolean(R.styleable.AnythingPullLayout_refresh_enable, true);
+        refreshMode = array.getInt(R.styleable.PullLoadLayout_refresh_mode, MODE_PULL);
+        refreshResistance = array.getFloat(R.styleable.PullLoadLayout_refresh_resistance, 1.6F);
+        refreshCloseDuring = array.getInt(R.styleable.PullLoadLayout_refresh_close_during, 300);
+        refreshResultDuring = array.getInt(R.styleable.PullLoadLayout_refresh_result_during, 750);
+        refreshFixed = array.getBoolean(R.styleable.PullLoadLayout_refresh_fixed, false);
+        refreshEnable = array.getBoolean(R.styleable.PullLoadLayout_refresh_enable, true);
 
-        loadMode = array.getInt(R.styleable.AnythingPullLayout_load_mode, MODE_PULL);
-        loadResistance = array.getFloat(R.styleable.AnythingPullLayout_load_resistance, 1.6F);
-        loadCloseDuring = array.getInt(R.styleable.AnythingPullLayout_load_close_during, 300);
-        loadResultDuring = array.getInt(R.styleable.AnythingPullLayout_load_result_during, 750);
-        loadFixed = array.getBoolean(R.styleable.AnythingPullLayout_load_fixed, false);
-        loadEnable = array.getBoolean(R.styleable.AnythingPullLayout_load_enable, true);
+        loadMode = array.getInt(R.styleable.PullLoadLayout_load_mode, MODE_PULL);
+        loadResistance = array.getFloat(R.styleable.PullLoadLayout_load_resistance, 1.6F);
+        loadCloseDuring = array.getInt(R.styleable.PullLoadLayout_load_close_during, 300);
+        loadResultDuring = array.getInt(R.styleable.PullLoadLayout_load_result_during, 750);
+        loadFixed = array.getBoolean(R.styleable.PullLoadLayout_load_fixed, false);
+        loadEnable = array.getBoolean(R.styleable.PullLoadLayout_load_enable, true);
 
         array.recycle();
-        touchSlop = Utils.dp2px(1);
+        touchSlop = ResourceUtil.INSTANCE.dip2px(getContext(), 1);
     }
 
     @Override
@@ -364,6 +362,8 @@ public class PullLoadLayout extends ViewGroup {
     }
 
     private void onAnimEnd(final int animDirection, final int mode, final @Status int toStatus) {
+        int fromStatus = mStatus;
+        mStatus = toStatus;
         switch (toStatus) {
             case INIT:
                 if (animDirection == 1) {
@@ -379,7 +379,7 @@ public class PullLoadLayout extends ViewGroup {
                 }
                 break;
             case REFRESH_ING:
-                if (iRefresh != null && mStatus != REFRESH_ING && mStatus != REFRESH_RESULT) {
+                if (iRefresh != null && fromStatus != REFRESH_ING && fromStatus != REFRESH_RESULT) {
                     iRefresh.onRefreshStart();
                     iRefresh.onPositionChange(false, refreshViewHeight, toStatus);
                     if (onPullListener != null) {
@@ -388,7 +388,7 @@ public class PullLoadLayout extends ViewGroup {
                 }
                 break;
             case LOAD_ING:
-                if (iLoad != null && mStatus != LOAD_ING && mStatus != LOAD_RESULT) {
+                if (iLoad != null && fromStatus != LOAD_ING && fromStatus != LOAD_RESULT) {
                     iLoad.onLoadStart();
                     iLoad.onPositionChange(false, loadViewHeight, toStatus);
                     if (onPullListener != null) {
@@ -399,7 +399,6 @@ public class PullLoadLayout extends ViewGroup {
             default:
                 break;
         }
-        mStatus = toStatus;
     }
 
     @Override
@@ -767,7 +766,7 @@ public class PullLoadLayout extends ViewGroup {
      *
      * @param success
      */
-    public void responseload(boolean success) {
+    public void responseLoad(boolean success) {
         if (iLoad != null && mStatus == LOAD_ING) {
             iLoad.onLoadFinish(success);
             mStatus = LOAD_RESULT;

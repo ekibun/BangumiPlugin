@@ -71,7 +71,7 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
         epView.btn_detail.setOnClickListener {
             EpisodeListDialog.showDialog(this)
         }
-        proxy.subjectPresenter.subjectRefreshListener = { data ->
+        proxy.subjectPresenter.subjectRefreshListener = { _ ->
             val newSubject = proxy.subjectPresenter.subject
             subject.type = newSubject.type
             subject.eps = if(newSubject.eps?.size?:0 > 0) newSubject.eps else subject.eps

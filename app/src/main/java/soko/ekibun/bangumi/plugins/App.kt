@@ -9,7 +9,6 @@ import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.model.VideoCacheModel
 import soko.ekibun.bangumi.plugins.util.StorageUtil
 import java.util.concurrent.Executors
-import java.util.logging.Handler
 
 class App(val context: Context) {
     val handler = android.os.Handler { true }

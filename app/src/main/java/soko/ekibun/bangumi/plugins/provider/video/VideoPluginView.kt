@@ -134,7 +134,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         val maskShown =
             view.item_mask.visibility == View.VISIBLE || linePresenter.proxy.item_mask.visibility == View.VISIBLE
         linePresenter.proxy.app_bar.visibility = if (maskShown) View.VISIBLE else View.INVISIBLE
-        linePresenter.activity.window.decorView.systemUiVisibility = if (maskShown) View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+        linePresenter.activity.window.decorView.systemUiVisibility = if (!isLandscape || maskShown) View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                 (if (Build.VERSION.SDK_INT >= 26) View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION else 0)
         else (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -228,11 +228,10 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             }
 
             override fun onError(error: ExoPlaybackException) {
-//                Log.e("plugin", Log.getStackTraceString(error.sourceException))
-//                showVideoError("视频加载错误\n${error.sourceException.localizedMessage}", "重新加载"){
-//                    startAt = videoModel.player.currentPosition
-//                    videoModel.reload()
-//                }
+                showVideoError("视频加载错误\n${error.sourceException.localizedMessage}", "重新加载"){
+                    startAt = videoModel.player.currentPosition
+                    videoModel.reload()
+                }
             }
         })
     }

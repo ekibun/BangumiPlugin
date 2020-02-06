@@ -7,10 +7,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable
-import com.tk.anythingpull.AnythingPullLayout
-import com.tk.anythingpull.IAction
-import com.tk.anythingpull.ILoad
-import com.tk.anythingpull.IRefresh
 import kotlinx.android.synthetic.main.item_pull_load.view.*
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
@@ -35,7 +31,7 @@ abstract class PullLoadView constructor(context: Context, attrs: AttributeSet) :
 
     @SuppressLint("SwitchIntDef")
     override fun onPositionChange(touch: Boolean, distance: Int, status: Int) {
-        progressDrawable.arrowEnabled = status !in arrayOf(AnythingPullLayout.REFRESH_ING, AnythingPullLayout.LOAD_ING)
+        progressDrawable.arrowEnabled = status !in arrayOf(PullLoadLayout.REFRESH_ING, PullLoadLayout.LOAD_ING)
         if (progressDrawable.arrowEnabled){
             progressDrawable.alpha = Math.min(255, (distance * 255 / (1f + measuredHeight * 2f)).toInt())
             progressDrawable.setStartEndTrim(0f, Math.min(0.75f, distance / (1f + measuredHeight * 3f)))
@@ -44,11 +40,11 @@ abstract class PullLoadView constructor(context: Context, attrs: AttributeSet) :
             progressDrawable.alpha = 255
         }
         when(status){
-            AnythingPullLayout.TO_REFRESH, AnythingPullLayout.TO_LOAD -> view.item_hint.text = "释放加载"
-            AnythingPullLayout.REFRESH_ING, AnythingPullLayout.LOAD_ING -> view.item_hint.text = "加载中..."
-            AnythingPullLayout.PRE_REFRESH, AnythingPullLayout.PRE_LOAD -> view.item_hint.text = hint
+            PullLoadLayout.TO_REFRESH, PullLoadLayout.TO_LOAD -> view.item_hint.text = "释放加载"
+            PullLoadLayout.REFRESH_ING, PullLoadLayout.LOAD_ING -> view.item_hint.text = "加载中..."
+            PullLoadLayout.PRE_REFRESH, PullLoadLayout.PRE_LOAD -> view.item_hint.text = hint
         }
-        if (status == AnythingPullLayout.TO_REFRESH) view.item_hint.text = "释放加载"
+        if (status == PullLoadLayout.TO_REFRESH) view.item_hint.text = "释放加载"
     }
 
     fun onPullLoadFinish(success: Boolean) {
