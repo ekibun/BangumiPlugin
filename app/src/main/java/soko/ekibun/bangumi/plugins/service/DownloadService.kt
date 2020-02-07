@@ -2,19 +2,17 @@ package soko.ekibun.bangumi.plugins.service
 
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.Service
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.AsyncTask
-import android.os.IBinder
 import android.text.format.Formatter
 import android.util.Log
 import com.google.android.exoplayer2.offline.DefaultDownloaderFactory
 import com.google.android.exoplayer2.offline.DownloadRequest
 import com.google.android.exoplayer2.offline.Downloader
 import com.google.android.exoplayer2.offline.DownloaderConstructorHelper
-import com.pl.sphelper.SPHelper
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
@@ -26,13 +24,10 @@ import soko.ekibun.bangumi.plugins.util.AppUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import soko.ekibun.bangumi.plugins.util.NotificationUtil
 
-class DownloadService : Service() {
-    private val manager by lazy { getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager }
+class DownloadService(val app: Context, val pluginContext: Context) {
+    private val manager = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private val taskCollection = HashMap<String, DownloadTask>()
-
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
-    }
+    private val videoCacheModel by lazy { App.from(pluginContext).videoCacheModel }
 
     private fun getTaskKey(episode: Episode, subject: Subject): String{
         return subject.prefKey + "_${episode.id}"
@@ -40,7 +35,7 @@ class DownloadService : Service() {
 
     private fun getGroupSummary(status: Int): String{
         val groupKey = "download"
-        manager.notify(0, NotificationUtil.builder(this, downloadChannelId, "下载")
+        manager.notify(0, NotificationUtil.builder(app, downloadChannelId, "下载")
             .setSmallIcon(when(status) {
                 0 -> R.drawable.offline_pin
                 -1 -> R.drawable.ic_pause
@@ -54,8 +49,7 @@ class DownloadService : Service() {
         return groupKey
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        SPHelper.init(applicationContext)
+    fun onStartCommand(intent: Intent?, flags: Int, startId: Int) {
         intent?.let {request ->
             val episode = JsonUtil.toEntity<Episode>(request.getStringExtra(EXTRA_EPISODE)?:"")?:return@let
             val subject = JsonUtil.toEntity<Subject>(request.getStringExtra(EXTRA_SUBJECT)?:"")?:return@let
@@ -68,19 +62,19 @@ class DownloadService : Service() {
                         taskCollection.remove(taskKey)
                         task.cancel(true)
                         sendBroadcast(episode, subject, task.percentDownloaded, task.bytesDownloaded, true)
-                        val pIntent = PendingIntent.getActivity(this@DownloadService, taskKey.hashCode(),
+                        val pIntent = PendingIntent.getActivity(app, taskKey.hashCode(),
                             AppUtil.parseSubjectActivityIntent(subject), PendingIntent.FLAG_UPDATE_CURRENT)
-                        manager.notify(taskKey, 0, NotificationUtil.builder(this@DownloadService, downloadChannelId, "下载")
+                        manager.notify(taskKey, 0, NotificationUtil.builder(app, downloadChannelId, "下载")
                             .setSmallIcon(R.drawable.ic_pause)
                             .setOngoing(false)
                             .setAutoCancel(true)
                             .setGroup(this@DownloadService.getGroupSummary(-1))
-                            .setContentTitle("已暂停 ${subject.name} ${episode.parseSort(this)}")
-                            .setContentText(parseDownloadInfo(this@DownloadService, task.percentDownloaded, task.bytesDownloaded))
+                            .setContentTitle("已暂停 ${subject.name} ${episode.parseSort(pluginContext)}")
+                            .setContentText(parseDownloadInfo(pluginContext, task.percentDownloaded, task.bytesDownloaded))
                             .setContentIntent(pIntent).build())
                     }else{
                         val videoCache = JsonUtil.toEntity<VideoCache>(intent.getStringExtra(EXTRA_VIDEO_CACHE)?:"")?:return@let
-                        VideoCacheModel.addVideoCache(subject, videoCache)
+                        videoCacheModel.addVideoCache(subject, videoCache)
                         val newTask = DownloadTask(createDownloader(videoCache)) {mTask ->
                             val status = taskCollection.filter { !VideoCacheModel.isFinished(it.value.percentDownloaded) }.size
 
@@ -91,18 +85,18 @@ class DownloadService : Service() {
                             videoCache.bytesDownloaded = mTask.bytesDownloaded
                             videoCache.percentDownloaded = mTask.percentDownloaded
 
-                            VideoCacheModel.addVideoCache(subject, videoCache)
+                            videoCacheModel.addVideoCache(subject, videoCache)
 
                             sendBroadcast(episode, subject, mTask.percentDownloaded, mTask.bytesDownloaded)
-                            val pIntent = PendingIntent.getActivity(this@DownloadService, taskKey.hashCode(),
+                            val pIntent = PendingIntent.getActivity(app, taskKey.hashCode(),
                                 AppUtil.parseSubjectActivityIntent(subject), PendingIntent.FLAG_UPDATE_CURRENT)
-                            manager.notify(taskKey, 0, NotificationUtil.builder(this@DownloadService, downloadChannelId, "下载")
+                            manager.notify(taskKey, 0, NotificationUtil.builder(app, downloadChannelId, "下载")
                                 .setSmallIcon(if(isFinished) R.drawable.offline_pin else android.R.drawable.stat_sys_download)
                                 .setOngoing(!isFinished)
                                 .setAutoCancel(true)
                                 .setGroup(this@DownloadService.getGroupSummary(status))
-                                .setContentTitle((if(isFinished)"已完成 " else "") + "${subject.name} ${episode.parseSort(this)}")
-                                .setContentText(if(isFinished)Formatter.formatFileSize(this@DownloadService, mTask.bytesDownloaded) else parseDownloadInfo(this@DownloadService, mTask.percentDownloaded, mTask.bytesDownloaded))
+                                .setContentTitle((if(isFinished)"已完成 " else "") + "${subject.name} ${episode.parseSort(pluginContext)}")
+                                .setContentText(if(isFinished)Formatter.formatFileSize(pluginContext, mTask.bytesDownloaded) else parseDownloadInfo(pluginContext, mTask.percentDownloaded, mTask.bytesDownloaded))
                                 .let{ if(!isFinished) it.setProgress(10000, (mTask.percentDownloaded * 100).toInt(), mTask.bytesDownloaded == 0L)
                                     it }
                                 .setContentIntent(pIntent).build())
@@ -120,20 +114,18 @@ class DownloadService : Service() {
                     if(taskCollection.isEmpty())
                         manager.cancel(0)
 
-                    val videoCache = VideoCacheModel.getVideoCache(episode, subject)?:return@let
-                    createDownloader(videoCache).remove()
-                    VideoCacheModel.removeVideoCache(episode, subject)
-
                     sendBroadcast(episode, subject, Float.NaN, 0, false)
+                    val videoCache = videoCacheModel.getVideoCache(episode, subject)?:return@let
+                    createDownloader(videoCache).remove()
+                    videoCacheModel.removeVideoCache(episode, subject)
                 }
             }
         }
-        return super.onStartCommand(intent, flags, startId)
     }
 
     private fun createDownloader(videoCache: VideoCache): Downloader{
-        val dataSourceFactory = VideoModel.createDataSourceFactory(this, videoCache.video, true)
-        val downloaderFactory = DefaultDownloaderFactory(DownloaderConstructorHelper(App.from(this).downloadCache, dataSourceFactory))
+        val dataSourceFactory = VideoModel.createDataSourceFactory(pluginContext, videoCache.video, true)
+        val downloaderFactory = DefaultDownloaderFactory(DownloaderConstructorHelper(App.from(pluginContext).downloadCache, dataSourceFactory))
         return downloaderFactory.createDownloader(DownloadRequest(videoCache.video.url, videoCache.type, Uri.parse(videoCache.video.url), videoCache.streamKeys, null, null))
     }
 
@@ -143,7 +135,7 @@ class DownloadService : Service() {
         broadcastIntent.putExtra(EXTRA_PERCENT, percent)
         broadcastIntent.putExtra(EXTRA_BYTES, bytes)
         hasCache?.let{ broadcastIntent.putExtra(EXTRA_CANCEL, it) }
-        sendBroadcast(broadcastIntent)
+        app.sendBroadcast(broadcastIntent)
     }
 
     class DownloadTask(private val downloader: Downloader, val update: (DownloadTask)->Unit): AsyncTask<Unit, Unit, Unit>(){
@@ -205,8 +197,11 @@ class DownloadService : Service() {
             return "${Formatter.formatFileSize(context, bytes)}/${Formatter.formatFileSize(context, (bytes * 100 / percent).toLong())}"
         }
 
+        val serviceComp = ComponentName("soko.ekibun.bangumi", "soko.ekibun.bangumi.RemoteService")
+
         fun download(context: Context, episode: Episode, subject: Subject, videoCache: VideoCache){
-            val intent = Intent(context, DownloadService::class.java)
+            val intent = Intent()
+            intent.component = serviceComp
             intent.action = ACTION_DOWNLOAD
             intent.putExtra(EXTRA_SUBJECT, JsonUtil.toJson(subject))
             intent.putExtra(EXTRA_EPISODE, JsonUtil.toJson(episode))
@@ -214,7 +209,8 @@ class DownloadService : Service() {
             context.startService(intent)
         }
         fun remove(context: Context, episode: Episode, subject: Subject){
-            val intent = Intent(context, DownloadService::class.java)
+            val intent = Intent()
+            intent.component = serviceComp
             intent.action = ACTION_REMOVE
             intent.putExtra(EXTRA_SUBJECT, JsonUtil.toJson(subject))
             intent.putExtra(EXTRA_EPISODE, JsonUtil.toJson(episode))

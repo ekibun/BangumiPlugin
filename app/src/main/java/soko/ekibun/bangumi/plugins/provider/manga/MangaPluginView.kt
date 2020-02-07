@@ -7,7 +7,6 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.android.synthetic.main.plugin_manga.view.*
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
-import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.ui.view.ScalableLayoutManager
@@ -76,7 +75,7 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     fun loadEp(episode: Episode, isPrev: Boolean, callback: (Boolean) -> Unit) {
         val ep = episode.manga
         val provider =
-            LineProvider.getProvider(Provider.TYPE_MANGA, ep?.site ?: "")?.provider as? MangaProvider
+            linePresenter.app.lineProvider.getProvider(Provider.TYPE_MANGA, ep?.site ?: "")?.provider as? MangaProvider
         if (ep == null || provider == null) {
             callback(false)
             return

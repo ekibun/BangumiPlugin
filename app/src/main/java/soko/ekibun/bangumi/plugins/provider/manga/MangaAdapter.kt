@@ -6,7 +6,6 @@ import com.chad.library.adapter.base.BaseViewHolder
 import kotlinx.android.synthetic.main.item_image.view.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
-import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.util.GlideUtil
@@ -37,7 +36,7 @@ class MangaAdapter(private val linePresenter: LinePresenter, data: MutableList<M
         if(imageRequest != null){
             setImage(helper, item, imageRequest)
         }else{
-            (LineProvider.getProvider(Provider.TYPE_MANGA, item.site?:"")?.provider as? MangaProvider)?.getImage("${item.site}_${item.id}", jsEngine, item)?.enqueue({
+            (linePresenter.app.lineProvider.getProvider(Provider.TYPE_MANGA, item.site?:"")?.provider as? MangaProvider)?.getImage("${item.site}_${item.id}", jsEngine, item)?.enqueue({
                 requests[item] = it
                 setImage(helper, item, it)
             }, {

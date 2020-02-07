@@ -8,9 +8,8 @@ import com.chad.library.adapter.base.BaseViewHolder
 import kotlinx.android.synthetic.main.item_provider.view.*
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
-import soko.ekibun.bangumi.plugins.model.LineProvider
 
-class SearchLineAdapter(val type: String, data: MutableList<LineInfoModel.LineInfo>? = null) :
+class SearchLineAdapter(val linePresenter: LinePresenter, data: MutableList<LineInfoModel.LineInfo>? = null) :
     BaseQuickAdapter<LineInfoModel.LineInfo, BaseViewHolder>(R.layout.item_provider, data) {
     var lines: LineInfoModel.LineInfoList? = null
 
@@ -23,7 +22,7 @@ class SearchLineAdapter(val type: String, data: MutableList<LineInfoModel.LineIn
 
         helper.itemView.item_switch.visibility = View.GONE
         helper.itemView.item_title.text = (if(exist) "[已存在] " else "") +if(item.title.isEmpty()) item.id else item.title
-        val provider = LineProvider.getProvider(type, item.site)
+        val provider = linePresenter.app.lineProvider.getProvider(linePresenter.type, item.site)
         helper.itemView.item_site.backgroundTintList = ColorStateList.valueOf(((provider?.color?:0) + 0xff000000).toInt())
         helper.itemView.item_site.text = provider?.title?:{ if(item.site == "") "线路" else "错误接口" }()
         helper.itemView.item_id.text = item.id

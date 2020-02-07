@@ -17,7 +17,6 @@ import soko.ekibun.bangumi.plugins.JsEngine
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
-import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
@@ -40,7 +39,7 @@ class DanmakuPresenter(
             field = value
             updateValue()
         }
-    private val adapter = DanmakuListAdapter()
+    private val adapter = DanmakuListAdapter(linePresenter)
 
     init {
         val overlappingEnablePair = HashMap<Int, Boolean>()
@@ -223,7 +222,7 @@ class DanmakuPresenter(
     }
 
     private fun loadDanmaku(danmakuInfo: DanmakuListAdapter.DanmakuInfo, episode: Episode) {
-        val provider = LineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider ?: return
+        val provider = linePresenter.app.lineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider ?: return
         when {
             danmakuInfo.videoInfo == null -> {
                 danmakuInfo.info = " 获取视频信息..."
@@ -267,7 +266,7 @@ class DanmakuPresenter(
     }
 
     private fun doAdd(pos: Long, danmakuInfo: DanmakuListAdapter.DanmakuInfo) {
-        val provider = LineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider ?: return
+        val provider = linePresenter.app.lineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider ?: return
         val call = provider.getDanmaku(
             "getDanmakuKey(${danmakuInfo.videoInfo}, ${danmakuInfo.key}, ${pos / 1000})",
             linePresenter.app.jsEngine,

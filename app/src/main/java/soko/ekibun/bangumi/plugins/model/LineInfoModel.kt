@@ -1,10 +1,12 @@
 package soko.ekibun.bangumi.plugins.model
 
-import com.pl.sphelper.SPHelper
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.preference.PreferenceManager
 import soko.ekibun.bangumi.plugins.bean.Subject
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 
-object LineInfoModel {
+class LineInfoModel(context: Context){
     data class LineInfo(
         var site: String,
         var id: String,
@@ -21,17 +23,27 @@ object LineInfoModel {
         }
     }
 
+    val sp: SharedPreferences by lazy{ PreferenceManager.getDefaultSharedPreferences(context) }
     private fun prefKey(subject: Subject): String {
         return "${PREF_LINE_INFO_LIST}_${subject.prefKey}"
     }
 
     fun saveInfos(subject: Subject, infos: LineInfoList) {
-        SPHelper.save(prefKey(subject), JsonUtil.toJson(infos))
+        val editor = sp.edit()
+        val key = prefKey(subject)
+        if(infos.providers.size == 0){
+            editor.remove(key)
+        }else{
+            editor.putString(key, JsonUtil.toJson(infos))
+        }
+        editor.apply()
     }
 
     fun getInfos(subject: Subject): LineInfoList? {
-        return JsonUtil.toEntity<LineInfoList>(SPHelper.getString(prefKey(subject), JsonUtil.toJson(LineInfoList()))!!)
+        return JsonUtil.toEntity<LineInfoList>(sp.getString(prefKey(subject), JsonUtil.toJson(LineInfoList()))!!)
     }
 
-    const val PREF_LINE_INFO_LIST = "lineInfoList"
+    companion object{
+        const val PREF_LINE_INFO_LIST="lineInfoList"
+    }
 }

@@ -11,8 +11,6 @@ import kotlinx.android.synthetic.main.dialog_episode_list.view.*
 import kotlinx.android.synthetic.main.item_episode.view.*
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.VideoCache
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
-import soko.ekibun.bangumi.plugins.model.VideoCacheModel
 import soko.ekibun.bangumi.plugins.provider.video.VideoPluginView
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.ui.view.BasePluginDialog
@@ -37,7 +35,6 @@ class EpisodeListDialog(private val linePresenter: LinePresenter, val adapter: E
     @SuppressLint("SetTextI18n", "InflateParams")
     override fun onViewCreated(view: View) {
         val behavior = BottomSheetBehavior.from(view.bottom_sheet)
-        var offset = 0f
         behavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
             @SuppressLint("SwitchIntDef")
             override fun onStateChanged(bottomSheet: View, @BottomSheetBehavior.State newState: Int) {
@@ -45,7 +42,6 @@ class EpisodeListDialog(private val linePresenter: LinePresenter, val adapter: E
             }
 
             override fun onSlide(bottomSheet: View, slideOffset: Float) { /* no-op */
-                offset = slideOffset
             }
         })
 
@@ -60,14 +56,14 @@ class EpisodeListDialog(private val linePresenter: LinePresenter, val adapter: E
 
         adapter.setOnItemChildLongClickListener { _, _, position ->
             val item = linePresenter.subjectView.episodeDetailAdapter.data[position]
-            val videoCache = VideoCacheModel.getVideoCache(item.t, linePresenter.subject)
+            val videoCache = linePresenter.app.videoCacheModel.getVideoCache(item.t, linePresenter.subject)
             if(videoCache != null) DownloadService.remove(linePresenter.pluginContext, item.t, linePresenter.subject)
             true
         }
 
         adapter.setOnItemChildClickListener { _, _, position ->
             val item = linePresenter.subjectView.episodeDetailAdapter.data[position]
-            val info = LineInfoModel.getInfos(linePresenter.subject)?.getDefaultProvider()?:return@setOnItemChildClickListener
+            val info = linePresenter.app.lineInfoModel.getInfos(linePresenter.subject)?.getDefaultProvider()?:return@setOnItemChildClickListener
             linePresenter.subjectView.episodeDetailAdapter.getViewByPosition(position, R.id.item_layout)?.let{
                 it.item_download_info.text = "获取视频信息"
             }

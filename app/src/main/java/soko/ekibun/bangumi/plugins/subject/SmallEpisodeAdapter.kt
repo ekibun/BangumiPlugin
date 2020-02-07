@@ -50,7 +50,7 @@ class SmallEpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<Ep
         helper.addOnClickListener(R.id.item_container)
         helper.addOnLongClickListener(R.id.item_container)
 
-        val videoCache = VideoCacheModel.getVideoCache(item, linePresenter.subject)
+        val videoCache = linePresenter.app.videoCacheModel.getVideoCache(item, linePresenter.subject)
         updateDownload(helper.itemView, videoCache?.percentDownloaded?: Float.NaN, videoCache?.bytesDownloaded?:0L, videoCache != null)
     }
     fun updateDownload(view: View, percent: Float, bytes: Long, hasCache: Boolean, download: Boolean = false){

@@ -20,13 +20,5 @@
         <activity
                 android:name=".ui.provider.ProviderActivity"
                 android:label="@string/provide_activity_label"/>
-
-        <service
-                android:name=".service.DownloadService"
-                android:exported="false"/>
-
-        <provider
-                android:authorities="soko.ekibun.bangumi.plugin"
-                android:name="com.pl.sphelper.SPContentProvider"/>
     </application>
 </manifest>

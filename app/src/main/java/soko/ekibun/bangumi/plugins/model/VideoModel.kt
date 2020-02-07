@@ -83,12 +83,12 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
         onCheckNetwork: (() -> Unit) -> Unit
     ) {
         //val videoCache = videoCacheModel.getCache(episode, subject)
-        val videoCache = VideoCacheModel.getVideoCache(episode, linePresenter.subject)
+        val videoCache = linePresenter.app.videoCacheModel.getVideoCache(episode, linePresenter.subject)
         if (videoCache != null) {
             onGetVideoInfo(VideoProvider.VideoInfo("", videoCache.video.url, videoCache.video.url), null)
             onGetVideo(videoCache.video, videoCache.streamKeys, null)
         } else {
-            val provider = LineProvider.getProvider(
+            val provider = linePresenter.app.lineProvider.getProvider(
                 Provider.TYPE_VIDEO,
                 info?.site ?: ""
             )?.provider as? VideoProvider
@@ -118,7 +118,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
                         onGetVideo(HttpUtil.HttpRequest(video.url), null, null)
                         return@enqueue
                     }
-                    val videoProvider = LineProvider.getProvider(
+                    val videoProvider = linePresenter.app.lineProvider.getProvider(
                         Provider.TYPE_VIDEO,
                         video.site
                     )?.provider as VideoProvider

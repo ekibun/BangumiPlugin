@@ -8,10 +8,9 @@ import com.zhy.adapter.abslistview.ViewHolder
 import kotlinx.android.synthetic.main.item_provider.view.*
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
-import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
-class LineAdapter(val type: String, context: Context?, data: List<LineInfoModel.LineInfo>?) :
+class LineAdapter(val linePresenter: LinePresenter, val type: String, context: Context?, data: List<LineInfoModel.LineInfo>?) :
     CommonAdapter<LineInfoModel.LineInfo>(context, R.layout.item_provider, data) {
     var selectIndex = 0
 
@@ -21,7 +20,7 @@ class LineAdapter(val type: String, context: Context?, data: List<LineInfoModel.
             if (position == selectIndex) R.attr.colorPrimary else android.R.attr.textColorSecondary)
         viewHolder.convertView.item_title.setTextColor(color)
         viewHolder.convertView.item_title.text = if(item.title.isEmpty()) item.id else item.title
-        val provider = LineProvider.getProvider(type, item.site)
+        val provider = linePresenter.app.lineProvider.getProvider(type, item.site)
         viewHolder.convertView.item_switch.visibility = View.GONE
         if(position<count-1){
             viewHolder.convertView.item_site.visibility = View.VISIBLE

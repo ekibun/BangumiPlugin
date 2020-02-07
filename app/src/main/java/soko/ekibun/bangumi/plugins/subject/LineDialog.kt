@@ -76,7 +76,8 @@ class LineDialog(private val linePresenter: LinePresenter) :
                 LineInfoModel.LineInfo(
                     site = provider.site,
                     id = view.item_video_id.text.toString(),
-                    title = view.item_video_title.text.toString()
+                    title = view.item_video_title.text.toString(),
+                    extra = view.item_video_extra.text.toString()
                 )
             )
             dismiss()
@@ -91,7 +92,7 @@ class LineDialog(private val linePresenter: LinePresenter) :
             val popList = ListPopupWindow(context)
             popList.anchorView = view.item_line
             val providerList: ArrayList<LineProvider.ProviderInfo> =
-                ArrayList(LineProvider.providerList().values.filter { it.type == linePresenter.type })
+                ArrayList(linePresenter.app.lineProvider.providerList.values.filter { it.type == linePresenter.type })
 
             providerList.add(0, emptyProvider)
             providerList.add(LineProvider.ProviderInfo("", 0, "添加..."))
@@ -107,7 +108,7 @@ class LineDialog(private val linePresenter: LinePresenter) :
                         //doAdd
                         linePresenter.loadProvider(linePresenter.type, null) {
                             if (it == null) return@loadProvider
-                            LineProvider.addProvider(it)
+                            linePresenter.app.lineProvider.addProvider(it)
                             view.item_line.text = it.title
                             view.item_line.tag = it
                             updateProvider(view)
@@ -118,7 +119,7 @@ class LineDialog(private val linePresenter: LinePresenter) :
                         clipboardManager.setPrimaryClip(
                             ClipData.newPlainText(
                                 "videoplayer.providerInfo",
-                                JsonUtil.toJson(LineProvider.providerList().values)
+                                JsonUtil.toJson(linePresenter.app.lineProvider.providerList.values)
                             )
                         )
                         Toast.makeText(view.context, "数据已导出至剪贴板", Toast.LENGTH_SHORT).show()
@@ -131,13 +132,13 @@ class LineDialog(private val linePresenter: LinePresenter) :
                                     info.type = linePresenter.type
                                 }
                             }
-                            val oldProvider = LineProvider.getProvider(linePresenter.type, providerInfo.site)
+                            val oldProvider = linePresenter.app.lineProvider.getProvider(linePresenter.type, providerInfo.site)
                             if (oldProvider != null)
                                 AlertDialog.Builder(context).setMessage("接口 ${providerInfo.title}(${providerInfo.site}) 与现有接口 ${oldProvider.title}(${oldProvider.site}) 重复")
                                     .setPositiveButton("替换") { _: DialogInterface, _: Int ->
-                                        LineProvider.addProvider(providerInfo)
+                                        linePresenter.app.lineProvider.addProvider(providerInfo)
                                     }.setNegativeButton("取消") { _: DialogInterface, _: Int -> }.show()
-                            else LineProvider.addProvider(providerInfo)
+                            else linePresenter.app.lineProvider.addProvider(providerInfo)
                         }
                         //inport
                         JsonUtil.toEntity<List<JsonObject>>(
@@ -165,8 +166,8 @@ class LineDialog(private val linePresenter: LinePresenter) :
                 //edit
                 val info = providerList[position]
                 linePresenter.loadProvider(linePresenter.type, info) {
-                    LineProvider.removeProvider(info)
-                    if (it != null) LineProvider.addProvider(it)
+                    linePresenter.app.lineProvider.removeProvider(info)
+                    if (it != null) linePresenter.app.lineProvider.addProvider(it)
                     updateProvider(view)
                 }
                 true
@@ -176,14 +177,11 @@ class LineDialog(private val linePresenter: LinePresenter) :
     }
 
     private fun updateInfo(view: View, info: LineInfoModel.LineInfo) {
-        val provider = LineProvider.getProvider(linePresenter.type, info.site) ?: emptyProvider
+        val provider = linePresenter.app.lineProvider.getProvider(linePresenter.type, info.site) ?: emptyProvider
         view.item_line.text = provider.title
         view.item_line.tag = provider
         view.item_video_id.setText(info.id)
         view.item_video_title.setText(info.title)
-//        view.item_video_offset.setText(info.offset.toString())
-//        view.item_load_danmaku.visibility = if(provider is VideoProvider.ProviderInfo) View.VISIBLE else View.GONE
-//        view.item_load_danmaku.isEnabled = (provider as? VideoProvider.ProviderInfo)?.hasDanmaku?:false
-//        view.item_load_danmaku.isChecked = info.loadDanmaku
+        view.item_video_extra.setText(info.extra)
     }
 }
