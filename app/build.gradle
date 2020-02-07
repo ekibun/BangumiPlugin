@@ -56,4 +56,5 @@ dependencies {
     implementation 'com.google.android.exoplayer:exoplayer-hls:2.11.1'
     implementation 'com.google.android.exoplayer:exoplayer-smoothstreaming:2.11.1'
     implementation 'com.oushangfeng:PinnedSectionItemDecoration:1.3.2'
+    implementation 'com.github.siyamed:android-shape-imageview:0.9.3'
 }

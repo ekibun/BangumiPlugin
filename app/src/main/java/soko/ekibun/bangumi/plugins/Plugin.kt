@@ -6,14 +6,16 @@ import android.content.Intent
 import android.util.Log
 import androidx.annotation.Keep
 import androidx.appcompat.view.ContextThemeWrapper
+import soko.ekibun.bangumi.plugins.main.MainActivityPlugin
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.subject.SubjectActivityPlugin
 import soko.ekibun.bangumi.plugins.util.ReflectUtil
 
 @Keep
 object Plugin {
-    private val pluginList = mapOf<String, ActivityPlugin>(
-        "soko.ekibun.bangumi.ui.subject.SubjectActivity" to SubjectActivityPlugin()
+    private val pluginList = mapOf(
+        "soko.ekibun.bangumi.ui.subject.SubjectActivity" to SubjectActivityPlugin(),
+        "soko.ekibun.bangumi.ui.main.MainActivity" to MainActivityPlugin()
     )
 
     private var downloadService: DownloadService? = null

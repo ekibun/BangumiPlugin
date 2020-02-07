@@ -7,6 +7,7 @@ data class Subject(
     @SubjectType var type: String = TYPE_ANY,
     var name: String? = null,
     var name_cn: String? = null,
+    var image: String? = null,
     var eps: List<Episode>? = null,
     var eps_count: Int = 0,
     var vol_count: Int = 0,

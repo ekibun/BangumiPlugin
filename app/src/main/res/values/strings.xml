@@ -28,4 +28,6 @@
     <string name="hint_air_nothing">尚未开播</string>
     <string name="parse_update_to">更新到%1$s</string>
     <string name="phrase_full_eps">全 %1$d 话</string>
+
+    <string name="parse_cache_eps">已缓存 %1$d 话</string>
 </resources>

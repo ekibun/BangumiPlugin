@@ -19,8 +19,8 @@ class VideoCacheModel(context: Context) {
         ) ?: HashMap()
     }
 
-    fun getCacheList(site: String): List<SubjectCache> {
-        return cacheList.filter { it.key.startsWith(site) }.values.toList()
+    fun getCacheList(): List<SubjectCache> {
+        return cacheList.values.toList()
     }
 
     fun getSubjectCacheList(subject: Subject): SubjectCache? {
