@@ -30,6 +30,9 @@ class MainPresenter(val activity: Activity, val pluginContext: Context) {
     }
 
     init {
+        val emptyView =
+            LayoutInflater.from(activity).inflate(ResourceUtil.getResId(activity, "layout", "view_empty"), null)
+        adapter.emptyView = emptyView
         adapter.setOnItemClickListener { _, _, position ->
             activity.startActivity(AppUtil.parseSubjectActivityIntent(adapter.data[position].subject))
         }
@@ -39,6 +42,7 @@ class MainPresenter(val activity: Activity, val pluginContext: Context) {
             updateData()
         }
         contentFrame.addView(view)
+        view.visibility = View.INVISIBLE
 
         val menu =
             nav_view.menu.add(ResourceUtil.getId(activity, "group1"), Menu.FIRST, Menu.NONE, "离线缓存")
