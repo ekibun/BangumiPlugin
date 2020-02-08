@@ -21,7 +21,8 @@ class SearchLineAdapter(val linePresenter: LinePresenter, data: MutableList<Line
         helper.itemView.item_id.alpha = helper.itemView.item_title.alpha
 
         helper.itemView.item_switch.visibility = View.GONE
-        helper.itemView.item_title.text = (if(exist) "[已存在] " else "") +if(item.title.isEmpty()) item.id else item.title
+        helper.itemView.item_title.text =
+            (if (exist) "[已添加] " else "") + if (item.title.isEmpty()) item.id else item.title
         val provider = linePresenter.app.lineProvider.getProvider(linePresenter.type, item.site)
         helper.itemView.item_site.backgroundTintList = ColorStateList.valueOf(((provider?.color?:0) + 0xff000000).toInt())
         helper.itemView.item_site.text = provider?.title?:{ if(item.site == "") "线路" else "错误接口" }()

@@ -33,8 +33,8 @@ class MainPresenter(val activity: Activity, val pluginContext: Context) {
         adapter.setOnItemClickListener { _, _, position ->
             activity.startActivity(AppUtil.parseSubjectActivityIntent(adapter.data[position].subject))
         }
-        view.item_list.adapter = adapter
-        view.item_list.layoutManager = LinearLayoutManager(pluginContext)
+        view.list_download.adapter = adapter
+        view.list_download.layoutManager = LinearLayoutManager(pluginContext)
         view.setOnRefreshListener {
             updateData()
         }
@@ -57,6 +57,14 @@ class MainPresenter(val activity: Activity, val pluginContext: Context) {
                 view.visibility = View.INVISIBLE
             }
             superListener(it)
+        }
+        val superBack = proxy.onBackListener
+        proxy.onBackListener = {
+            if (menu.isChecked) {
+                proxy.mainPresenter.drawerView.select(ResourceUtil.getId(activity, "nav_home"))
+                view.visibility = View.INVISIBLE
+                true
+            } else superBack()
         }
     }
 }

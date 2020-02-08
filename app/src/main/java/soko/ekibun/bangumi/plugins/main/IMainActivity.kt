@@ -10,6 +10,8 @@ interface IMainActivity {
     val content_frame: FrameLayout
     val mainPresenter: IMainPresenter
 
+    var onBackListener: () -> Boolean
+
     interface INavigationView {
         val menu: Menu
         fun setCheckedItem(id: Int)
@@ -21,5 +23,6 @@ interface IMainActivity {
 
     interface IDrawerView {
         var navigationItemSelectedListener: (MenuItem) -> Boolean
+        fun select(id: Int)
     }
 }

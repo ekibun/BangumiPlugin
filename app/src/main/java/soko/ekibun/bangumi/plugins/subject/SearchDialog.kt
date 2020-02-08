@@ -31,7 +31,7 @@ class SearchDialog(private val linePresenter: LinePresenter) :
 
     lateinit var callback: (LineInfoModel.LineInfo?, LineInfoModel.LineInfo?) -> Unit
     override fun onViewCreated(view: View) {
-        val subject = linePresenter.subject
+        val subject = linePresenter.proxy.subjectPresenter.subject
         view.item_search_key.setText(subject.displayName)
         view.list_search.layoutManager = LinearLayoutManager(context)
 

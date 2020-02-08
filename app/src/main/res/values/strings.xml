@@ -4,10 +4,8 @@
     <string name="provide_activity_label">编辑接口</string>
 
     <string name="episode_status_watch">看过</string>
-    <string name="episode_status_watch_to">看到</string>
     <string name="episode_status_wish">想看</string>
     <string name="episode_status_drop">抛弃</string>
-    <string name="episode_status_remove">未看</string>
 
     <string name="episode_type_main">本篇</string>
     <string name="episode_type_sp">特别篇</string>
@@ -18,13 +16,7 @@
     <string name="episode_type_music">曲目</string>
     <string name="episode_type_other">其他</string>
 
-    <string name="ep_unit">话</string>
-    <string name="vol_unit">章</string>
-    <string name="phrase_progress">看到 %1$s</string>
     <string name="parse_sort_ep">第 %1$s 话</string>
-    <string name="parse_sort_vol">第 %1$s 章</string>
-    <string name="parse_watch_to">看到%1$s</string>
-    <string name="hint_watch_nothing">尚未观看</string>
     <string name="hint_air_nothing">尚未开播</string>
     <string name="parse_update_to">更新到%1$s</string>
     <string name="phrase_full_eps">全 %1$d 话</string>

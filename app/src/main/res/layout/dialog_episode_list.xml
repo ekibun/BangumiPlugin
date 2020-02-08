@@ -49,7 +49,6 @@
                 tools:layoutManager="androidx.recyclerview.widget.GridLayoutManager"/>
 
         <TextView
-                android:id="@+id/item_ep_title"
                 android:layout_width="0dp"
                 android:layout_height="@dimen/appBarSize"
                 app:layout_constraintTop_toTopOf="parent"

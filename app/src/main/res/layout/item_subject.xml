@@ -76,7 +76,6 @@
             app:layout_constraintTop_toBottomOf="@+id/item_title"/>
     <TextView
             android:layout_marginTop="8dp"
-            android:id="@+id/item_summary"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:textSize="@dimen/textSizeSmall"

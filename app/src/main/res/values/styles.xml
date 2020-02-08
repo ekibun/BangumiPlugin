@@ -14,17 +14,4 @@
 
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light"/>
 
-    <style name="AnimDialog">
-        <item name="android:windowEnterAnimation">@anim/move_in_bottom</item>
-        <item name="android:windowExitAnimation">@anim/move_out_bottom</item>
-    </style>
-
-    <style name="AppTheme.Dialog">
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:colorBackgroundCacheHint">@null</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowTranslucentStatus">false</item>
-        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-    </style>
 </resources>
