@@ -35,7 +35,7 @@ class EpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<Section
 
     override fun convert(helper: BaseViewHolder, item: SectionEntity<Episode>) {
         helper.setText(R.id.item_title, item.t.parseSort(helper.itemView.context))
-        helper.setText(R.id.item_desc, item.t.name)
+        helper.setText(R.id.item_desc, item.t.displayName)
         val color = ResourceUtil.resolveColorAttr(
             helper.itemView.context,
             when (item.t.progress) {
