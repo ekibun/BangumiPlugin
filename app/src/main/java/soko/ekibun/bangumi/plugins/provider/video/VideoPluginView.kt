@@ -578,18 +578,21 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
 
     private var inited = false
     private fun initPlayer() {
-        if(inited) return
+        if (inited) return
         inited = true
 
         view.visibility = View.VISIBLE
 
         var pauseOnStop = false
-        linePresenter.proxy.onStartListener = {
+        linePresenter.proxy.onResumeListener = {
             if (videoModel.player.duration > 0 && pauseOnStop)
                 doPlayPause(true)
             pauseOnStop = false
+            if (linePresenter.activity.isFinishing) {
+                videoModel.player.release()
+            }
         }
-        linePresenter.proxy.onStopListener = {
+        linePresenter.proxy.onPauseListener = {
             pauseOnStop = videoModel.player.playWhenReady
             doPlayPause(false)
         }
