@@ -588,13 +588,14 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             if (videoModel.player.duration > 0 && pauseOnStop)
                 doPlayPause(true)
             pauseOnStop = false
-            if (linePresenter.activity.isFinishing) {
-                videoModel.player.release()
-            }
         }
         linePresenter.proxy.onPauseListener = {
             pauseOnStop = videoModel.player.playWhenReady
-            doPlayPause(false)
+            if (!linePresenter.activity.isInPictureInPictureMode)
+                doPlayPause(false)
+            if (linePresenter.activity.isFinishing) {
+                videoModel.player.release()
+            }
         }
 
         linePresenter.proxy.onBackListener = {

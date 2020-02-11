@@ -16,20 +16,31 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     val layoutManager = ScalableLayoutManager(linePresenter.pluginContext)
     val mangaAdapter = MangaAdapter(linePresenter)
 
+    companion object {
+        const val tapScrollRange = 1 / 4f
+        const val tapScrollRatio = 3 / 4f
+    }
+
     init {
         linePresenter.proxy.subjectPresenter.subjectView.onStateChangedListener = { state ->
             linePresenter.proxy.item_mask.visibility =
                 if (state == BottomSheetBehavior.STATE_HIDDEN) View.INVISIBLE else View.VISIBLE
             linePresenter.proxy.app_bar.visibility = linePresenter.proxy.item_mask.visibility
         }
-        layoutManager.setupWithRecyclerView(view.item_manga) { _, _ ->
-            linePresenter.proxy.subjectPresenter.subjectView.behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        layoutManager.setupWithRecyclerView(view.item_manga) { _, y ->
+            val h = view.item_manga.height
+            when {
+                y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, -(h * tapScrollRatio).toInt())
+                h - y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, (h * tapScrollRatio).toInt())
+                else -> linePresenter.proxy.subjectPresenter.subjectView.behavior.state =
+                    BottomSheetBehavior.STATE_COLLAPSED
+            }
         }
         linePresenter.proxy.subjectPresenter.subjectView.behavior.isHideable = true
         linePresenter.proxy.subjectPresenter.subjectView.peakRatio = 1 / 3f
         linePresenter.proxy.subjectPresenter.subjectView.behavior.state = BottomSheetBehavior.STATE_COLLAPSED
         view.item_manga.adapter = mangaAdapter
-        view.item_manga.addOnScrollListener(object: RecyclerView.OnScrollListener() {
+        view.item_manga.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
                 updateProgress()
