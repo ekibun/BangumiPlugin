@@ -1,9 +1,12 @@
 package soko.ekibun.bangumi.plugins.provider.manga
 
+import android.os.Build
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import kotlinx.android.synthetic.main.item_image.view.*
 import kotlinx.android.synthetic.main.plugin_manga.view.*
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
@@ -11,6 +14,7 @@ import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.ui.view.ScalableLayoutManager
 import soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadLayout
+import soko.ekibun.bangumi.plugins.util.AppUtil
 
 class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_manga) {
     val layoutManager = ScalableLayoutManager(linePresenter.pluginContext)
@@ -18,7 +22,7 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
 
     companion object {
         const val tapScrollRange = 1 / 4f
-        const val tapScrollRatio = 3 / 4f
+        const val tapScrollRatio = 1 / 2f
     }
 
     init {
@@ -27,45 +31,77 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
                 if (state == BottomSheetBehavior.STATE_HIDDEN) View.INVISIBLE else View.VISIBLE
             linePresenter.proxy.app_bar.visibility = linePresenter.proxy.item_mask.visibility
         }
-        layoutManager.setupWithRecyclerView(view.item_manga) { _, y ->
-            val h = view.item_manga.height
-            when {
-                y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, -(h * tapScrollRatio).toInt())
-                h - y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, (h * tapScrollRatio).toInt())
-                else -> linePresenter.proxy.subjectPresenter.subjectView.behavior.state =
-                    BottomSheetBehavior.STATE_COLLAPSED
+        view.viewTreeObserver.addOnWindowFocusChangeListener {
+            linePresenter.activity.window.decorView.systemUiVisibility =
+                if (linePresenter.proxy.subjectPresenter.subjectView.behavior.state != BottomSheetBehavior.STATE_HIDDEN)
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE or (if (Build.VERSION.SDK_INT >= 26) View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION else 0)
+                else (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION // hide nav bar
+                        or View.SYSTEM_UI_FLAG_FULLSCREEN // hide status bar
+                        or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+        }
+        layoutManager.setupWithRecyclerView(view.item_manga,
+            { _, y ->
+                val h = view.item_manga.height
+                when {
+                    y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, -(h * tapScrollRatio).toInt())
+                    h - y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, (h * tapScrollRatio).toInt())
+                    else -> linePresenter.proxy.subjectPresenter.subjectView.behavior.state =
+                        BottomSheetBehavior.STATE_COLLAPSED
+                }
+            })
+        { view, index ->
+            view.item_image.setOnLongClickListener {
+                val systemUiVisibility = view.systemUiVisibility
+                val dialog = AlertDialog.Builder(linePresenter.pluginContext)
+                    .setTitle(mangaAdapter.data[index].url)
+                    .setItems(arrayOf("分享"))
+                    { _, _ ->
+                        AppUtil.shareDrawable(linePresenter.activity, view.item_image.drawable ?: return@setItems)
+                    }.setOnDismissListener {
+                        view.systemUiVisibility = systemUiVisibility
+                    }.create()
+                dialog.window?.decorView?.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
+                dialog.show()
+                true
             }
         }
         linePresenter.proxy.subjectPresenter.subjectView.behavior.isHideable = true
         linePresenter.proxy.subjectPresenter.subjectView.peakRatio = 1 / 3f
         linePresenter.proxy.subjectPresenter.subjectView.behavior.state = BottomSheetBehavior.STATE_COLLAPSED
         view.item_manga.adapter = mangaAdapter
-        view.item_manga.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                updateProgress()
-            }
-        })
+        view.item_manga.addOnScrollListener(
+            object : RecyclerView.OnScrollListener() {
+                override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                    super.onScrolled(recyclerView, dx, dy)
+                    updateProgress()
+                }
+            })
 
-        view.item_pull_layout.setOnPullListener(object : PullLoadLayout.OnPullListener {
-            override fun onRefreshStart(pullLayout: PullLoadLayout?) {
-                val curIndex =
-                    linePresenter.episodeAdapter.data.indexOfFirst { it.manga == mangaAdapter.data.firstOrNull()?.ep }
-                linePresenter.episodeAdapter.data.getOrNull(curIndex - 1)?.let { ep ->
-                    loadEp(ep, true) { view.item_pull_layout.responseRefresh(it) }
-                }?: view.item_pull_layout.responseRefresh(false)
-            }
+        view.item_pull_layout.setOnPullListener(
+            object : PullLoadLayout.OnPullListener {
+                override fun onRefreshStart(pullLayout: PullLoadLayout?) {
+                    val curIndex =
+                        linePresenter.episodeAdapter.data.indexOfFirst { it.manga == mangaAdapter.data.firstOrNull()?.ep }
+                    linePresenter.episodeAdapter.data.getOrNull(curIndex - 1)?.let { ep ->
+                        loadEp(ep, true) { view.item_pull_layout.responseRefresh(it) }
+                    } ?: view.item_pull_layout.responseRefresh(false)
+                }
 
-            override fun onLoadStart(pullLayout: PullLoadLayout?) {
-                val curIndex =
-                    linePresenter.episodeAdapter.data.indexOfFirst { it.manga == mangaAdapter.data.lastOrNull()?.ep }
-                linePresenter.episodeAdapter.data.getOrNull(curIndex + 1)?.let { ep ->
-                    loadEp(ep, false) { view.item_pull_layout.responseLoad(it) }
-                }?: view.item_pull_layout.responseLoad(false)
+                override fun onLoadStart(pullLayout: PullLoadLayout?) {
+                    val curIndex =
+                        linePresenter.episodeAdapter.data.indexOfFirst { it.manga == mangaAdapter.data.lastOrNull()?.ep }
+                    linePresenter.episodeAdapter.data.getOrNull(curIndex + 1)?.let { ep ->
+                        loadEp(ep, false) { view.item_pull_layout.responseLoad(it) }
+                    } ?: view.item_pull_layout.responseLoad(false)
 
-            }
+                }
 
-        })
+            })
     }
 
     override fun loadEp(episode: Episode) {
@@ -76,10 +112,12 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         loadEp(episode, false) {}
     }
 
-    private fun updateProgress(){
+    private fun updateProgress() {
         mangaAdapter.data.getOrNull(layoutManager.findFirstVisibleItemPosition())?.let {
-            linePresenter.proxy.subjectPresenter.subjectView.collapsibleAppBarHelper.setTitle(null,
-                "${it.ep?.sort}-${it.index}/${mangaAdapter.data.lastOrNull { l -> l.ep == it.ep }?.index}", null)
+            linePresenter.proxy.subjectPresenter.subjectView.collapsibleAppBarHelper.setTitle(
+                null,
+                "${it.ep?.sort}-${it.index}/${mangaAdapter.data.lastOrNull { l -> l.ep == it.ep }?.index}", null
+            )
         }
     }
 

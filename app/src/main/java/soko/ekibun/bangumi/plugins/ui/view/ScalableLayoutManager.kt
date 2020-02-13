@@ -35,13 +35,12 @@ class ScalableLayoutManager(val context: Context) : LinearLayoutManager(context)
 
     lateinit var recyclerView: RecyclerView
     @SuppressLint("ClickableViewAccessibility")
-    fun setupWithRecyclerView(view: RecyclerView, onTap: (Int, Int) -> Unit) {
+    fun setupWithRecyclerView(view: RecyclerView, onTap: (Int, Int) -> Unit, onPress: (View, Int) -> Unit) {
         recyclerView = view
         view.layoutManager = this
         var beginScale = scale
         val scaleGestureDetector =
             ScaleGestureDetector(view.context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-
                 override fun onScaleBegin(detector: ScaleGestureDetector?): Boolean {
                     beginScale = scale
                     return super.onScaleBegin(detector)
@@ -59,6 +58,11 @@ class ScalableLayoutManager(val context: Context) : LinearLayoutManager(context)
             override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
                 onTap((e.x).toInt(), (e.y).toInt())
                 return super.onSingleTapConfirmed(e)
+            }
+
+            override fun onLongPress(e: MotionEvent) {
+                view.findChildViewUnder(e.x, e.y)?.let { onPress(it, view.getChildAdapterPosition(it)) }
+                super.onLongPress(e)
             }
 
             override fun onDoubleTap(e: MotionEvent): Boolean {

@@ -28,6 +28,11 @@ object Plugin {
                 override fun getApplicationContext(): Context {
                     return context
                 }
+
+                override fun getSystemService(name: String): Any? {
+                    return if (name == Context.WINDOW_SERVICE) activity.getSystemService(name)
+                    else super.getSystemService(name)
+                }
             }
             themeContext.applyOverrideConfiguration(activity.resources.configuration)
             if (downloadService == null) {
