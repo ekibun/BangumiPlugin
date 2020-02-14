@@ -38,6 +38,7 @@ import java.util.*
 
 class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_video) {
     val isLandscape get() = linePresenter.activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            && !(Build.VERSION.SDK_INT > 24 && linePresenter.activity.isInMultiWindowMode)
     private fun updateView() {
         linePresenter.proxy.subjectPresenter.subjectView.behavior.isHideable = isLandscape
         view.player_container.layoutParams = (view.player_container.layoutParams as ConstraintLayout.LayoutParams).let {
@@ -127,7 +128,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
                     updateActionBar()
                 }
             }
-        }) { linePresenter.activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE }
+        }) { isLandscape }
     }
 
     fun updateActionBar() {
