@@ -139,7 +139,6 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
             C.TYPE_DASH -> DashMediaSource.Factory(dataSourceFactory)
             C.TYPE_SS -> SsMediaSource.Factory(dataSourceFactory)
             C.TYPE_HLS -> HlsMediaSource.Factory(dataSourceFactory)
-            C.TYPE_OTHER -> ProgressiveMediaSource.Factory(dataSourceFactory)
             else -> ProgressiveMediaSource.Factory(dataSourceFactory)
         }.let {
             if (streamKeys != null) it.setStreamKeys(streamKeys)
@@ -155,21 +154,20 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
                 linePresenter.pluginContext,
                 uri,
                 dataSourceFactory,
-                DefaultRenderersFactory(linePresenter.pluginContext)
+                DefaultRenderersFactory(linePresenter.activity)
             )
             C.TYPE_SS -> DownloadHelper.forSmoothStreaming(
                 linePresenter.pluginContext,
                 uri,
                 dataSourceFactory,
-                DefaultRenderersFactory(linePresenter.pluginContext)
+                DefaultRenderersFactory(linePresenter.activity)
             )
             C.TYPE_HLS -> DownloadHelper.forHls(
                 linePresenter.pluginContext,
                 uri,
                 dataSourceFactory,
-                DefaultRenderersFactory(linePresenter.pluginContext)
+                DefaultRenderersFactory(linePresenter.activity)
             )
-            C.TYPE_OTHER -> DownloadHelper.forProgressive(linePresenter.pluginContext, uri)
             else -> DownloadHelper.forProgressive(linePresenter.pluginContext, uri)
         }
         helper.prepare(callback)

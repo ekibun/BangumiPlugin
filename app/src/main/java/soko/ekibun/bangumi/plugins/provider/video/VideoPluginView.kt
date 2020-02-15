@@ -38,7 +38,8 @@ import java.util.*
 
 class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_video) {
     val isLandscape get() = linePresenter.activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-            && !(Build.VERSION.SDK_INT > 24 && linePresenter.activity.isInMultiWindowMode)
+    val isInMultiWindowMode get() = Build.VERSION.SDK_INT > 24 && linePresenter.activity.isInMultiWindowMode
+
     private fun updateView() {
         linePresenter.proxy.subjectPresenter.subjectView.behavior.isHideable = isLandscape
         view.player_container.layoutParams = (view.player_container.layoutParams as ConstraintLayout.LayoutParams).let {
@@ -50,7 +51,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             resizeVideoSurface()
             danmakuPresenter.sizeScale = when {
                 Build.VERSION.SDK_INT >= 24 && linePresenter.activity.isInPictureInPictureMode -> 0.7f
-                isLandscape -> 1.1f
+                isLandscape && !isInMultiWindowMode -> 1.1f
                 else -> 0.8f
             }
             showInfo(false)
@@ -600,13 +601,13 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         }
 
         linePresenter.proxy.onBackListener = {
-            if (isLandscape) {
+            if (isLandscape && !isInMultiWindowMode) {
                 linePresenter.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                 true
             } else false
         }
         linePresenter.proxy.onUserLeaveHintListener = {
-            if (isLandscape && videoModel.player.playWhenReady && Build.VERSION.SDK_INT >= 24) {
+            if (isLandscape && !isInMultiWindowMode && videoModel.player.playWhenReady && Build.VERSION.SDK_INT >= 24) {
                 @Suppress("DEPRECATION") linePresenter.activity.enterPictureInPictureMode()
                 setPictureInPictureParams(false)
             }
@@ -614,7 +615,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         linePresenter.proxy.item_plugin.setOnApplyWindowInsetsListener { _, insets ->
             view.setPadding(
                 0,
-                if (isLandscape) 0 else insets.systemWindowInsetTop,
+                if (isLandscape && !isInMultiWindowMode) 0 else insets.systemWindowInsetTop,
                 0,
                 if (isLandscape) 0 else insets.systemWindowInsetBottom
             )
