@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.android.synthetic.main.item_image.view.*
 import kotlinx.android.synthetic.main.plugin_manga.view.*
+import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.provider.Provider
@@ -16,9 +17,9 @@ import soko.ekibun.bangumi.plugins.ui.view.ScalableLayoutManager
 import soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadLayout
 import soko.ekibun.bangumi.plugins.util.AppUtil
 
-class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_manga) {
+class MangaPluginView(val linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_manga) {
     val layoutManager = ScalableLayoutManager(linePresenter.pluginContext)
-    val mangaAdapter = MangaAdapter(linePresenter)
+    val mangaAdapter = MangaAdapter()
 
     companion object {
         const val tapScrollRange = 1 / 4f
@@ -27,19 +28,20 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
 
     init {
         linePresenter.proxy.onBackListener = {
-            if (linePresenter.proxy.subjectPresenter.subjectView.behavior.state == BottomSheetBehavior.STATE_HIDDEN) {
-                linePresenter.proxy.subjectPresenter.subjectView.behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            val behavior = linePresenter.proxy.subjectPresenter.subjectView.behavior
+            if (behavior.state == BottomSheetBehavior.STATE_HIDDEN) {
+                behavior.state = BottomSheetBehavior.STATE_COLLAPSED
                 true
             } else false
         }
 
         linePresenter.proxy.subjectPresenter.subjectView.onStateChangedListener = { state ->
-            linePresenter.proxy.item_mask.visibility =
-                if (state == BottomSheetBehavior.STATE_HIDDEN) View.INVISIBLE else View.VISIBLE
-            linePresenter.proxy.app_bar.visibility = linePresenter.proxy.item_mask.visibility
+            val maskVisibility = if (state == BottomSheetBehavior.STATE_HIDDEN) View.INVISIBLE else View.VISIBLE
+            linePresenter.proxy.item_mask.visibility = maskVisibility
+            linePresenter.proxy.app_bar.visibility = maskVisibility
         }
         view.viewTreeObserver.addOnWindowFocusChangeListener {
-            linePresenter.activity.window.decorView.systemUiVisibility =
+            linePresenter.activityRef.get()?.window?.decorView?.systemUiVisibility =
                 if (linePresenter.proxy.subjectPresenter.subjectView.behavior.state != BottomSheetBehavior.STATE_HIDDEN)
                     View.SYSTEM_UI_FLAG_LAYOUT_STABLE or (if (Build.VERSION.SDK_INT >= 26) View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION else 0)
                 else (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -66,7 +68,8 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
                     .setTitle(mangaAdapter.data[index].url)
                     .setItems(arrayOf("分享"))
                     { _, _ ->
-                        AppUtil.shareDrawable(linePresenter.activity, view.item_image.drawable ?: return@setItems)
+                        linePresenter.activityRef.get()
+                            ?.let { AppUtil.shareDrawable(it, view.item_image.drawable ?: return@setItems) }
                     }.setOnDismissListener {
                         view.systemUiVisibility = systemUiVisibility
                     }.create()
@@ -77,9 +80,11 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
                 true
             }
         }
-        linePresenter.proxy.subjectPresenter.subjectView.behavior.isHideable = true
-        linePresenter.proxy.subjectPresenter.subjectView.peakRatio = 1 / 3f
-        linePresenter.proxy.subjectPresenter.subjectView.behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        linePresenter.proxy.subjectPresenter.subjectView.let {
+            it.behavior.isHideable = true
+            it.behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            it.peakRatio = 1 / 3f
+        }
         view.item_manga.adapter = mangaAdapter
         view.item_manga.addOnScrollListener(
             object : RecyclerView.OnScrollListener() {
@@ -131,14 +136,14 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     fun loadEp(episode: Episode, isPrev: Boolean, callback: (Boolean) -> Unit) {
         val ep = episode.manga
         val provider =
-            linePresenter.app.lineProvider.getProvider(Provider.TYPE_MANGA, ep?.site ?: "")?.provider as? MangaProvider
+            App.app.lineProvider.getProvider(Provider.TYPE_MANGA, ep?.site ?: "")?.provider as? MangaProvider
         if (ep == null || provider == null) {
             callback(false)
             return
         }
         linePresenter.proxy.subjectPresenter.subjectView.collapsibleAppBarHelper.setTitle(null, ep.sort, null)
         layoutManager.reset()
-        provider.getManga("getManga", linePresenter.app.jsEngine, ep).enqueue({
+        provider.getManga("getManga", App.app.jsEngine, ep).enqueue({
             if (isPrev) {
                 val curItem = layoutManager.findFirstVisibleItemPosition()
                 val curOffset =
@@ -148,7 +153,7 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             } else mangaAdapter.addData(it)
             callback(true)
         }, {
-            Toast.makeText(linePresenter.pluginContext, it.message, Toast.LENGTH_LONG).show()
+            Toast.makeText(App.app.plugin, it.message, Toast.LENGTH_LONG).show()
             callback(false)
         })
     }

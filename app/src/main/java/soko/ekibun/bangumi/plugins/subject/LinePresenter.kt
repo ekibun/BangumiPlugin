@@ -1,7 +1,6 @@
 package soko.ekibun.bangumi.plugins.subject
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.util.Log
@@ -9,10 +8,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
-import android.widget.ListPopupWindow
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.android.synthetic.main.subject_episode.view.*
@@ -29,11 +25,11 @@ import soko.ekibun.bangumi.plugins.util.AppUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import soko.ekibun.bangumi.plugins.util.ReflectUtil
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
+import java.lang.ref.WeakReference
 
-class LinePresenter(val activity: Activity, val pluginContext: Context) {
-    val app by lazy { App.from(pluginContext) }
-
-    val proxy = ReflectUtil.proxyObject(activity, ISubjectActivity::class.java)!!
+class LinePresenter(val activityRef: WeakReference<Activity>) {
+    val proxy = ReflectUtil.proxyObjectWeak(activityRef, ISubjectActivity::class.java)!!
+    val pluginContext = App.createThemeContext(activityRef)
 
     val episodeAdapter = SmallEpisodeAdapter(this)
     val emptyView = {
@@ -100,15 +96,26 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
         val intent = Intent(pluginContext, ProviderActivity::class.java)
         intent.putExtra(ProviderActivity.EXTRA_PROVIDER_TYPE, type)
         info?.let { intent.putExtra(ProviderActivity.EXTRA_PROVIDER_INFO, JsonUtil.toJson(info)) }
-        activity.startActivityForResult(intent, AppUtil.REQUEST_PROVIDER)
+        activityRef.get()?.startActivityForResult(intent, AppUtil.REQUEST_PROVIDER)
     }
 
     var epCall: Pair<LineProvider.ProviderInfo, JsEngine.ScriptTask<List<MangaProvider.MangaEpisode>>>? = null
     fun refreshLines() {
-        val infos = app.lineInfoModel.getInfos(subject)
+        val infos = App.app.lineInfoModel.getInfos(subject)
 
         episodeAdapter.setOnItemChildClickListener { _, _, position ->
             pluginView.loadEp(episodeAdapter.data[position])
+        }
+        episodeAdapter.setOnItemChildLongClickListener { _, v, position ->
+            val ep = episodeAdapter.data[position]
+            val popupMenu = PopupMenu(pluginContext, v)
+            popupMenu.menu.add("看到")
+            popupMenu.setOnMenuItemClickListener {
+                proxy.subjectPresenter.updateSubjectProgress(null, ep.sort.toInt())
+                false
+            }
+            popupMenu.show()
+            true
         }
         subjectView.episodeAdapter.setOnItemChildClickListener { _, _, position ->
             infos?.getDefaultProvider()?.let {
@@ -147,7 +154,7 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
                 position >= 0 -> infos.providers[position] = newInfo
                 else -> infos.providers.add(newInfo)
             }
-            app.lineInfoModel.saveInfos(subject, infos)
+            App.app.lineInfoModel.saveInfos(subject, infos)
         }
 
         val editLines = { info: LineInfoModel.LineInfo? ->
@@ -161,7 +168,7 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
         }
 
         val defaultLine = infos?.getDefaultProvider()
-        activity.runOnUiThread {
+        activityRef.get()?.runOnUiThread {
             val showPlugin = type.isNotEmpty()
             epLayout.getChildAt(0).visibility = if (showPlugin) View.GONE else View.VISIBLE
             epLayout.getChildAt(1).visibility = if (showPlugin) View.GONE else View.VISIBLE
@@ -169,7 +176,7 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
             epLayout.visibility = if (showPlugin || subject.eps?.size ?: 0 > 0) View.VISIBLE else View.GONE
 
             if (defaultLine != null) {
-                val provider = app.lineProvider.getProvider(type, defaultLine.site)
+                val provider = App.app.lineProvider.getProvider(type, defaultLine.site)
                 epView.episodes_line_id.text = if (defaultLine.title.isEmpty()) defaultLine.id else defaultLine.title
                 epView.episodes_line_site.backgroundTintList =
                     ColorStateList.valueOf(((provider?.color ?: 0) + 0xff000000).toInt())
@@ -180,7 +187,7 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
                     popList.anchorView = epView.episodes_line
                     val lines = ArrayList(infos.providers)
                     lines.add(LineInfoModel.LineInfo("", "添加线路"))
-                    val adapter = LineAdapter(this, type, pluginContext, lines)
+                    val adapter = LineAdapter(type, pluginContext, lines)
                     adapter.selectIndex = infos.defaultProvider
                     popList.setAdapter(adapter)
                     popList.isModal = true
@@ -191,7 +198,7 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
                         if (position == lines.size - 1) editLines(null)
                         else {
                             infos.defaultProvider = position
-                            app.lineInfoModel.saveInfos(subject, infos)
+                            App.app.lineInfoModel.saveInfos(subject, infos)
                             epCall = null
                             refreshLines()
                         }
@@ -207,7 +214,7 @@ class LinePresenter(val activity: Activity, val pluginContext: Context) {
                 if (epCall?.first != provider) (provider?.provider as? MangaProvider)?.let {
                     emptyView.text = "加载中..."
                     episodeAdapter.setNewData(null)
-                    epCall = provider to it.getEpisode("loadEps", app.jsEngine, defaultLine)
+                    epCall = provider to it.getEpisode("loadEps", App.app.jsEngine, defaultLine)
                     epCall?.second?.enqueue({ eps ->
                         if (epCall?.first == provider){
                             subject.eps = eps.map { mangaEpisode ->

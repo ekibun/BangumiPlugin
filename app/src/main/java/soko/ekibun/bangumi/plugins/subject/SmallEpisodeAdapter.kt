@@ -5,6 +5,7 @@ import android.view.View
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.BaseViewHolder
 import kotlinx.android.synthetic.main.item_episode_small.view.*
+import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.VideoCacheModel
@@ -50,7 +51,7 @@ class SmallEpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<Ep
         helper.addOnClickListener(R.id.item_container)
         helper.addOnLongClickListener(R.id.item_container)
 
-        val videoCache = linePresenter.app.videoCacheModel.getVideoCache(item, linePresenter.subject)
+        val videoCache = App.app.videoCacheModel.getVideoCache(item, linePresenter.subject)
         updateDownload(helper.itemView, videoCache?.percentDownloaded?: Float.NaN, videoCache?.bytesDownloaded?:0L, videoCache != null)
     }
     fun updateDownload(view: View, percent: Float, bytes: Long, hasCache: Boolean, download: Boolean = false){

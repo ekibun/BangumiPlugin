@@ -9,6 +9,7 @@ import soko.ekibun.bangumi.plugins.bean.Subject
 interface ISubjectActivity {
     val subjectPresenter: ISubjectPresenter
 
+    var onStopListener: () -> Unit
     var onPauseListener: () -> Unit
     var onResumeListener: () -> Unit
     var onDestroyListener: () -> Unit
@@ -18,6 +19,7 @@ interface ISubjectActivity {
 
     val item_plugin: FrameLayout
     val item_mask: View
+    val item_swipe: View
     val app_bar: View
 
     interface ISubjectPresenter {
@@ -26,6 +28,7 @@ interface ISubjectActivity {
         val subject: Subject
 
         fun showEpisodeDialog(id: Int)
+        fun updateSubjectProgress(vol: Int?, ep: Int?)
 
         var subjectRefreshListener: (Any?) -> Unit
 

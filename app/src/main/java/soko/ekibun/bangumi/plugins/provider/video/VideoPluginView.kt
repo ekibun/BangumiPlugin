@@ -24,6 +24,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.android.synthetic.main.danmaku_setting.view.*
 import kotlinx.android.synthetic.main.error_frame.view.*
 import kotlinx.android.synthetic.main.plugin_video.view.*
+import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
@@ -36,9 +37,9 @@ import soko.ekibun.bangumi.plugins.util.JsonUtil
 import soko.ekibun.bangumi.plugins.util.NetworkUtil
 import java.util.*
 
-class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_video) {
-    val isLandscape get() = linePresenter.activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val isInMultiWindowMode get() = Build.VERSION.SDK_INT > 24 && linePresenter.activity.isInMultiWindowMode
+class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_video) {
+    val isLandscape get() = linePresenter.activityRef.get()?.resources?.configuration?.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isInMultiWindowMode get() = Build.VERSION.SDK_INT > 24 && linePresenter.activityRef.get()?.isInMultiWindowMode == true
 
     private fun updateView() {
         linePresenter.proxy.subjectPresenter.subjectView.behavior.isHideable = isLandscape
@@ -50,7 +51,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         view.post {
             resizeVideoSurface()
             danmakuPresenter.sizeScale = when {
-                Build.VERSION.SDK_INT >= 24 && linePresenter.activity.isInPictureInPictureMode -> 0.7f
+                Build.VERSION.SDK_INT >= 24 && linePresenter.activityRef.get()?.isInPictureInPictureMode == true -> 0.7f
                 isLandscape && !isInMultiWindowMode -> 1.1f
                 else -> 0.8f
             }
@@ -82,7 +83,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             }
 
             override fun onFullscreen() {
-                linePresenter.activity.requestedOrientation = if (isLandscape)
+                linePresenter.activityRef.get()?.requestedOrientation = if (isLandscape)
                     ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             }
 
@@ -117,7 +118,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             }
 
             override fun onShowHide(show: Boolean) {
-                linePresenter.activity.runOnUiThread {
+                linePresenter.activityRef.get()?.runOnUiThread {
                     if (show) {
                         updatePauseResume()
                         updateProgress()
@@ -129,21 +130,22 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
                     updateActionBar()
                 }
             }
-        }) { isLandscape }
+        }) { isLandscape && !isInMultiWindowMode }
     }
 
     fun updateActionBar() {
         val maskShown =
             view.item_mask.visibility == View.VISIBLE || linePresenter.proxy.item_mask.visibility == View.VISIBLE
         linePresenter.proxy.app_bar.visibility = if (maskShown) View.VISIBLE else View.INVISIBLE
-        linePresenter.activity.window.decorView.systemUiVisibility = if (!isLandscape || maskShown) View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                (if (Build.VERSION.SDK_INT >= 26) View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION else 0)
-        else (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION // hide nav bar
-                or View.SYSTEM_UI_FLAG_FULLSCREEN // hide status bar
-                or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
+        linePresenter.activityRef.get()?.window?.decorView?.systemUiVisibility =
+            if (!isLandscape || maskShown) View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                    (if (Build.VERSION.SDK_INT >= 26) View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION else 0)
+            else (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION // hide nav bar
+                    or View.SYSTEM_UI_FLAG_FULLSCREEN // hide status bar
+                    or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
 
     }
 
@@ -170,7 +172,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
 
     @SuppressLint("SetTextI18n")
     private fun parseLogcat() {
-        linePresenter.activity.runOnUiThread {
+        linePresenter.activityRef.get()?.runOnUiThread {
             if (loadVideoInfo == false || loadVideo == false || exception != null)
                 controller.updateLoading(false)
             view.item_logcat.text = "获取视频信息…" + if (loadVideoInfo == null) "" else (
@@ -239,7 +241,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     }
 
     fun showVideoError(error: String, retry: String, callback: () -> Unit) {
-        linePresenter.activity.runOnUiThread {
+        linePresenter.activityRef.get()?.runOnUiThread {
             //            context.videoPresenter.doPlayPause(false)
             controller.doShowHide(false)
             view.item_error_hint.text = error
@@ -261,7 +263,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         val doPlay = {
             playLoopTask = object : TimerTask() {
                 override fun run() {
-                    linePresenter.activity.runOnUiThread {
+                    linePresenter.activityRef.get()?.runOnUiThread {
                         updateProgress()
 //                    updatePlayProgress((videoModel.player.currentPosition/ 10).toInt())
                         danmakuPresenter.add(videoModel.player.currentPosition)
@@ -277,7 +279,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
                 view.danmaku_flame.resume()
         }
         if (play) {
-            if (NetworkUtil.isWifiConnected(linePresenter.activity) || ignoreNetwork) doPlay()
+            if (NetworkUtil.isWifiConnected(App.app.host) || ignoreNetwork) doPlay()
             else showVideoError("正在使用非wifi网络", "继续播放") {
                 videoModel.player.playWhenReady = true
                 updatePauseResume()
@@ -291,7 +293,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     }
 
     private fun updateProgress() {
-        linePresenter.activity.runOnUiThread {
+        linePresenter.activityRef.get()?.runOnUiThread {
             controller.duration = videoModel.player.duration.toInt() / 10
             controller.buffedPosition = videoModel.player.bufferedPosition.toInt() / 10
             controller.updateProgress(videoModel.player.currentPosition)
@@ -299,7 +301,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     }
 
     private fun updatePauseResume() {
-        linePresenter.activity.runOnUiThread {
+        linePresenter.activityRef.get()?.runOnUiThread {
             controller.updatePauseResume(videoModel.player.playWhenReady)
             setPictureInPictureParams(!videoModel.player.playWhenReady)
         }
@@ -373,7 +375,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     var prevEpisode: () -> Episode? = { null }
     override fun loadEp(episode: Episode) {
         initPlayer()
-        val infos = linePresenter.app.lineInfoModel.getInfos(linePresenter.subject)
+        val infos = App.app.lineInfoModel.getInfos(linePresenter.subject)
         infos?.getDefaultProvider()?.let {
             prevEpisode = {
                 val position =
@@ -388,7 +390,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
                 if ((ep?.status ?: "") !in listOf("Air")) null else ep
             }
             startAt = null
-            linePresenter.activity.runOnUiThread { play(episode, it, infos.providers) }
+            linePresenter.activityRef.get()?.runOnUiThread { play(episode, it, infos.providers) }
         } ?: Toast.makeText(linePresenter.pluginContext, "请先添加播放源", Toast.LENGTH_SHORT).show()
     }
 
@@ -402,7 +404,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         loadDanmaku = null
         exception = null
         showDanmakuSetting(false)
-        linePresenter.activity.runOnUiThread {
+        linePresenter.activityRef.get()?.runOnUiThread {
             view.error_frame.visibility = View.INVISIBLE
 //            view.toolbar_layout.isTitleEnabled = false
 //            view.video_surface_container.visibility = View.VISIBLE
@@ -423,10 +425,10 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         videoModel.getVideo("play", episode, info, { videoInfo, error ->
             exception = error ?: exception
             loadVideoInfo = videoInfo != null
-            if (videoInfo != null) linePresenter.activity.runOnUiThread {
+            if (videoInfo != null) linePresenter.activityRef.get()?.runOnUiThread {
                 view.item_logcat.setOnClickListener {
                     try {
-                        linePresenter.activity.startActivity(
+                        linePresenter.activityRef.get()?.startActivity(
                             Intent.createChooser(
                                 Intent(
                                     Intent.ACTION_VIEW,
@@ -442,7 +444,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             }
         }, { request, streamKeys, error ->
             exception = error ?: exception
-            if (linePresenter.activity.isDestroyed) return@getVideo
+            if (linePresenter.activityRef.get()?.isDestroyed != false) return@getVideo
             loadVideo = request != null
             ignoreNetwork = streamKeys != null
             if (request != null) videoModel.play(request, view.video_surface, streamKeys)
@@ -465,7 +467,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             val actionPrev = RemoteAction(
                 Icon.createWithResource(linePresenter.pluginContext, R.drawable.ic_prev), "上一集", "上一集",
                 PendingIntent.getBroadcast(
-                    linePresenter.activity,
+                    App.app.host,
                     CONTROL_TYPE_PREV,
                     Intent(ACTION_MEDIA_CONTROL + linePresenter.subject.id).putExtra(
                         EXTRA_CONTROL_TYPE,
@@ -478,7 +480,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             val actionNext = RemoteAction(
                 Icon.createWithResource(linePresenter.pluginContext, R.drawable.ic_next), "下一集", "下一集",
                 PendingIntent.getBroadcast(
-                    linePresenter.activity,
+                    App.app.host,
                     CONTROL_TYPE_NEXT,
                     Intent(ACTION_MEDIA_CONTROL + linePresenter.subject.id).putExtra(
                         EXTRA_CONTROL_TYPE,
@@ -489,7 +491,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             )
             actionNext.isEnabled = nextEpisode() != null
             try {
-                linePresenter.activity.setPictureInPictureParams(
+                linePresenter.activityRef.get()?.setPictureInPictureParams(
                     PictureInPictureParams.Builder().setActions(
                         listOf(
                             actionPrev,
@@ -499,7 +501,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
                                     if (playPause) R.drawable.ic_play else R.drawable.ic_pause
                                 ), if (playPause) "播放" else "暂停", if (playPause) "播放" else "暂停",
                                 PendingIntent.getBroadcast(
-                                    linePresenter.activity,
+                                    App.app.host,
                                     CONTROL_TYPE_PLAY,
                                     Intent(ACTION_MEDIA_CONTROL + linePresenter.subject.id).putExtra(
                                         EXTRA_CONTROL_TYPE,
@@ -580,16 +582,18 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     }
 
     init {
-        linePresenter.activity.registerReceiver(receiver, IntentFilter(ACTION_MEDIA_CONTROL + linePresenter.subject.id))
-        linePresenter.activity.registerReceiver(
+        linePresenter.activityRef.get()
+            ?.registerReceiver(receiver, IntentFilter(ACTION_MEDIA_CONTROL + linePresenter.subject.id))
+        linePresenter.activityRef.get()?.registerReceiver(
             downloadReceiver,
             IntentFilter(DownloadService.getBroadcastAction(linePresenter.subject))
         )
-        linePresenter.activity.registerReceiver(networkReceiver, IntentFilter("android.net.conn.CONNECTIVITY_CHANGE"))
+        linePresenter.activityRef.get()
+            ?.registerReceiver(networkReceiver, IntentFilter("android.net.conn.CONNECTIVITY_CHANGE"))
         linePresenter.proxy.onDestroyListener = {
-            linePresenter.activity.unregisterReceiver(receiver)
-            linePresenter.activity.unregisterReceiver(downloadReceiver)
-            linePresenter.activity.unregisterReceiver(networkReceiver)
+            linePresenter.activityRef.get()?.unregisterReceiver(receiver)
+            linePresenter.activityRef.get()?.unregisterReceiver(downloadReceiver)
+            linePresenter.activityRef.get()?.unregisterReceiver(networkReceiver)
         }
     }
 
@@ -608,11 +612,19 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         }
         linePresenter.proxy.onPauseListener = {
             pauseOnStop = videoModel.player.playWhenReady
-            if (!linePresenter.activity.isInPictureInPictureMode)
+            if (linePresenter.activityRef.get()?.isInPictureInPictureMode != true)
                 doPlayPause(false)
-            if (linePresenter.activity.isFinishing) {
-                videoModel.player.release()
-            }
+        }
+        linePresenter.proxy.onStopListener = {
+            pauseOnStop = videoModel.player.playWhenReady
+            doPlayPause(false)
+        }
+
+        linePresenter.proxy.subjectPresenter.subjectView.onStateChangedListener = onStateChangedListener@{ state ->
+            if (!isLandscape) return@onStateChangedListener
+            val maskVisibility = if (state == BottomSheetBehavior.STATE_HIDDEN) View.INVISIBLE else View.VISIBLE
+            linePresenter.proxy.item_mask.visibility = maskVisibility
+            linePresenter.proxy.app_bar.visibility = maskVisibility
         }
 
         linePresenter.proxy.subjectPresenter.subjectView.collapsibleAppBarHelper.let {
@@ -626,14 +638,18 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         }
 
         linePresenter.proxy.onBackListener = {
-            if (isLandscape && !isInMultiWindowMode) {
-                linePresenter.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            val behavior = linePresenter.proxy.subjectPresenter.subjectView.behavior
+            if (isLandscape && behavior.state != BottomSheetBehavior.STATE_HIDDEN) {
+                showInfo(false)
+                true
+            } else if (isLandscape && !isInMultiWindowMode) {
+                linePresenter.activityRef.get()?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                 true
             } else false
         }
         linePresenter.proxy.onUserLeaveHintListener = {
             if (isLandscape && !isInMultiWindowMode && videoModel.player.playWhenReady && Build.VERSION.SDK_INT >= 24) {
-                @Suppress("DEPRECATION") linePresenter.activity.enterPictureInPictureMode()
+                @Suppress("DEPRECATION") linePresenter.activityRef.get()?.enterPictureInPictureMode()
                 setPictureInPictureParams(false)
             }
         }

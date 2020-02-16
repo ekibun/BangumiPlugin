@@ -1,8 +1,8 @@
 package soko.ekibun.bangumi.plugins.util
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.view.View
+import java.lang.ref.WeakReference
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
@@ -41,7 +41,26 @@ object ReflectUtil {
         return ret
     }
 
-    @SuppressLint("DefaultLocale")
+    @Suppress("UNCHECKED_CAST")
+    fun <T> proxyObjectWeak(objRef: WeakReference<*>, clazz: Class<T>): T? {
+        if ((clazz as? Class<Any>)?.kotlin?.isData == true)
+            return JsonUtil.toEntity(JsonUtil.toJson(objRef.get()), clazz) as? T
+        if (clazz.classLoader == null || objRef.get() == null || objRef.get()?.javaClass == clazz || !clazz.isInterface)
+            return objRef.get() as? T
+        return Proxy.newProxyInstance(
+            clazz.classLoader, arrayOf(clazz)
+        ) { _, method, args ->
+            val obj = objRef.get() ?: return@newProxyInstance null
+            if (obj is Activity && View::class.java.isAssignableFrom(method.returnType))
+                (obj as? Activity)?.findViewById(ResourceUtil.getId(obj, method.name.substring(3).toLowerCase()))
+            else getMethod(obj.javaClass, method.name, *method.parameterTypes)?.let {
+                it.invoke(obj, *(args ?: arrayOf()).mapIndexed { i, v ->
+                    proxyObject(v, it.parameterTypes[i])
+                }.toTypedArray())
+            }?.let { proxyObject(it, method.returnType) }
+        } as? T
+    }
+
     @Suppress("UNCHECKED_CAST")
     fun <T> proxyObject(obj: Any?, clazz: Class<T>): T? {
         if ((clazz as? Class<Any>)?.kotlin?.isData == true)

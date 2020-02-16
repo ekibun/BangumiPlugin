@@ -1,8 +1,8 @@
 package soko.ekibun.bangumi.plugins
 
 import android.app.Activity
-import android.content.Context
+import java.lang.ref.WeakReference
 
 interface ActivityPlugin {
-    fun setUpPlugins(activity: Activity, context: Context)
+    fun setUpPlugins(activityRef: WeakReference<Activity>)
 }

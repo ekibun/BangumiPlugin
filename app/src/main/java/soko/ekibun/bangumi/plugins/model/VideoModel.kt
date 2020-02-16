@@ -38,7 +38,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
     }
 
     val player: SimpleExoPlayer by lazy {
-        val player = SimpleExoPlayer.Builder(linePresenter.activity).build()
+        val player = SimpleExoPlayer.Builder(linePresenter.activityRef.get()!!).build()
         player.addListener(object : Player.EventListener {
             override fun onSeekProcessed() {}
             override fun onPlayerError(error: ExoPlaybackException) {
@@ -83,12 +83,12 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
         onCheckNetwork: (() -> Unit) -> Unit
     ) {
         //val videoCache = videoCacheModel.getCache(episode, subject)
-        val videoCache = linePresenter.app.videoCacheModel.getVideoCache(episode, linePresenter.subject)
+        val videoCache = App.app.videoCacheModel.getVideoCache(episode, linePresenter.subject)
         if (videoCache != null) {
             onGetVideoInfo(VideoProvider.VideoInfo("", videoCache.video.url, videoCache.video.url), null)
             onGetVideo(videoCache.video, videoCache.streamKeys, null)
         } else {
-            val provider = linePresenter.app.lineProvider.getProvider(
+            val provider = App.app.lineProvider.getProvider(
                 Provider.TYPE_VIDEO,
                 info?.site ?: ""
             )?.provider as? VideoProvider
@@ -108,7 +108,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
                 return
             }
             val loadFromNetwork: () -> Unit = {
-                val jsEngine = linePresenter.app.jsEngine
+                val jsEngine = App.app.jsEngine
                 videoInfoCall[key]?.cancel(true)
                 videoCall[key]?.cancel(true)
                 videoInfoCall[key] = provider.getVideoInfo(key, jsEngine, info, episode)
@@ -118,7 +118,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
                         onGetVideo(HttpUtil.HttpRequest(video.url), null, null)
                         return@enqueue
                     }
-                    val videoProvider = linePresenter.app.lineProvider.getProvider(
+                    val videoProvider = App.app.lineProvider.getProvider(
                         Provider.TYPE_VIDEO,
                         video.site
                     )?.provider as VideoProvider
@@ -128,13 +128,13 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
                     }, { onGetVideo(null, null, it) })
                 }, { onGetVideoInfo(null, it) })
             }
-            if (!NetworkUtil.isWifiConnected(linePresenter.pluginContext)) onCheckNetwork(loadFromNetwork) else loadFromNetwork()
+            if (!NetworkUtil.isWifiConnected(App.app.host)) onCheckNetwork(loadFromNetwork) else loadFromNetwork()
         }
     }
 
     private fun createMediaSource(request: HttpUtil.HttpRequest, streamKeys: List<StreamKey>? = null): MediaSource {
         val uri = Uri.parse(request.url)
-        val dataSourceFactory = createDataSourceFactory(linePresenter.pluginContext, request, streamKeys != null)
+        val dataSourceFactory = createDataSourceFactory(App.app.host, request, streamKeys != null)
         return when (@C.ContentType Util.inferContentType(uri, request.overrideExtension)) {
             C.TYPE_DASH -> DashMediaSource.Factory(dataSourceFactory)
             C.TYPE_SS -> SsMediaSource.Factory(dataSourceFactory)
@@ -148,27 +148,27 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
 
     fun createDownloadRequest(request: HttpUtil.HttpRequest, callback: DownloadHelper.Callback) {
         val uri = Uri.parse(request.url)
-        val dataSourceFactory = createDataSourceFactory(linePresenter.pluginContext, request, true)
+        val dataSourceFactory = createDataSourceFactory(App.app.host, request, true)
         val helper = when (@C.ContentType Util.inferContentType(uri, request.overrideExtension)) {
             C.TYPE_DASH -> DownloadHelper.forDash(
-                linePresenter.pluginContext,
+                App.app.host,
                 uri,
                 dataSourceFactory,
-                DefaultRenderersFactory(linePresenter.activity)
+                DefaultRenderersFactory(App.app.host)
             )
             C.TYPE_SS -> DownloadHelper.forSmoothStreaming(
-                linePresenter.pluginContext,
+                App.app.host,
                 uri,
                 dataSourceFactory,
-                DefaultRenderersFactory(linePresenter.activity)
+                DefaultRenderersFactory(App.app.host)
             )
             C.TYPE_HLS -> DownloadHelper.forHls(
-                linePresenter.pluginContext,
+                App.app.host,
                 uri,
                 dataSourceFactory,
-                DefaultRenderersFactory(linePresenter.activity)
+                DefaultRenderersFactory(App.app.host)
             )
-            else -> DownloadHelper.forProgressive(linePresenter.pluginContext, uri)
+            else -> DownloadHelper.forProgressive(App.app.host, uri)
         }
         helper.prepare(callback)
     }
@@ -203,7 +203,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
                 context,
                 null,
                 if (useCache) CacheDataSourceFactory(
-                    App.from(context).downloadCache,
+                    App.app.downloadCache,
                     httpSourceFactory
                 ) else httpSourceFactory
             )

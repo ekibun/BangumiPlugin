@@ -24,12 +24,16 @@ abstract class Provider(
 
     abstract fun createPluginView(linePresenter: LinePresenter): PluginView
 
-    abstract class PluginView(val linePresenter: LinePresenter, @LayoutRes resId: Int) {
+    abstract class PluginView(linePresenter: LinePresenter, @LayoutRes resId: Int) {
         val view = LayoutInflater.from(linePresenter.pluginContext).inflate(resId, null)
+
         init {
-            linePresenter.proxy.item_plugin.removeAllViews()
-            linePresenter.proxy.item_plugin.addView(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            linePresenter.proxy.item_plugin.let {
+                it.removeAllViews()
+                it.addView(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            }
         }
+
         abstract fun loadEp(episode: Episode)
     }
 

@@ -27,7 +27,6 @@ import soko.ekibun.bangumi.plugins.util.NotificationUtil
 class DownloadService(val app: Context, val pluginContext: Context) {
     private val manager = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     private val taskCollection = HashMap<String, DownloadTask>()
-    private val videoCacheModel by lazy { App.from(pluginContext).videoCacheModel }
 
     private fun getTaskKey(episode: Episode, subject: Subject): String{
         return subject.prefKey + "_${episode.id}"
@@ -74,7 +73,7 @@ class DownloadService(val app: Context, val pluginContext: Context) {
                             .setContentIntent(pIntent).build())
                     }else{
                         val videoCache = JsonUtil.toEntity<VideoCache>(intent.getStringExtra(EXTRA_VIDEO_CACHE)?:"")?:return@let
-                        videoCacheModel.addVideoCache(subject, videoCache)
+                        App.app.videoCacheModel.addVideoCache(subject, videoCache)
                         val newTask = DownloadTask(createDownloader(videoCache)) {mTask ->
                             val status = taskCollection.filter { !VideoCacheModel.isFinished(it.value.percentDownloaded) }.size
 
@@ -85,7 +84,7 @@ class DownloadService(val app: Context, val pluginContext: Context) {
                             videoCache.bytesDownloaded = mTask.bytesDownloaded
                             videoCache.percentDownloaded = mTask.percentDownloaded
 
-                            videoCacheModel.addVideoCache(subject, videoCache)
+                            App.app.videoCacheModel.addVideoCache(subject, videoCache)
 
                             sendBroadcast(episode, subject, mTask.percentDownloaded, mTask.bytesDownloaded)
                             val pIntent = PendingIntent.getActivity(app, taskKey.hashCode(),
@@ -115,18 +114,28 @@ class DownloadService(val app: Context, val pluginContext: Context) {
                         manager.cancel(0)
 
                     sendBroadcast(episode, subject, Float.NaN, 0, false)
-                    val videoCache = videoCacheModel.getVideoCache(episode, subject)?:return@let
+                    val videoCache = App.app.videoCacheModel.getVideoCache(episode, subject) ?: return@let
                     createDownloader(videoCache).remove()
-                    videoCacheModel.removeVideoCache(episode, subject)
+                    App.app.videoCacheModel.removeVideoCache(episode, subject)
                 }
             }
         }
     }
 
-    private fun createDownloader(videoCache: VideoCache): Downloader{
-        val dataSourceFactory = VideoModel.createDataSourceFactory(pluginContext, videoCache.video, true)
-        val downloaderFactory = DefaultDownloaderFactory(DownloaderConstructorHelper(App.from(pluginContext).downloadCache, dataSourceFactory))
-        return downloaderFactory.createDownloader(DownloadRequest(videoCache.video.url, videoCache.type, Uri.parse(videoCache.video.url), videoCache.streamKeys, null, null))
+    private fun createDownloader(videoCache: VideoCache): Downloader {
+        val dataSourceFactory = VideoModel.createDataSourceFactory(App.app.host, videoCache.video, true)
+        val downloaderFactory =
+            DefaultDownloaderFactory(DownloaderConstructorHelper(App.app.downloadCache, dataSourceFactory))
+        return downloaderFactory.createDownloader(
+            DownloadRequest(
+                videoCache.video.url,
+                videoCache.type,
+                Uri.parse(videoCache.video.url),
+                videoCache.streamKeys,
+                null,
+                null
+            )
+        )
     }
 
     private fun sendBroadcast(episode: Episode, subject: Subject, percent: Float, bytes: Long, hasCache: Boolean? = null){

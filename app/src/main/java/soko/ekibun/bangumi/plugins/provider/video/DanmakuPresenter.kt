@@ -13,6 +13,7 @@ import master.flame.danmaku.danmaku.model.IDisplayer
 import master.flame.danmaku.danmaku.model.android.DanmakuContext
 import master.flame.danmaku.danmaku.model.android.Danmakus
 import master.flame.danmaku.danmaku.parser.BaseDanmakuParser
+import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.JsEngine
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
@@ -39,7 +40,7 @@ class DanmakuPresenter(
             field = value
             updateValue()
         }
-    private val adapter = DanmakuListAdapter(linePresenter)
+    private val adapter = DanmakuListAdapter()
 
     init {
         val overlappingEnablePair = HashMap<Int, Boolean>()
@@ -222,14 +223,17 @@ class DanmakuPresenter(
     }
 
     private fun loadDanmaku(danmakuInfo: DanmakuListAdapter.DanmakuInfo, episode: Episode) {
-        val provider = linePresenter.app.lineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider ?: return
+        val provider =
+            App.app.lineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider
+                ?: return
         when {
             danmakuInfo.videoInfo == null -> {
                 danmakuInfo.info = " 获取视频信息..."
-                linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+                linePresenter.activityRef.get()
+                    ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
                 val videoCall = provider.getVideoInfo(
                     "getVideoInfo(${danmakuInfo.line}, ${episode.id})",
-                    linePresenter.app.jsEngine,
+                    App.app.jsEngine,
                     danmakuInfo.line,
                     episode
                 )
@@ -239,16 +243,18 @@ class DanmakuPresenter(
                     loadDanmaku(danmakuInfo, episode)
                 }, {
                     danmakuInfo.info = " 获取视频信息出错: $it"
-                    linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+                    linePresenter.activityRef.get()
+                        ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
                     onFinish(it)
                 })
             }
             danmakuInfo.key == null -> {
                 danmakuInfo.info = " 获取弹幕信息..."
-                linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+                linePresenter.activityRef.get()
+                    ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
                 val call = provider.getDanmakuKey(
                     "getDanmakuKey(${danmakuInfo.videoInfo})",
-                    linePresenter.app.jsEngine,
+                    App.app.jsEngine,
                     danmakuInfo.videoInfo ?: return
                 )
                 danmakuCalls.add(call)
@@ -257,7 +263,8 @@ class DanmakuPresenter(
                     doAdd(Math.max(lastPos, 0) * 1000L * 300L, danmakuInfo)
                 }, {
                     danmakuInfo.info = " 获取弹幕信息出错: $it"
-                    linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+                    linePresenter.activityRef.get()
+                        ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
                     onFinish(it)
                 })
             }
@@ -266,16 +273,18 @@ class DanmakuPresenter(
     }
 
     private fun doAdd(pos: Long, danmakuInfo: DanmakuListAdapter.DanmakuInfo) {
-        val provider = linePresenter.app.lineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider ?: return
+        val provider =
+            App.app.lineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider
+                ?: return
         val call = provider.getDanmaku(
             "getDanmakuKey(${danmakuInfo.videoInfo}, ${danmakuInfo.key}, ${pos / 1000})",
-            linePresenter.app.jsEngine,
+            App.app.jsEngine,
             danmakuInfo.videoInfo ?: return,
             danmakuInfo.key ?: return,
             (pos / 1000).toInt()
         )
         danmakuInfo.info = " 加载弹幕..."
-        linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+        linePresenter.activityRef.get()?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
         call.enqueue({
             it.forEach {
                 danmakuInfo.danmakus.add(it)
@@ -289,11 +298,13 @@ class DanmakuPresenter(
                 linePresenter.pluginView.view.danmaku_flame.addDanmaku(danmaku)
             }
             danmakuInfo.info = ""
-            linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+            linePresenter.activityRef.get()
+                ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
             onFinish(null)
         }, {
             danmakuInfo.info = " 加载弹幕出错: $it"
-            linePresenter.activity.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+            linePresenter.activityRef.get()
+                ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
             onFinish(it)
         })
     }

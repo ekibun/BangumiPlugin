@@ -9,6 +9,7 @@ import com.google.android.exoplayer2.offline.DownloadHelper
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.android.synthetic.main.dialog_episode_list.view.*
 import kotlinx.android.synthetic.main.item_episode.view.*
+import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.VideoCache
 import soko.ekibun.bangumi.plugins.provider.video.VideoPluginView
@@ -19,7 +20,8 @@ import java.io.IOException
 /**
  * 剧集列表对话框
  */
-class EpisodeListDialog(private val linePresenter: LinePresenter, val adapter: EpisodeAdapter) : BasePluginDialog(linePresenter.activity, linePresenter.pluginContext, R.layout.dialog_episode_list) {
+class EpisodeListDialog(private val linePresenter: LinePresenter, val adapter: EpisodeAdapter) :
+    BasePluginDialog(linePresenter.activityRef.get()!!, linePresenter.pluginContext, R.layout.dialog_episode_list) {
     companion object {
         /**
          * 显示对话框
@@ -56,14 +58,22 @@ class EpisodeListDialog(private val linePresenter: LinePresenter, val adapter: E
 
         adapter.setOnItemChildLongClickListener { _, _, position ->
             val item = linePresenter.subjectView.episodeDetailAdapter.data[position]
-            val videoCache = linePresenter.app.videoCacheModel.getVideoCache(item.t, linePresenter.subject)
-            if(videoCache != null) DownloadService.remove(linePresenter.pluginContext, item.t, linePresenter.subject)
+            val videoCache = App.app.videoCacheModel.getVideoCache(item.t, linePresenter.subject)
+            if (videoCache != null)
+                (linePresenter.pluginView as? VideoPluginView)?.let {
+                    DownloadService.remove(
+                        linePresenter.pluginContext,
+                        item.t,
+                        linePresenter.subject
+                    )
+                }
             true
         }
 
         adapter.setOnItemChildClickListener { _, _, position ->
             val item = linePresenter.subjectView.episodeDetailAdapter.data[position]
-            val info = linePresenter.app.lineInfoModel.getInfos(linePresenter.subject)?.getDefaultProvider()?:return@setOnItemChildClickListener
+            val info = App.app.lineInfoModel.getInfos(linePresenter.subject)?.getDefaultProvider()
+                ?: return@setOnItemChildClickListener
             linePresenter.subjectView.episodeDetailAdapter.getViewByPosition(position, R.id.item_layout)?.let{
                 it.item_download_info.text = "获取视频信息"
             }

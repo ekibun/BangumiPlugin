@@ -27,7 +27,7 @@ class JsEngine(val app: App) {
         var pageFinish = false
         var lastTime = System.currentTimeMillis()
         app.handler.post {
-            val webview = webviewList.getOrPut(key) { BackgroundWebView(app.context) }
+            val webview = webviewList.getOrPut(key) { BackgroundWebView(app.host) }
             webview.settings.userAgentString = header["User-Agent"] ?: webview.settings.userAgentString
             val map = HashMap<String, String>()
             map["referer"] = url
