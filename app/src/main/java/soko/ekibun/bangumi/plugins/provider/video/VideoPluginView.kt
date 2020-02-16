@@ -230,7 +230,7 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             }
 
             override fun onError(error: ExoPlaybackException) {
-                showVideoError("视频加载错误\n${error.sourceException.localizedMessage}", "重新加载"){
+                showVideoError("视频加载错误\n${error.sourceException.localizedMessage}", "重新加载") {
                     startAt = videoModel.player.currentPosition
                     videoModel.reload()
                 }
@@ -536,23 +536,35 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
         }
     }
 
-    private val downloadReceiver = object: BroadcastReceiver(){
+    private val downloadReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            try{
-                val episode = JsonUtil.toEntity<Episode>(intent.getStringExtra(DownloadService.EXTRA_EPISODE)?:"")!!
+            try {
+                val episode = JsonUtil.toEntity<Episode>(intent.getStringExtra(DownloadService.EXTRA_EPISODE) ?: "")!!
                 val percent = intent.getFloatExtra(DownloadService.EXTRA_PERCENT, Float.NaN)
                 val bytes = intent.getLongExtra(DownloadService.EXTRA_BYTES, 0L)
 
                 val index = linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst { it.t?.id == episode.id }
-                linePresenter.subjectView.episodeDetailAdapter.getViewByPosition(index, R.id.item_layout)?.let{
-                    linePresenter.subjectView.episodeDetailAdapter.updateDownload(it, percent, bytes, intent.getBooleanExtra(DownloadService.EXTRA_CANCEL, true), !intent.hasExtra(DownloadService.EXTRA_CANCEL))
+                linePresenter.subjectView.episodeDetailAdapter.getViewByPosition(index, R.id.item_layout)?.let {
+                    linePresenter.subjectView.episodeDetailAdapter.updateDownload(
+                        it,
+                        percent,
+                        bytes,
+                        intent.getBooleanExtra(DownloadService.EXTRA_CANCEL, true),
+                        !intent.hasExtra(DownloadService.EXTRA_CANCEL)
+                    )
                 }
 
                 val epIndex = linePresenter.subjectView.episodeAdapter.data.indexOfFirst { it.id == episode.id }
-                linePresenter.subjectView.episodeAdapter.getViewByPosition(epIndex, R.id.item_layout)?.let{
-                    linePresenter.subjectView.episodeAdapter.updateDownload(it, percent, bytes, intent.getBooleanExtra(DownloadService.EXTRA_CANCEL, true), !intent.hasExtra(DownloadService.EXTRA_CANCEL))
+                linePresenter.subjectView.episodeAdapter.getViewByPosition(epIndex, R.id.item_layout)?.let {
+                    linePresenter.subjectView.episodeAdapter.updateDownload(
+                        it,
+                        percent,
+                        bytes,
+                        intent.getBooleanExtra(DownloadService.EXTRA_CANCEL, true),
+                        !intent.hasExtra(DownloadService.EXTRA_CANCEL)
+                    )
                 }
-            }catch (e: Exception){
+            } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
@@ -569,7 +581,10 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
 
     init {
         linePresenter.activity.registerReceiver(receiver, IntentFilter(ACTION_MEDIA_CONTROL + linePresenter.subject.id))
-        linePresenter.activity.registerReceiver(downloadReceiver, IntentFilter(DownloadService.getBroadcastAction(linePresenter.subject)))
+        linePresenter.activity.registerReceiver(
+            downloadReceiver,
+            IntentFilter(DownloadService.getBroadcastAction(linePresenter.subject))
+        )
         linePresenter.activity.registerReceiver(networkReceiver, IntentFilter("android.net.conn.CONNECTIVITY_CHANGE"))
         linePresenter.proxy.onDestroyListener = {
             linePresenter.activity.unregisterReceiver(receiver)
@@ -600,6 +615,16 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
             }
         }
 
+        linePresenter.proxy.subjectPresenter.subjectView.collapsibleAppBarHelper.let {
+            val superTitleClick = it.onTitleClickListener
+            it.onTitleClickListener = { ev ->
+                if (linePresenter.proxy.subjectPresenter.subjectView.behavior.state == BottomSheetBehavior.STATE_HIDDEN) {
+                    doPlayPause(false)
+                    showInfo(true)
+                } else superTitleClick(ev)
+            }
+        }
+
         linePresenter.proxy.onBackListener = {
             if (isLandscape && !isInMultiWindowMode) {
                 linePresenter.activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
@@ -619,8 +644,10 @@ class VideoPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
                 0,
                 if (isLandscape) 0 else insets.systemWindowInsetBottom
             )
-            view.controller_frame.setPadding(0, 0, 0,
-                if (!isLandscape) 0 else insets.systemWindowInsetBottom)
+            view.controller_frame.setPadding(
+                0, 0, 0,
+                if (!isLandscape) 0 else insets.systemWindowInsetBottom
+            )
             insets.consumeSystemWindowInsets()
         }
         view.hide_danmaku_panel.setOnClickListener {

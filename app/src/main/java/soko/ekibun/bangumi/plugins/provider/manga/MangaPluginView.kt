@@ -26,6 +26,13 @@ class MangaPluginView(linePresenter: LinePresenter) : Provider.PluginView(linePr
     }
 
     init {
+        linePresenter.proxy.onBackListener = {
+            if (linePresenter.proxy.subjectPresenter.subjectView.behavior.state == BottomSheetBehavior.STATE_HIDDEN) {
+                linePresenter.proxy.subjectPresenter.subjectView.behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                true
+            } else false
+        }
+
         linePresenter.proxy.subjectPresenter.subjectView.onStateChangedListener = { state ->
             linePresenter.proxy.item_mask.visibility =
                 if (state == BottomSheetBehavior.STATE_HIDDEN) View.INVISIBLE else View.VISIBLE
