@@ -24,7 +24,6 @@ class MangaAdapter(data: MutableList<MangaProvider.ImageInfo>? = null) :
     }
 
     private fun loadData(helper: BaseViewHolder, item: MangaProvider.ImageInfo) {
-        helper.itemView.loading_text.isClickable = false
         helper.itemView.item_image.visibility = View.INVISIBLE
         helper.itemView.item_loading.visibility = View.VISIBLE
         helper.itemView.loading_progress.visibility = View.VISIBLE
@@ -49,7 +48,6 @@ class MangaAdapter(data: MutableList<MangaProvider.ImageInfo>? = null) :
     }
 
     private fun showError(helper: BaseViewHolder, message: String) {
-        helper.itemView.loading_text.isClickable = true
         helper.itemView.loading_progress.visibility = View.GONE
         helper.itemView.loading_text.visibility = View.VISIBLE
         helper.itemView.loading_text.text = message

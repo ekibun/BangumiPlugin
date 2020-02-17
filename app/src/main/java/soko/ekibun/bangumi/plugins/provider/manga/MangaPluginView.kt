@@ -62,23 +62,20 @@ class MangaPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
                 }
             })
         { view, index ->
-            view.item_image.setOnLongClickListener {
-                val systemUiVisibility = view.systemUiVisibility
-                val dialog = AlertDialog.Builder(linePresenter.pluginContext)
-                    .setTitle(mangaAdapter.data[index].url)
-                    .setItems(arrayOf("分享"))
-                    { _, _ ->
-                        linePresenter.activityRef.get()
-                            ?.let { AppUtil.shareDrawable(it, view.item_image.drawable ?: return@setItems) }
-                    }.setOnDismissListener {
-                        view.systemUiVisibility = systemUiVisibility
-                    }.create()
-                dialog.window?.decorView?.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
-                dialog.show()
-                true
-            }
+            val systemUiVisibility = view.systemUiVisibility
+            val dialog = AlertDialog.Builder(linePresenter.pluginContext)
+                .setTitle(mangaAdapter.data[index].url)
+                .setItems(arrayOf("分享"))
+                { _, _ ->
+                    linePresenter.activityRef.get()
+                        ?.let { AppUtil.shareDrawable(it, view.item_image.drawable ?: return@setItems) }
+                }.setOnDismissListener {
+                    view.systemUiVisibility = systemUiVisibility
+                }.create()
+            dialog.window?.decorView?.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
+            dialog.show()
         }
         linePresenter.proxy.subjectPresenter.subjectView.let {
             it.behavior.isHideable = true
