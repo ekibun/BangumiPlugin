@@ -41,6 +41,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:visibility="gone"
+                tools:maxLines="2"
                 tools:text="网络错误"
                 android:textColor="#ff0000"
                 android:textSize="20sp"/>

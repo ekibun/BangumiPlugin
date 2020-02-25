@@ -49,7 +49,7 @@ class App(val host: Context, val plugin: Context) {
         fun createThemeContext(activityRef: WeakReference<Activity>): Context {
             val themeContext = object : ContextThemeWrapper(app.plugin, R.style.AppTheme) {
                 override fun getApplicationContext(): Context {
-                    return app.plugin
+                    return this
                 }
 
                 override fun getSystemService(name: String): Any? {

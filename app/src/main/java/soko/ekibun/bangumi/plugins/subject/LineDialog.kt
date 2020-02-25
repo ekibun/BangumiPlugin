@@ -70,6 +70,14 @@ class LineDialog(private val linePresenter: LinePresenter) :
             dismiss()
         }
 
+        view.item_file.setOnClickListener {
+            linePresenter.loadFile { file ->
+                if (file == null) return@loadFile
+                updateInfo(view, LineInfoModel.LineInfo("", file))
+            }
+        }
+
+
         view.item_ok.setOnClickListener {
             val provider = view.item_line.tag as? LineProvider.ProviderInfo ?: return@setOnClickListener
             callback(

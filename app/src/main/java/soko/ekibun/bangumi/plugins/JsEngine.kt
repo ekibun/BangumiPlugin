@@ -65,8 +65,8 @@ class JsEngine(val app: App) {
         return ret
     }
 
-    fun runScript(script: String, key: String): String {
-        val methods = """
+    fun runScript(script: String, header: String?, key: String): String {
+        val globalMethods = """
             |var _http = Packages.${HttpUtil.javaClass.name}.INSTANCE;
             |var _json = Packages.${JsonUtil.javaClass.name}.INSTANCE;
             |var AsyncTask = Packages.${JsAsyncTask::class.java.name};
@@ -121,7 +121,8 @@ class JsEngine(val app: App) {
             rhino.optimizationLevel = -1
             val scope = rhino.initStandardObjects()
             ScriptableObject.putProperty(scope, "_jsEngine", Context.javaToJS(this, scope))
-            rhino.evaluateString(scope, methods, "header", 1, null)
+            rhino.evaluateString(scope, globalMethods, "global", 1, null)
+            if (!header.isNullOrEmpty()) rhino.evaluateString(scope, header, "header", 1, null)
             rhino.evaluateString(
                 scope, """(function(){var _ret = (function(){$script
                 |   }());
@@ -138,6 +139,7 @@ class JsEngine(val app: App) {
     class ScriptTask<T>(
         private val jsEngine: JsEngine,
         private val script: String,
+        private val header: String?,
         private val key: String,
         val converter: (String) -> T
     ) : AsyncTask<String, Unit, String>() {
@@ -146,7 +148,7 @@ class JsEngine(val app: App) {
         var exception: Exception? = null
         override fun doInBackground(vararg params: String?): String? {
             return try {
-                jsEngine.runScript(script, key)
+                jsEngine.runScript(script, header, key)
             } catch (e: InterruptedException) {
                 null
             } catch (e: Exception) {

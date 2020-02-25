@@ -13,12 +13,22 @@ import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 
 abstract class Provider(
-    @Code("搜索",  0) val search: String? = null
-){
+    @Code("全局", -2) val header: String? = null,
+    @Code("打开", -1) val open: String? = null,
+    @Code("搜索", 0) val search: String? = null
+) {
+    fun open(scriptKey: String, jsEngine: JsEngine, line: LineInfoModel.LineInfo): JsEngine.ScriptTask<String> {
+        return JsEngine.ScriptTask(
+            jsEngine,
+            "var line = ${JsonUtil.toJson(line)};\n$open",
+            header,
+            scriptKey
+        ) { JsonUtil.toEntity<String>(it) ?: "" }
+    }
 
-    fun search(scriptKey: String, jsEngine: JsEngine, key: String): JsEngine.ScriptTask<List<LineInfoModel.LineInfo>>{
-        return JsEngine.ScriptTask(jsEngine,"var key = ${JsonUtil.toJson(key)};\n$search", scriptKey){
-            JsonUtil.toEntity<List<LineInfoModel.LineInfo>>(it)?:ArrayList()
+    fun search(scriptKey: String, jsEngine: JsEngine, key: String): JsEngine.ScriptTask<List<LineInfoModel.LineInfo>> {
+        return JsEngine.ScriptTask(jsEngine, "var key = ${JsonUtil.toJson(key)};\n$search", header, scriptKey) {
+            JsonUtil.toEntity<List<LineInfoModel.LineInfo>>(it) ?: ArrayList()
         }
     }
 
@@ -50,9 +60,17 @@ abstract class Provider(
         )
 
         fun getProviderType(subject: Subject): String {
-            return when(subject.type){
+            return when (subject.type) {
                 Subject.TYPE_ANIME, Subject.TYPE_REAL -> TYPE_VIDEO
                 Subject.TYPE_BOOK -> TYPE_MANGA
+                else -> ""
+            }
+        }
+
+        fun getProviderFileType(type: String): String {
+            return when (type) {
+                TYPE_VIDEO -> "video/*"
+                TYPE_MANGA -> "image/*"
                 else -> ""
             }
         }

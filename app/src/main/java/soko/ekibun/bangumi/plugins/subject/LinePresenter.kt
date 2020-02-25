@@ -21,10 +21,7 @@ import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.manga.MangaProvider
 import soko.ekibun.bangumi.plugins.ui.provider.ProviderActivity
-import soko.ekibun.bangumi.plugins.util.AppUtil
-import soko.ekibun.bangumi.plugins.util.JsonUtil
-import soko.ekibun.bangumi.plugins.util.ReflectUtil
-import soko.ekibun.bangumi.plugins.util.ResourceUtil
+import soko.ekibun.bangumi.plugins.util.*
 import java.lang.ref.WeakReference
 
 class LinePresenter(val activityRef: WeakReference<Activity>) {
@@ -70,13 +67,13 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
         proxy.subjectPresenter.subjectRefreshListener = { _ ->
             val newSubject = proxy.subjectPresenter.subject
             subject.type = newSubject.type
-            subject.eps = if(newSubject.eps?.size?:0 > 0) newSubject.eps else subject.eps
+            subject.eps = if (newSubject.eps?.size ?: 0 > 0) newSubject.eps else subject.eps
             subject.eps_count = newSubject.eps_count
             subject.ep_status = newSubject.ep_status
             subjectView.updateEpisode(subject)
             refreshLines()
         }
-        proxy.onActivityResultListener = { requestCode: Int, resultCode: Int, data: Intent? ->
+        proxy.onActivityResultListener = onActivityResultListener@{ requestCode: Int, resultCode: Int, data: Intent? ->
             if (requestCode == AppUtil.REQUEST_PROVIDER && resultCode == AppCompatActivity.RESULT_OK) {//Provider
                 loadProviderCallback?.invoke(
                     JsonUtil.toEntity<LineProvider.ProviderInfo>(
@@ -85,6 +82,10 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                         ) ?: ""
                     )
                 )
+            }
+            if (requestCode == AppUtil.REQUEST_FILE_CODE && resultCode == AppCompatActivity.RESULT_OK) {//file
+                val uri = data?.data ?: return@onActivityResultListener
+                loadFileCallback?.invoke(StorageUtil.getRealPathFromUri(pluginContext, uri))
             }
         }
     }
@@ -99,6 +100,15 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
         activityRef.get()?.startActivityForResult(intent, AppUtil.REQUEST_PROVIDER)
     }
 
+    private var loadFileCallback: ((String?) -> Unit)? = null
+    fun loadFile(callback: (String?) -> Unit) {
+        loadFileCallback = callback
+        val intent = Intent()
+        intent.type = Provider.getProviderFileType(type)
+        intent.action = Intent.ACTION_GET_CONTENT
+        activityRef.get()?.startActivityForResult(intent, AppUtil.REQUEST_FILE_CODE)
+    }
+
     var epCall: Pair<LineProvider.ProviderInfo, JsEngine.ScriptTask<List<MangaProvider.MangaEpisode>>>? = null
     fun refreshLines() {
         val infos = App.app.lineInfoModel.getInfos(subject)
@@ -110,8 +120,13 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
             val ep = episodeAdapter.data[position]
             val popupMenu = PopupMenu(pluginContext, v)
             popupMenu.menu.add("看到")
+            popupMenu.menu.add("打开")
             popupMenu.setOnMenuItemClickListener {
-                proxy.subjectPresenter.updateSubjectProgress(null, ep.sort.toInt())
+                when (it.title) {
+                    "看到" -> proxy.subjectPresenter.updateSubjectProgress(null, ep.sort.toInt())
+                    "打开" -> activityRef.get()?.let { ctx -> AppUtil.openBrowser(ctx, ep.manga?.url ?: "") }
+                }
+
                 false
             }
             popupMenu.show()
@@ -182,6 +197,14 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                     ColorStateList.valueOf(((provider?.color ?: 0) + 0xff000000).toInt())
                 epView.episodes_line_site.visibility = View.VISIBLE
                 epView.episodes_line_site.text = provider?.title ?: { if (defaultLine.site == "") "线路" else "错误接口" }()
+                epView.episodes_line.setOnLongClickListener { _ ->
+                    App.app.lineProvider.getProvider(type, defaultLine.site)?.provider?.let { p ->
+                        if (!p.open.isNullOrEmpty()) p.open("open", App.app.jsEngine, defaultLine).enqueue({ url ->
+                            activityRef.get()?.let { AppUtil.openBrowser(it, url) }
+                        }, {})
+                    }
+                    true
+                }
                 epView.episodes_line.setOnClickListener {
                     val popList = ListPopupWindow(pluginContext)
                     popList.anchorView = epView.episodes_line
@@ -216,7 +239,8 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                     episodeAdapter.setNewData(null)
                     epCall = provider to it.getEpisode("loadEps", App.app.jsEngine, defaultLine)
                     epCall?.second?.enqueue({ eps ->
-                        if (epCall?.first == provider){
+                        if (epCall?.first == provider) {
+                            emptyView.text = "什么都没有哦"
                             subject.eps = eps.map { mangaEpisode ->
                                 val sort = Regex("(\\d+)").find(
                                     mangaEpisode.sort
@@ -240,7 +264,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                         emptyView.text = e.message
                     })
                 }
-                episodeAdapter.data.forEachIndexed { index, episode ->
+                episodeAdapter.data.forEach { episode ->
                     episode.progress =
                         if (episode.sort > subject.ep_status) Episode.PROGRESS_REMOVE else Episode.PROGRESS_WATCH
                 }

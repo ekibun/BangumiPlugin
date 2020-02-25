@@ -107,6 +107,16 @@
                   android:padding="16dp"
                   android:textColor="?colorAccent"
                   android:text="搜索"/>
+        <TextView android:id="@+id/item_file"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:textAlignment="center"
+                  android:clickable="true"
+                  android:background="?android:attr/selectableItemBackground"
+                  android:focusable="true"
+                  android:padding="16dp"
+                  android:textColor="?colorAccent"
+                  android:text="浏览"/>
         <View
                 android:layout_width="0dp"
                 android:layout_height="match_parent"

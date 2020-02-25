@@ -17,28 +17,48 @@ class VideoProvider(
     @Code("获取弹幕", 4) val getDanmaku: String? = ""     // (video: VideoInfo, key: Object, pos: Int) -> List<DanmakuInfo>
 ): Provider(search){
     fun getVideoInfo(scriptKey: String, jsEngine: JsEngine, line: LineInfoModel.LineInfo, episode: Episode): JsEngine.ScriptTask<VideoInfo>{
-        return JsEngine.ScriptTask(jsEngine,"var line = ${JsonUtil.toJson(line)};var episode = ${JsonUtil.toJson(episode)};\n$getVideoInfo", scriptKey){
+        return JsEngine.ScriptTask(
+            jsEngine,
+            "var line = ${JsonUtil.toJson(line)};var episode = ${JsonUtil.toJson(episode)};\n$getVideoInfo",
+            header,
+            scriptKey
+        ) {
             JsonUtil.toEntity<VideoInfo>(it)!!
         }
     }
 
     fun getVideo(scriptKey: String, jsEngine: JsEngine, video: VideoInfo): JsEngine.ScriptTask<HttpUtil.HttpRequest>{
-        return JsEngine.ScriptTask(jsEngine,"var video = ${JsonUtil.toJson(video)};\n${if(!getVideo.isNullOrEmpty()) getVideo else "return webview.load(video.url);"}", scriptKey){
+        return JsEngine.ScriptTask(
+            jsEngine,
+            "var video = ${JsonUtil.toJson(video)};\n${if (!getVideo.isNullOrEmpty()) getVideo else "return webview.load(video.url);"}",
+            header,
+            scriptKey
+        ) {
             JsonUtil.toEntity<HttpUtil.HttpRequest>(it)!!
         }
     }
 
     fun getDanmakuKey(scriptKey: String, jsEngine: JsEngine, video: VideoInfo): JsEngine.ScriptTask<String>{
-        return JsEngine.ScriptTask(jsEngine,"var video = ${JsonUtil.toJson(video)};\n${if(!getDanmakuKey.isNullOrEmpty()) getDanmakuKey else "return \"\";"}", scriptKey){
+        return JsEngine.ScriptTask(
+            jsEngine,
+            "var video = ${JsonUtil.toJson(video)};\n${if (!getDanmakuKey.isNullOrEmpty()) getDanmakuKey else "return \"\";"}",
+            header,
+            scriptKey
+        ) {
             Log.v("plugin", "danmaku $it")
             it
         }
     }
 
     fun getDanmaku(scriptKey: String, jsEngine: JsEngine, video: VideoInfo, key: String, pos: Int): JsEngine.ScriptTask<List<DanmakuInfo>>{
-        return JsEngine.ScriptTask(jsEngine,"var video = ${JsonUtil.toJson(video)};var key = $key;var pos = $pos;\n$getDanmaku", scriptKey){
+        return JsEngine.ScriptTask(
+            jsEngine,
+            "var video = ${JsonUtil.toJson(video)};var key = $key;var pos = $pos;\n$getDanmaku",
+            header,
+            scriptKey
+        ) {
             Log.v("plugin", "danmaku $it")
-            JsonUtil.toEntity<List<DanmakuInfo>>(it)?:ArrayList()
+            JsonUtil.toEntity<List<DanmakuInfo>>(it) ?: ArrayList()
         }
     }
 

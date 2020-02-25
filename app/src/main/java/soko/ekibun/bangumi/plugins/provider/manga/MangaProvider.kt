@@ -14,12 +14,17 @@ class MangaProvider(
     @Code("获取图片", 3) val getImage: String = ""        // (image: ImageInfo) -> HttpRequest
 ): Provider(search) {
     fun getEpisode(scriptKey: String, jsEngine: JsEngine, line: LineInfoModel.LineInfo): JsEngine.ScriptTask<List<MangaEpisode>> {
-        return JsEngine.ScriptTask(jsEngine,"var line = ${JsonUtil.toJson(line)};\n$getEpisode", scriptKey){
+        return JsEngine.ScriptTask(jsEngine, "var line = ${JsonUtil.toJson(line)};\n$getEpisode", header, scriptKey) {
             JsonUtil.toEntity<List<MangaEpisode>>(it)!!
         }
     }
     fun getManga(scriptKey: String, jsEngine: JsEngine, episode: MangaEpisode): JsEngine.ScriptTask<List<ImageInfo>> {
-        return JsEngine.ScriptTask(jsEngine,"var episode = ${JsonUtil.toJson(episode)};\n$getManga", scriptKey){
+        return JsEngine.ScriptTask(
+            jsEngine,
+            "var episode = ${JsonUtil.toJson(episode)};\n$getManga",
+            header,
+            scriptKey
+        ) {
             val ret = JsonUtil.toEntity<List<ImageInfo>>(it)!!
             ret.forEachIndexed { index, imageInfo ->
                 imageInfo.ep = episode
@@ -29,8 +34,10 @@ class MangaProvider(
         }
     }
     fun getImage(scriptKey: String, jsEngine: JsEngine, image: ImageInfo): JsEngine.ScriptTask<HttpUtil.HttpRequest> {
-        return JsEngine.ScriptTask(jsEngine,"var image = ${JsonUtil.toJson(image)};\n${
-        if(getImage.isNotEmpty()) getImage else "return image.url;"}", scriptKey){
+        return JsEngine.ScriptTask(
+            jsEngine, "var image = ${JsonUtil.toJson(image)};\n${
+            if (getImage.isNotEmpty()) getImage else "return image.url;"}", header, scriptKey
+        ) {
             JsonUtil.toEntity<HttpUtil.HttpRequest>(it)!!
         }
     }

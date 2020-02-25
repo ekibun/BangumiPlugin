@@ -1,18 +1,12 @@
 package soko.ekibun.bangumi.plugins.util
 
-import android.Manifest
-import android.app.Activity
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.Point
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
-import android.os.Build
-import android.util.Size
-import android.view.WindowManager
+import android.net.Uri
 import androidx.core.content.FileProvider
 import com.bumptech.glide.load.resource.gif.GifDrawable
 import soko.ekibun.bangumi.plugins.bean.Subject
@@ -64,10 +58,18 @@ object AppUtil {
         }
     }
 
-    fun getScreenSize(context: Context): Size {
-        val p = Point()
-        (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay.getRealSize(p)
-        return Size(Math.min(p.x, p.y), Math.max(p.x, p.y))
+    /**
+     * 打开浏览器
+     * @param context Context
+     * @param url String
+     */
+    fun openBrowser(context: Context, url: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun shareString(context: Context, str: String) {
@@ -77,14 +79,6 @@ object AppUtil {
         context.startActivity(Intent.createChooser(intent, "share"))
     }
 
-    const val REQUEST_STORAGE_CODE = 1
     const val REQUEST_FILE_CODE = 2
     const val REQUEST_PROVIDER = 3
-    fun checkStorage(context: Activity): Boolean{
-        if (Build.VERSION.SDK_INT >= 23 && context.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            context.requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), REQUEST_STORAGE_CODE)
-            return false
-        }
-        return true
-    }
 }
