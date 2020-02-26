@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @GlideModule
 public class ProgressAppGlideModule extends AppGlideModule {
@@ -77,30 +78,43 @@ public class ProgressAppGlideModule extends AppGlideModule {
         }
 
         static void forget(String url) {
+            try {
+                url = Objects.requireNonNull(HttpUrl.parse(url)).toString();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             LISTENERS.remove(url);
             PROGRESSES.remove(url);
         }
 
         static void expect(String url, UIonProgressListener listener) {
+            try {
+                url = Objects.requireNonNull(HttpUrl.parse(url)).toString();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             LISTENERS.put(url, listener);
         }
 
         @Override
-        public void update(HttpUrl url, final long bytesRead, final long contentLength) {
+        public void update(HttpUrl url, final long bytesRead, long contentLength) {
             //System.out.printf("%s: %d/%d = %.2f%%%n", url, bytesRead, contentLength, (100f * bytesRead) / contentLength);
             String key = url.toString();
+            if (contentLength < 0 && bytesRead > 0)
+                contentLength = (long) (1e9 / bytesRead) + bytesRead;
+            final long _contentLength = contentLength;
             final UIonProgressListener listener = LISTENERS.get(key);
             if (listener == null) {
                 return;
             }
-            if (contentLength <= bytesRead) {
+            if (_contentLength <= bytesRead) {
                 forget(key);
             }
             if (needsDispatch(key, bytesRead, contentLength, listener.getGranualityPercentage())) {
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
-                        listener.onProgress(bytesRead, contentLength);
+                        listener.onProgress(bytesRead, _contentLength);
                     }
                 });
             }
