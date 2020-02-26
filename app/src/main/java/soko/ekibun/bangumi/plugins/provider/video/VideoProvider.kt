@@ -1,6 +1,5 @@
 package soko.ekibun.bangumi.plugins.provider.video
 
-import android.util.Log
 import soko.ekibun.bangumi.plugins.JsEngine
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
@@ -44,10 +43,7 @@ class VideoProvider(
             "var video = ${JsonUtil.toJson(video)};\n${if (!getDanmakuKey.isNullOrEmpty()) getDanmakuKey else "return \"\";"}",
             header,
             scriptKey
-        ) {
-            Log.v("plugin", "danmaku $it")
-            it
-        }
+        ) { it }
     }
 
     fun getDanmaku(scriptKey: String, jsEngine: JsEngine, video: VideoInfo, key: String, pos: Int): JsEngine.ScriptTask<List<DanmakuInfo>>{
@@ -57,7 +53,6 @@ class VideoProvider(
             header,
             scriptKey
         ) {
-            Log.v("plugin", "danmaku $it")
             JsonUtil.toEntity<List<DanmakuInfo>>(it) ?: ArrayList()
         }
     }

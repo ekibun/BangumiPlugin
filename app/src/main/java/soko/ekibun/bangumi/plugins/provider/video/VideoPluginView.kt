@@ -13,7 +13,6 @@ import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
-import android.util.Log
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.Toast
@@ -667,7 +666,6 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
             VideoModel.createDownloadRequest(request, object : DownloadHelper.Callback {
                 override fun onPrepared(helper: DownloadHelper) {
                     val downloadRequest = helper.getDownloadRequest(request.url, null)
-                    Log.v("downloadRequest", downloadRequest.streamKeys.toString())
                     DownloadService.download(
                         App.app.plugin, episode, subject, EpisodeCache(
                             episode, Provider.TYPE_VIDEO, JsonUtil.toJson(

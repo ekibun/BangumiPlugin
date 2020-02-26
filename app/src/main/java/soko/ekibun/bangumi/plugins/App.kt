@@ -10,8 +10,8 @@ import soko.ekibun.bangumi.plugins.model.EpisodeCacheModel
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.service.DownloadService
+import soko.ekibun.bangumi.plugins.util.AppUtil
 import soko.ekibun.bangumi.plugins.util.ReflectUtil
-import soko.ekibun.bangumi.plugins.util.StorageUtil
 import java.io.File
 import java.lang.ref.WeakReference
 import java.util.concurrent.ExecutorService
@@ -20,7 +20,7 @@ import java.util.concurrent.Executors
 class App(val host: Context, val plugin: Context) {
     val handler = android.os.Handler { true }
     private val databaseProvider by lazy { ExoDatabaseProvider(host) }
-    val downloadCachePath = StorageUtil.getDiskFileDir(host, "download").absolutePath
+    private val downloadCachePath = AppUtil.getDiskFileDir(host, "download").absolutePath
 
     val downloadCache by lazy {
         SimpleCache(

@@ -1,7 +1,6 @@
 package soko.ekibun.bangumi.plugins.main
 
 import android.app.Activity
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.View
@@ -51,7 +50,7 @@ class MainPresenter(activityRef: WeakReference<Activity>) {
             nav_view.menu.add(ResourceUtil.getId(App.app.host, "group1"), Menu.FIRST, Menu.NONE, "离线缓存")
         menu.icon = ResourceUtil.getDrawable(pluginContext, R.drawable.ic_cloud_done)
         menu.isCheckable = true
-        Log.v("plugin", "group ${menu.groupId}")
+
         val superListener = proxy.mainPresenter.drawerView.navigationItemSelectedListener
         proxy.mainPresenter.drawerView.navigationItemSelectedListener = {
             if (menu.itemId == it.itemId) {

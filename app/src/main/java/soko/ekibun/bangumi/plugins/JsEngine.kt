@@ -43,7 +43,6 @@ class JsEngine(val app: App) {
             }
             webview.onPageFinished = {
                 webview.evaluateJavascript(script) {
-                    Log.v("javascript", it.toString())
                     JsonUtil.toEntity<HttpUtil.HttpRequest>(it)?.let {
                         ret = it
                         finished = true
@@ -148,9 +147,7 @@ class JsEngine(val app: App) {
         var exception: Exception? = null
         override fun doInBackground(vararg params: String?): T? {
             return try {
-                val result = jsEngine.runScript(script, header, key)
-                Log.v("jsEngine", result)
-                converter(result)
+                converter(jsEngine.runScript(script, header, key))
             } catch (e: InterruptedException) {
                 null
             } catch (e: Exception) {

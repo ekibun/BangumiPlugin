@@ -1,7 +1,6 @@
 package soko.ekibun.bangumi.plugins.model
 
 import android.content.Context
-import android.util.Log
 import androidx.preference.PreferenceManager
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.EpisodeCache
@@ -25,7 +24,6 @@ class EpisodeCacheModel(context: Context) {
     }
 
     fun getSubjectCacheList(subject: Subject): SubjectCache? {
-        Log.v("cache", JsonUtil.toJson(cacheList[subject.prefKey]))
         return cacheList[subject.prefKey]
     }
 

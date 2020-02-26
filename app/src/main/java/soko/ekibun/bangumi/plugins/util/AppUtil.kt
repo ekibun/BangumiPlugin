@@ -7,6 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.os.Environment
 import androidx.core.content.FileProvider
 import com.bumptech.glide.load.resource.gif.GifDrawable
 import soko.ekibun.bangumi.plugins.bean.Subject
@@ -78,6 +79,22 @@ object AppUtil {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    /**
+     * 下载目录
+     * @param context Context
+     * @param uniqueName String
+     * @return File
+     */
+    fun getDiskFileDir(context: Context, uniqueName: String): File {
+        val filePath: String =
+            if (Environment.MEDIA_MOUNTED == Environment.getExternalStorageState() || !Environment.isExternalStorageRemovable()) {
+                context.getExternalFilesDir(uniqueName)!!.absolutePath
+            } else {
+                context.filesDir.path + File.separator + uniqueName
+            }
+        return File(filePath)
     }
 
     const val REQUEST_PROVIDER = 3

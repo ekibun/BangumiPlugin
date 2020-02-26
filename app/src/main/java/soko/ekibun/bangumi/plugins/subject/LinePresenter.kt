@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.ColorStateList
-import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -217,7 +216,6 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
         }
 
         type = Provider.getProviderType(subject)
-        Log.v("plugin", "type $type")
 
         val setProvider = setProvider@{ info: LineInfoModel.LineInfo?, newInfo: LineInfoModel.LineInfo? ->
             if (infos == null) return@setProvider
@@ -281,7 +279,6 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                     popList.show()
                     popList.listView?.setOnItemClickListener { _, _, position, _ ->
                         popList.dismiss()
-                        Log.v("pos", "click: $position")
                         selectCache = position == lines.size - 2
                         when (position) {
                             lines.size - 2 -> refreshLines()

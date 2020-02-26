@@ -14,7 +14,7 @@ class BackgroundWebView(context: Context): WebView(context) {
     var uiHandler: Handler = Handler{true}
 
     override fun loadUrl(url: String?) {
-        Log.v("loadUrl", url)
+        Log.v("BGWebView", "load url: $url")
         super.loadUrl(url)
     }
 
@@ -52,7 +52,7 @@ class BackgroundWebView(context: Context): WebView(context) {
                 return false
             }
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                Log.v("loadres", request.url.toString() +" " + request.requestHeaders.toString())
+                Log.v("BGWebView", "intercept ${request.url} ${request.requestHeaders}")
                 onInterceptRequest(request)
                 return super.shouldInterceptRequest(view, request)
             }

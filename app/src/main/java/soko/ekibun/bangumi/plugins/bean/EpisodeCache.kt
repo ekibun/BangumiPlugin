@@ -2,7 +2,6 @@ package soko.ekibun.bangumi.plugins.bean
 
 import android.net.Uri
 import android.text.format.Formatter
-import android.util.Log
 import com.bumptech.glide.load.model.GlideUrl
 import com.google.android.exoplayer2.offline.*
 import soko.ekibun.bangumi.plugins.App
@@ -61,7 +60,6 @@ data class EpisodeCache(
         override fun download(update: () -> Unit): Boolean {
             var time = System.currentTimeMillis()
             createDownloader().download { contentLength, bytesDownloaded, percentDownloaded ->
-                Log.v("download", "$contentLength, $bytesDownloaded, $percentDownloaded")
                 this.contentLength = contentLength
                 this.bytesDownloaded = bytesDownloaded
                 this.percentDownloaded = percentDownloaded
