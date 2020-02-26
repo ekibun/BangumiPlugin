@@ -23,14 +23,10 @@ object AppUtil {
         return intent
     }
 
-    /**
-     * 分享图片
-     */
-    fun shareDrawable(context: Context, drawable: Drawable) {
+    fun saveDrawableToPath(drawable: Drawable, path: String) {
         try {
-            val cachePath = File(context.cacheDir, "images")
-            cachePath.mkdirs() // don't forget to make the directory
-            val stream = FileOutputStream("$cachePath/image", false) // overwrites this image every time
+            File(path).parentFile?.mkdirs()
+            val stream = FileOutputStream(path, false) // overwrites this image every time
             if (drawable is GifDrawable) {
                 val newGifDrawable = (drawable.constantState!!.newDrawable().mutate()) as GifDrawable
                 val byteBuffer = newGifDrawable.buffer
@@ -41,6 +37,18 @@ object AppUtil {
                 drawable.bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
             }
             stream.close()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * 分享图片
+     */
+    fun shareDrawable(context: Context, drawable: Drawable) {
+        try {
+            val cachePath = File(context.cacheDir, "images")
+            saveDrawableToPath(drawable, "$cachePath/image")
 
             val imageFile = File(cachePath, "image")
             val contentUri = FileProvider.getUriForFile(context, "soko.ekibun.bangumi.fileprovider", imageFile)
@@ -72,13 +80,5 @@ object AppUtil {
         }
     }
 
-    fun shareString(context: Context, str: String) {
-        val intent = Intent(Intent.ACTION_SEND)
-        intent.putExtra(Intent.EXTRA_TEXT, str)
-        intent.type = "text/plain"
-        context.startActivity(Intent.createChooser(intent, "share"))
-    }
-
-    const val REQUEST_FILE_CODE = 2
     const val REQUEST_PROVIDER = 3
 }

@@ -28,7 +28,7 @@ class MainPresenter(activityRef: WeakReference<Activity>) {
 
     private fun updateData() {
         view.isRefreshing = false
-        adapter.setNewData(App.app.videoCacheModel.getCacheList())
+        adapter.setNewData(App.app.episodeCacheModel.getCacheList())
     }
 
     init {

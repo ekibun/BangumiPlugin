@@ -2,7 +2,6 @@ package soko.ekibun.bangumi.plugins.subject
 
 import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.chad.library.adapter.base.entity.SectionEntity
 import kotlinx.android.synthetic.main.subject_episode.view.*
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
@@ -35,11 +34,11 @@ class SubjectView(private val linePresenter: LinePresenter, private val detail: 
         episodeAdapter.setNewData(null)
         episodeDetailAdapter.setNewData(null)
         maps.forEach {
-            episodeDetailAdapter.addData(object: SectionEntity<Episode>(true, it.key){})
+            episodeDetailAdapter.addData(EpisodeAdapter.EpisodeSection(true, it.key))
             it.value.forEach { ep ->
                 if (ep.isAir)
                     episodeAdapter.addData(ep)
-                episodeDetailAdapter.addData(object: SectionEntity<Episode>(ep){})
+                episodeDetailAdapter.addData(EpisodeAdapter.EpisodeSection(ep))
             }
         }
         if ((!scrolled || episodeDetailAdapter.data.size != lastEpisodeSize) && episodeAdapter.data.any { it.progress != null }) {

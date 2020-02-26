@@ -20,6 +20,8 @@ import com.google.android.exoplayer2.util.Util
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.JsEngine
 import soko.ekibun.bangumi.plugins.bean.Episode
+import soko.ekibun.bangumi.plugins.bean.EpisodeCache
+import soko.ekibun.bangumi.plugins.bean.Subject
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.video.VideoProvider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
@@ -73,65 +75,6 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
         player
     }
 
-    private var videoInfoCall: HashMap<String, JsEngine.ScriptTask<VideoProvider.VideoInfo>> = HashMap()
-    private var videoCall: HashMap<String, JsEngine.ScriptTask<HttpUtil.HttpRequest>> = HashMap()
-    //private val videoCacheModel by lazy{ App.getVideoCacheModel(content)}
-    fun getVideo(
-        key: String, episode: Episode, info: LineInfoModel.LineInfo?,
-        onGetVideoInfo: (VideoProvider.VideoInfo?, error: Exception?) -> Unit,
-        onGetVideo: (HttpUtil.HttpRequest?, List<StreamKey>?, error: Exception?) -> Unit,
-        onCheckNetwork: (() -> Unit) -> Unit
-    ) {
-        //val videoCache = videoCacheModel.getCache(episode, subject)
-        val videoCache = App.app.videoCacheModel.getVideoCache(episode, linePresenter.subject)
-        if (videoCache != null) {
-            onGetVideoInfo(VideoProvider.VideoInfo("", videoCache.video.url, videoCache.video.url), null)
-            onGetVideo(videoCache.video, videoCache.streamKeys, null)
-        } else {
-            val provider = App.app.lineProvider.getProvider(
-                Provider.TYPE_VIDEO,
-                info?.site ?: ""
-            )?.provider as? VideoProvider
-            if (info == null || provider == null) {
-                if (info?.site == "") {
-                    val format =
-                        (Regex("""\{\{(.*)\}\}""").find(info.id)?.groupValues ?: listOf("{{ep}}", "ep")).toMutableList()
-                    if (format[0] == "{{ep}}") format[1] = "#.##"
-                    val url = try {
-                        info.id.replace(format[0], DecimalFormat(format[1]).format(episode.sort))
-                    } catch (e: Exception) {
-                        info.id
-                    }
-                    onGetVideoInfo(VideoProvider.VideoInfo("", url, url), null)
-                    onGetVideo(HttpUtil.HttpRequest(url), null, null)
-                } else onGetVideoInfo(null, null)
-                return
-            }
-            val loadFromNetwork: () -> Unit = {
-                val jsEngine = App.app.jsEngine
-                videoInfoCall[key]?.cancel(true)
-                videoCall[key]?.cancel(true)
-                videoInfoCall[key] = provider.getVideoInfo(key, jsEngine, info, episode)
-                videoInfoCall[key]?.enqueue({ video ->
-                    onGetVideoInfo(video, null)
-                    if (video.site == "") {
-                        onGetVideo(HttpUtil.HttpRequest(video.url), null, null)
-                        return@enqueue
-                    }
-                    val videoProvider = App.app.lineProvider.getProvider(
-                        Provider.TYPE_VIDEO,
-                        video.site
-                    )?.provider as VideoProvider
-                    videoCall[key] = videoProvider.getVideo(key, jsEngine, video)
-                    videoCall[key]?.enqueue({
-                        onGetVideo(it, null, null)
-                    }, { onGetVideo(null, null, it) })
-                }, { onGetVideoInfo(null, it) })
-            }
-            if (!NetworkUtil.isWifiConnected(App.app.host)) onCheckNetwork(loadFromNetwork) else loadFromNetwork()
-        }
-    }
-
     private fun createMediaSource(request: HttpUtil.HttpRequest, streamKeys: List<StreamKey>? = null): MediaSource {
         val uri = Uri.parse(request.url)
         val dataSourceFactory = createDataSourceFactory(App.app.host, request, streamKeys != null)
@@ -144,33 +87,6 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
             if (streamKeys != null) it.setStreamKeys(streamKeys)
             it
         }.createMediaSource(uri)
-    }
-
-    fun createDownloadRequest(request: HttpUtil.HttpRequest, callback: DownloadHelper.Callback) {
-        val uri = Uri.parse(request.url)
-        val dataSourceFactory = createDataSourceFactory(App.app.host, request, true)
-        val helper = when (@C.ContentType Util.inferContentType(uri, request.overrideExtension)) {
-            C.TYPE_DASH -> DownloadHelper.forDash(
-                App.app.host,
-                uri,
-                dataSourceFactory,
-                DefaultRenderersFactory(App.app.host)
-            )
-            C.TYPE_SS -> DownloadHelper.forSmoothStreaming(
-                App.app.host,
-                uri,
-                dataSourceFactory,
-                DefaultRenderersFactory(App.app.host)
-            )
-            C.TYPE_HLS -> DownloadHelper.forHls(
-                App.app.host,
-                uri,
-                dataSourceFactory,
-                DefaultRenderersFactory(App.app.host)
-            )
-            else -> DownloadHelper.forProgressive(App.app.host, uri)
-        }
-        helper.prepare(callback)
     }
 
     var reload = {}
@@ -207,6 +123,96 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
                     httpSourceFactory
                 ) else httpSourceFactory
             )
+        }
+
+        private var videoInfoCall: HashMap<String, JsEngine.ScriptTask<VideoProvider.VideoInfo>> = HashMap()
+        private var videoCall: HashMap<String, JsEngine.ScriptTask<HttpUtil.HttpRequest>> = HashMap()
+        //private val videoCacheModel by lazy{ App.getVideoCacheModel(content)}
+        fun getVideo(
+            key: String, subject: Subject, episode: Episode, info: LineInfoModel.LineInfo?,
+            onGetVideoInfo: (VideoProvider.VideoInfo?, error: Exception?) -> Unit,
+            onGetVideo: (HttpUtil.HttpRequest?, List<StreamKey>?, error: Exception?) -> Unit,
+            onCheckNetwork: (() -> Unit) -> Unit
+        ) {
+            //val videoCache = videoCacheModel.getCache(episode, subject)
+            val videoCache =
+                App.app.episodeCacheModel.getEpisodeCache(episode, subject)?.cache() as? EpisodeCache.VideoCache
+            if (videoCache != null) {
+                onGetVideoInfo(VideoProvider.VideoInfo("", videoCache.video.url, videoCache.video.url), null)
+                onGetVideo(videoCache.video, videoCache.streamKeys, null)
+            } else {
+                val provider = App.app.lineProvider.getProvider(
+                    Provider.TYPE_VIDEO,
+                    info?.site ?: ""
+                )?.provider as? VideoProvider
+                if (info == null || provider == null) {
+                    if (info?.site == "") {
+                        val format =
+                            (Regex("""\{\{(.*)\}\}""").find(info.id)?.groupValues ?: listOf(
+                                "{{ep}}",
+                                "ep"
+                            )).toMutableList()
+                        if (format[0] == "{{ep}}") format[1] = "#.##"
+                        val url = try {
+                            info.id.replace(format[0], DecimalFormat(format[1]).format(episode.sort))
+                        } catch (e: Exception) {
+                            info.id
+                        }
+                        onGetVideoInfo(VideoProvider.VideoInfo("", url, url), null)
+                        onGetVideo(HttpUtil.HttpRequest(url), null, null)
+                    } else onGetVideoInfo(null, null)
+                    return
+                }
+                val loadFromNetwork: () -> Unit = {
+                    val jsEngine = App.app.jsEngine
+                    videoInfoCall[key]?.cancel(true)
+                    videoCall[key]?.cancel(true)
+                    videoInfoCall[key] = provider.getVideoInfo(key, jsEngine, info, episode)
+                    videoInfoCall[key]?.enqueue({ video ->
+                        onGetVideoInfo(video, null)
+                        if (video.site == "") {
+                            onGetVideo(HttpUtil.HttpRequest(video.url), null, null)
+                            return@enqueue
+                        }
+                        val videoProvider = App.app.lineProvider.getProvider(
+                            Provider.TYPE_VIDEO,
+                            video.site
+                        )?.provider as VideoProvider
+                        videoCall[key] = videoProvider.getVideo(key, jsEngine, video)
+                        videoCall[key]?.enqueue({
+                            onGetVideo(it, null, null)
+                        }, { onGetVideo(null, null, it) })
+                    }, { onGetVideoInfo(null, it) })
+                }
+                if (!NetworkUtil.isWifiConnected(App.app.host)) onCheckNetwork(loadFromNetwork) else loadFromNetwork()
+            }
+        }
+
+        fun createDownloadRequest(request: HttpUtil.HttpRequest, callback: DownloadHelper.Callback) {
+            val uri = Uri.parse(request.url)
+            val dataSourceFactory = createDataSourceFactory(App.app.host, request, true)
+            val helper = when (@C.ContentType Util.inferContentType(uri, request.overrideExtension)) {
+                C.TYPE_DASH -> DownloadHelper.forDash(
+                    App.app.host,
+                    uri,
+                    dataSourceFactory,
+                    DefaultRenderersFactory(App.app.host)
+                )
+                C.TYPE_SS -> DownloadHelper.forSmoothStreaming(
+                    App.app.host,
+                    uri,
+                    dataSourceFactory,
+                    DefaultRenderersFactory(App.app.host)
+                )
+                C.TYPE_HLS -> DownloadHelper.forHls(
+                    App.app.host,
+                    uri,
+                    dataSourceFactory,
+                    DefaultRenderersFactory(App.app.host)
+                )
+                else -> DownloadHelper.forProgressive(App.app.host, uri)
+            }
+            helper.prepare(callback)
         }
     }
 }

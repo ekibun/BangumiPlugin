@@ -19,7 +19,7 @@ class LineInfoModel(context: Context){
         var defaultProvider: Int = 0
     ) {
         fun getDefaultProvider(): LineInfo? {
-            return providers.getOrNull(defaultProvider)
+            return providers.getOrNull(Math.min(providers.size - 1, defaultProvider))
         }
     }
 

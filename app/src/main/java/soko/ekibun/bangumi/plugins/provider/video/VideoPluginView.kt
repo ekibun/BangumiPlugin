@@ -13,6 +13,7 @@ import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.Toast
@@ -20,6 +21,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.preference.PreferenceManager
 import com.google.android.exoplayer2.ExoPlaybackException
 import com.google.android.exoplayer2.Player
+import com.google.android.exoplayer2.offline.DownloadHelper
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.android.synthetic.main.danmaku_setting.view.*
 import kotlinx.android.synthetic.main.error_frame.view.*
@@ -27,6 +29,7 @@ import kotlinx.android.synthetic.main.plugin_video.view.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
+import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.VideoModel
 import soko.ekibun.bangumi.plugins.provider.Provider
@@ -35,6 +38,7 @@ import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.ui.view.VideoController
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import soko.ekibun.bangumi.plugins.util.NetworkUtil
+import java.io.IOException
 import java.util.*
 
 class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_video) {
@@ -379,13 +383,23 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
         infos?.getDefaultProvider()?.let {
             prevEpisode = {
                 val position =
-                    linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst { it.t?.id == episode.id || (it.t?.type == episode.type && it.t?.sort == episode.sort) }
+                    linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst {
+                        Episode.compareEpisode(
+                            it.t,
+                            episode
+                        )
+                    }
                 val ep = linePresenter.subjectView.episodeDetailAdapter.data.getOrNull(position - 1)?.t
                 if ((ep?.status ?: "") !in listOf("Air")) null else ep
             }
             nextEpisode = {
                 val position =
-                    linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst { it.t?.id == episode.id || (it.t?.type == episode.type && it.t?.sort == episode.sort) }
+                    linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst {
+                        Episode.compareEpisode(
+                            it.t,
+                            episode
+                        )
+                    }
                 val ep = linePresenter.subjectView.episodeDetailAdapter.data.getOrNull(position + 1)?.t
                 if ((ep?.status ?: "") !in listOf("Air")) null else ep
             }
@@ -422,7 +436,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
         view.danmaku_flame.pause()
         view.item_logcat.setOnClickListener {}
 
-        videoModel.getVideo("play", episode, info, { videoInfo, error ->
+        VideoModel.getVideo("play", linePresenter.subject, episode, info, { videoInfo, error ->
             exception = error ?: exception
             loadVideoInfo = videoInfo != null
             if (videoInfo != null) linePresenter.activityRef.get()?.runOnUiThread {
@@ -538,40 +552,6 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
         }
     }
 
-    private val downloadReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            try {
-                val episode = JsonUtil.toEntity<Episode>(intent.getStringExtra(DownloadService.EXTRA_EPISODE) ?: "")!!
-                val percent = intent.getFloatExtra(DownloadService.EXTRA_PERCENT, Float.NaN)
-                val bytes = intent.getLongExtra(DownloadService.EXTRA_BYTES, 0L)
-
-                val index = linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst { it.t?.id == episode.id }
-                linePresenter.subjectView.episodeDetailAdapter.getViewByPosition(index, R.id.item_layout)?.let {
-                    linePresenter.subjectView.episodeDetailAdapter.updateDownload(
-                        it,
-                        percent,
-                        bytes,
-                        intent.getBooleanExtra(DownloadService.EXTRA_CANCEL, true),
-                        !intent.hasExtra(DownloadService.EXTRA_CANCEL)
-                    )
-                }
-
-                val epIndex = linePresenter.subjectView.episodeAdapter.data.indexOfFirst { it.id == episode.id }
-                linePresenter.subjectView.episodeAdapter.getViewByPosition(epIndex, R.id.item_layout)?.let {
-                    linePresenter.subjectView.episodeAdapter.updateDownload(
-                        it,
-                        percent,
-                        bytes,
-                        intent.getBooleanExtra(DownloadService.EXTRA_CANCEL, true),
-                        !intent.hasExtra(DownloadService.EXTRA_CANCEL)
-                    )
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
     private val networkReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             if (!NetworkUtil.isWifiConnected(context) && videoModel.player.playWhenReady) {
@@ -584,15 +564,10 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
     init {
         linePresenter.activityRef.get()
             ?.registerReceiver(receiver, IntentFilter(ACTION_MEDIA_CONTROL + linePresenter.subject.id))
-        linePresenter.activityRef.get()?.registerReceiver(
-            downloadReceiver,
-            IntentFilter(DownloadService.getBroadcastAction(linePresenter.subject))
-        )
         linePresenter.activityRef.get()
             ?.registerReceiver(networkReceiver, IntentFilter("android.net.conn.CONNECTIVITY_CHANGE"))
-        linePresenter.proxy.onDestroyListener = {
+        linePresenter.onDestroyListener = {
             linePresenter.activityRef.get()?.unregisterReceiver(receiver)
-            linePresenter.activityRef.get()?.unregisterReceiver(downloadReceiver)
             linePresenter.activityRef.get()?.unregisterReceiver(networkReceiver)
         }
     }
@@ -677,6 +652,38 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
             if (isLandscape) showInfo(false)
         }
         updateView()
+    }
+
+    override fun downloadEp(episode: Episode, updateInfo: (String) -> Unit) {
+        val subject = linePresenter.proxy.subjectPresenter.subject
+        val info = App.app.lineInfoModel.getInfos(subject)?.getDefaultProvider() ?: return
+        updateInfo("获取视频信息")
+        VideoModel.getVideo(episode.parseSort(App.app.plugin), subject, episode, info, { videoInfo, error ->
+            updateInfo(if (videoInfo != null) "解析视频地址" else "获取视频信息出错：${error?.message}")
+        }, { request, _, error ->
+            updateInfo("解析视频地址出错：${error?.message}")
+            if (request == null || request.url.startsWith("/")) return@getVideo
+            updateInfo("创建视频请求")
+            VideoModel.createDownloadRequest(request, object : DownloadHelper.Callback {
+                override fun onPrepared(helper: DownloadHelper) {
+                    val downloadRequest = helper.getDownloadRequest(request.url, null)
+                    Log.v("downloadRequest", downloadRequest.streamKeys.toString())
+                    DownloadService.download(
+                        App.app.plugin, episode, subject, EpisodeCache(
+                            episode, Provider.TYPE_VIDEO, JsonUtil.toJson(
+                                EpisodeCache.VideoCache(
+                                    downloadRequest.type, downloadRequest.streamKeys, request
+                                )
+                            )
+                        )
+                    )
+                }
+
+                override fun onPrepareError(helper: DownloadHelper, e: IOException) {
+                    updateInfo(e.toString())
+                }
+            })
+        }, { it() })
     }
 
     companion object {

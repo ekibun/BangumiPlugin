@@ -8,7 +8,7 @@ import kotlinx.android.synthetic.main.item_episode_small.view.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
-import soko.ekibun.bangumi.plugins.model.VideoCacheModel
+import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
 class SmallEpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<Episode>? = null) :
@@ -51,15 +51,18 @@ class SmallEpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<Ep
         helper.addOnClickListener(R.id.item_container)
         helper.addOnLongClickListener(R.id.item_container)
 
-        val videoCache = App.app.videoCacheModel.getVideoCache(item, linePresenter.subject)
-        updateDownload(helper.itemView, videoCache?.percentDownloaded?: Float.NaN, videoCache?.bytesDownloaded?:0L, videoCache != null)
+        val videoCache = App.app.episodeCacheModel.getEpisodeCache(item, linePresenter.subject)?.cache()
+        updateDownload(helper.itemView, videoCache)
     }
-    fun updateDownload(view: View, percent: Float, bytes: Long, hasCache: Boolean, download: Boolean = false){
-        view.item_icon.visibility = if(hasCache) View.VISIBLE else View.INVISIBLE
-        view.item_icon.setImageResource(when {
-            VideoCacheModel.isFinished(percent) -> R.drawable.ic_episode_download_ok
-            download -> R.drawable.ic_episode_download
-            else -> R.drawable.ic_episode_download_pause
-        })
+
+    fun updateDownload(view: View, cache: EpisodeCache.Cache?, downloading: Boolean = false) {
+        view.item_icon.visibility = if (cache != null) View.VISIBLE else View.INVISIBLE
+        view.item_icon.setImageResource(
+            when {
+                cache?.isFinished() ?: false -> R.drawable.ic_episode_download_ok
+                downloading -> R.drawable.ic_episode_download
+                else -> R.drawable.ic_episode_download_pause
+            }
+        )
     }
 }

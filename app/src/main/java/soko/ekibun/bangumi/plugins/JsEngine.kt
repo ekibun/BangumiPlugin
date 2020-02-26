@@ -142,13 +142,15 @@ class JsEngine(val app: App) {
         private val header: String?,
         private val key: String,
         val converter: (String) -> T
-    ) : AsyncTask<String, Unit, String>() {
+    ) : AsyncTask<String, Unit, T>() {
         var onFinish: (T) -> Unit = {}
         var onReject: (Exception) -> Unit = {}
         var exception: Exception? = null
-        override fun doInBackground(vararg params: String?): String? {
+        override fun doInBackground(vararg params: String?): T? {
             return try {
-                jsEngine.runScript(script, header, key)
+                val result = jsEngine.runScript(script, header, key)
+                Log.v("jsEngine", result)
+                converter(result)
             } catch (e: InterruptedException) {
                 null
             } catch (e: Exception) {
@@ -156,10 +158,10 @@ class JsEngine(val app: App) {
             }
         }
 
-        override fun onPostExecute(result: String?) {
+        override fun onPostExecute(result: T?) {
             result?.let {
                 try {
-                    onFinish(converter(it))
+                    onFinish(it)
                 } catch (e: Exception) {
                     exception = e
                 }
@@ -172,6 +174,10 @@ class JsEngine(val app: App) {
             this.onFinish = onFinish
             this.onReject = onReject
             this.executeOnExecutor(App.cachedThreadPool)
+        }
+
+        fun excute(): T? {
+            return this.executeOnExecutor(App.cachedThreadPool)?.get()
         }
     }
 

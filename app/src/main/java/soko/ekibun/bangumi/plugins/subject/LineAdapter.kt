@@ -25,13 +25,14 @@ class LineAdapter(val type: String, context: Context?, data: List<LineInfoModel.
         viewHolder.convertView.item_title.text = if (item.title.isEmpty()) item.id else item.title
         val provider = App.app.lineProvider.getProvider(type, item.site)
         viewHolder.convertView.item_switch.visibility = View.GONE
-        if(position<count-1){
+        if (position < count - 2) {
             viewHolder.convertView.item_site.visibility = View.VISIBLE
             viewHolder.convertView.item_id.visibility = View.VISIBLE
-            viewHolder.convertView.item_site.backgroundTintList = ColorStateList.valueOf(((provider?.color?:0) + 0xff000000).toInt())
-            viewHolder.convertView.item_site.text = provider?.title?:{ if(item.site == "") "线路" else "错误接口" }()
+            viewHolder.convertView.item_site.backgroundTintList =
+                ColorStateList.valueOf(((provider?.color ?: 0) + 0xff000000).toInt())
+            viewHolder.convertView.item_site.text = provider?.title ?: { if (item.site == "") "线路" else "错误接口" }()
             viewHolder.convertView.item_id.text = item.id
-        }else{
+        } else {
             viewHolder.convertView.item_site.visibility = View.INVISIBLE
             viewHolder.convertView.item_id.visibility = View.GONE
         }

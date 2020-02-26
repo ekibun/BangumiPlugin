@@ -1,7 +1,10 @@
 package soko.ekibun.bangumi.plugins.subject
 
 import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.ColorStateList
 import android.util.Log
 import android.view.Gravity
@@ -16,18 +19,24 @@ import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.JsEngine
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
+import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.manga.MangaProvider
+import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.ui.provider.ProviderActivity
-import soko.ekibun.bangumi.plugins.util.*
+import soko.ekibun.bangumi.plugins.util.AppUtil
+import soko.ekibun.bangumi.plugins.util.JsonUtil
+import soko.ekibun.bangumi.plugins.util.ReflectUtil
+import soko.ekibun.bangumi.plugins.util.ResourceUtil
 import java.lang.ref.WeakReference
 
 class LinePresenter(val activityRef: WeakReference<Activity>) {
     val proxy = ReflectUtil.proxyObjectWeak(activityRef, ISubjectActivity::class.java)!!
     val pluginContext = App.createThemeContext(activityRef)
 
+    val episodeDetailAdapter = EpisodeAdapter(this)
     val episodeAdapter = SmallEpisodeAdapter(this)
     val emptyView = {
         val view = TextView(pluginContext)
@@ -51,8 +60,63 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
     // 读一次，大部分只用到id
     val subject = proxy.subjectPresenter.subject
 
+    var onDestroyListener = {}
+
+    private val downloadReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            try {
+                val episode = JsonUtil.toEntity<Episode>(intent.getStringExtra(DownloadService.EXTRA_EPISODE) ?: "")!!
+                val downloading = intent.getBooleanExtra(DownloadService.EXTRA_DOWNLOADING, false)
+                val cache = if (intent.hasExtra(DownloadService.EXTRA_CACHE))
+                    JsonUtil.toEntity<EpisodeCache>(
+                        intent.getStringExtra(DownloadService.EXTRA_CACHE) ?: "{}"
+                    )!! else null
+
+                arrayOf(subjectView.episodeDetailAdapter, episodeDetailAdapter).forEach { adapter ->
+                    try {
+                        val index = adapter.data.indexOfFirst { Episode.compareEpisode(it.t, episode) }
+                        adapter.getViewByPosition(index, R.id.item_layout)?.let {
+                            adapter.updateDownload(
+                                it,
+                                cache?.cache(),
+                                downloading
+                            )
+                        }
+                    } catch (e: Exception) {
+                    }
+                }
+
+                arrayOf(subjectView.episodeAdapter, episodeAdapter).forEach { adapter ->
+                    try {
+                        val index = adapter.data.indexOfFirst { Episode.compareEpisode(it, episode) }
+                        adapter.getViewByPosition(index, R.id.item_layout)?.let {
+                            adapter.updateDownload(
+                                it,
+                                cache?.cache(),
+                                downloading
+                            )
+                        }
+                    } catch (e: Exception) {
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     init {
+        activityRef.get()?.registerReceiver(
+            downloadReceiver,
+            IntentFilter(DownloadService.getBroadcastAction(subject))
+        )
+        proxy.onDestroyListener = {
+            activityRef.get()?.unregisterReceiver(downloadReceiver)
+            onDestroyListener()
+        }
+
         episodeAdapter.emptyView = emptyView
+        episodeAdapter.bindToRecyclerView(epView.episode_list)
         // 添加自己的view
         subjectView.episodeAdapter.bindToRecyclerView(epView.episode_list)
         epView.episode_list.layoutManager = LinearLayoutManager(pluginContext, LinearLayoutManager.HORIZONTAL, false)
@@ -83,10 +147,6 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                     )
                 )
             }
-            if (requestCode == AppUtil.REQUEST_FILE_CODE && resultCode == AppCompatActivity.RESULT_OK) {//file
-                val uri = data?.data ?: return@onActivityResultListener
-                loadFileCallback?.invoke(StorageUtil.getRealPathFromUri(pluginContext, uri))
-            }
         }
     }
 
@@ -100,15 +160,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
         activityRef.get()?.startActivityForResult(intent, AppUtil.REQUEST_PROVIDER)
     }
 
-    private var loadFileCallback: ((String?) -> Unit)? = null
-    fun loadFile(callback: (String?) -> Unit) {
-        loadFileCallback = callback
-        val intent = Intent()
-        intent.type = Provider.getProviderFileType(type)
-        intent.action = Intent.ACTION_GET_CONTENT
-        activityRef.get()?.startActivityForResult(intent, AppUtil.REQUEST_FILE_CODE)
-    }
-
+    var selectCache = false
     var epCall: Pair<LineProvider.ProviderInfo, JsEngine.ScriptTask<List<MangaProvider.MangaEpisode>>>? = null
     fun refreshLines() {
         val infos = App.app.lineInfoModel.getInfos(subject)
@@ -148,6 +200,17 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
         }
         subjectView.episodeDetailAdapter.setOnItemLongClickListener { _, _, position ->
             subjectView.episodeDetailAdapter.data[position].t?.let {
+                proxy.subjectPresenter.showEpisodeDialog(it.id)
+            }
+            true
+        }
+        episodeDetailAdapter.setOnItemClickListener { _, _, position ->
+            infos?.getDefaultProvider()?.let {
+                episodeDetailAdapter.data[position].t?.let { pluginView.loadEp(it) }
+            } ?: Toast.makeText(pluginContext, "请先添加播放源", Toast.LENGTH_SHORT).show()
+        }
+        episodeDetailAdapter.setOnItemLongClickListener { _, _, position ->
+            episodeDetailAdapter.data[position].t?.let {
                 proxy.subjectPresenter.showEpisodeDialog(it.id)
             }
             true
@@ -209,32 +272,51 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                     val popList = ListPopupWindow(pluginContext)
                     popList.anchorView = epView.episodes_line
                     val lines = ArrayList(infos.providers)
+                    lines.add(LineInfoModel.LineInfo("", "已缓存"))
                     lines.add(LineInfoModel.LineInfo("", "添加线路"))
                     val adapter = LineAdapter(type, pluginContext, lines)
-                    adapter.selectIndex = infos.defaultProvider
+                    adapter.selectIndex = if (selectCache) lines.size - 2 else infos.defaultProvider
                     popList.setAdapter(adapter)
                     popList.isModal = true
                     popList.show()
                     popList.listView?.setOnItemClickListener { _, _, position, _ ->
                         popList.dismiss()
                         Log.v("pos", "click: $position")
-                        if (position == lines.size - 1) editLines(null)
-                        else {
-                            infos.defaultProvider = position
-                            App.app.lineInfoModel.saveInfos(subject, infos)
-                            epCall = null
-                            refreshLines()
+                        selectCache = position == lines.size - 2
+                        when (position) {
+                            lines.size - 2 -> refreshLines()
+                            lines.size - 1 -> editLines(null)
+                            else -> {
+                                infos.defaultProvider = position
+                                App.app.lineInfoModel.saveInfos(subject, infos)
+                                epCall = null
+                                refreshLines()
+                            }
                         }
                     }
                     popList.listView?.setOnItemLongClickListener { _, _, position, _ ->
                         popList.dismiss()
                         if (position == lines.size - 1) editLines(null)
-                        else editLines(lines[position])
+                        else if (position < lines.size - 2) editLines(lines[position])
                         true
                     }
                 }
                 // 加载eps
-                if (epCall?.first != provider) (provider?.provider as? MangaProvider)?.let {
+                if (selectCache) {
+                    epView.episodes_line_site.visibility = View.GONE
+                    epView.episodes_line_id.text = "已缓存"
+                    emptyView.text = "什么都没有哦"
+                    val eps = App.app.episodeCacheModel.getSubjectCacheList(subject)?.episodeList?.map {
+                        it.episode
+                    }
+                    episodeAdapter.setNewData(eps)
+                    val list = eps?.map {
+                        EpisodeAdapter.EpisodeSection(it)
+                    }?.toMutableList() ?: ArrayList()
+                    list.add(0, EpisodeAdapter.EpisodeSection(true, "已缓存"))
+                    episodeDetailAdapter.setNewData(list)
+                    epView.btn_detail.text = pluginContext.getString(R.string.parse_cache_eps, eps?.size ?: 0)
+                } else if (epCall?.first != provider) (provider?.provider as? MangaProvider)?.let {
                     emptyView.text = "加载中..."
                     episodeAdapter.setNewData(null)
                     epCall = provider to it.getEpisode("loadEps", App.app.jsEngine, defaultLine)
@@ -278,11 +360,10 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                 emptyView.text = "点击线路加载剧集"
                 episodeAdapter.setNewData(null)
             }
-            if (type == Provider.TYPE_MANGA) {
-                if (epView.episode_list.adapter != episodeAdapter)
-                    epView.episode_list.adapter = episodeAdapter
-            } else if (epView.episode_list.adapter != subjectView.episodeAdapter)
-                epView.episode_list.adapter = subjectView.episodeAdapter
+
+            (if (type == Provider.TYPE_MANGA || selectCache) episodeAdapter else subjectView.episodeAdapter).also { adapter ->
+                if (epView.episode_list.adapter != adapter) epView.episode_list.adapter = adapter
+            }
         }
     }
 }

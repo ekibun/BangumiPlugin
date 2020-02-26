@@ -85,5 +85,9 @@ data class Episode(
                 else -> R.string.episode_type_other
             }
         }
+
+        fun compareEpisode(a: Episode?, b: Episode?): Boolean {
+            return if (a?.manga != null) a.manga?.id == b?.manga?.id else a?.id == b?.id || (a?.type == b?.type && a?.sort == b?.sort)
+        }
     }
 }

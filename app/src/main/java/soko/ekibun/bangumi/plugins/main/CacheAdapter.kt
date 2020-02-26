@@ -17,10 +17,10 @@ class CacheAdapter(data: MutableList<SubjectCache>? = null) :
     BaseQuickAdapter<SubjectCache, BaseViewHolder>
         (R.layout.item_subject, data) {
     override fun convert(helper: BaseViewHolder, item: SubjectCache) {
-        helper.setText(R.id.item_title, item.subject.name)
+        helper.setText(R.id.item_title, item.subject.displayName)
         helper.setText(
             R.id.item_name_jp,
-            helper.itemView.context.getString(R.string.parse_cache_eps, item.videoList.size)
+            helper.itemView.context.getString(R.string.parse_cache_eps, item.episodeList.size)
         )
         GlideUtil.with(App.app.host)
             ?.load(item.subject.image)

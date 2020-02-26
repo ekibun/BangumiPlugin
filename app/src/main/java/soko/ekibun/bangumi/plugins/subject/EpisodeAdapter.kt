@@ -1,6 +1,5 @@
 package soko.ekibun.bangumi.plugins.subject
 
-import android.text.format.Formatter
 import android.view.View
 import androidx.recyclerview.widget.RecyclerView
 import com.chad.library.adapter.base.BaseSectionQuickAdapter
@@ -12,16 +11,20 @@ import kotlinx.android.synthetic.main.item_episode.view.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
-import soko.ekibun.bangumi.plugins.model.VideoCacheModel
-import soko.ekibun.bangumi.plugins.provider.Provider
-import soko.ekibun.bangumi.plugins.service.DownloadService
+import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
-class EpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<SectionEntity<Episode>>? = null) :
-    BaseSectionQuickAdapter<SectionEntity<Episode>, BaseViewHolder>
+class EpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<EpisodeSection>? = null) :
+    BaseSectionQuickAdapter<EpisodeAdapter.EpisodeSection, BaseViewHolder>
         (R.layout.item_episode, R.layout.item_episode_header, data) {
 
-    override fun convertHead(helper: BaseViewHolder, item: SectionEntity<Episode>) {
+    class EpisodeSection(isHeader: Boolean, header: String) : SectionEntity<Episode>(isHeader, header) {
+        constructor(t: Episode) : this(false, "") {
+            this.t = t
+        }
+    }
+
+    override fun convertHead(helper: BaseViewHolder, item: EpisodeSection) {
         //helper.getView<TextView>(R.id.item_header).visibility = if(data.indexOf(item) == 0) View.GONE else View.VISIBLE
         helper.setText(R.id.item_header, item.header)
     }
@@ -34,7 +37,7 @@ class EpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<Section
         recyclerView.addItemDecoration(PinnedHeaderItemDecoration.Builder(SECTION_HEADER_VIEW).create())
     }
 
-    override fun convert(helper: BaseViewHolder, item: SectionEntity<Episode>) {
+    override fun convert(helper: BaseViewHolder, item: EpisodeSection) {
         helper.setText(R.id.item_title, item.t.parseSort(helper.itemView.context))
         helper.setText(R.id.item_desc, item.t.displayName)
         val color = ResourceUtil.resolveColorAttr(
@@ -50,34 +53,25 @@ class EpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<Section
         helper.itemView.item_desc.setTextColor(color)
         helper.itemView.item_desc.alpha = alpha
 
-        helper.itemView.item_download.visibility =
-            if (linePresenter.type == Provider.TYPE_VIDEO) View.VISIBLE else View.GONE
-
         helper.addOnClickListener(R.id.item_download)
         helper.addOnLongClickListener(R.id.item_download)
 
-        val videoCache = App.app.videoCacheModel.getVideoCache(item.t, linePresenter.subject)
-        updateDownload(
-            helper.itemView,
-            videoCache?.percentDownloaded ?: Float.NaN,
-            videoCache?.bytesDownloaded ?: 0L,
-            videoCache != null
-        )
+        val videoCache = App.app.episodeCacheModel.getEpisodeCache(item.t, linePresenter.subject)?.cache()
+        updateDownload(helper.itemView, videoCache)
     }
 
-    fun updateDownload(itemView: View, percent: Float, bytes: Long, hasCache: Boolean, download: Boolean = false) {
-        if (hasCache && !VideoCacheModel.isFinished(percent)) {
+    fun updateDownload(itemView: View, cache: EpisodeCache.Cache?, download: Boolean = false) {
+        itemView.item_download_info.text = cache?.getProgressInfo() ?: ""
+        if (cache != null && !cache.isFinished()) {
             itemView.item_progress.max = 10000
-            itemView.item_progress.progress = (percent * 100).toInt()
-            itemView.item_download_info.text = DownloadService.parseDownloadInfo(itemView.context, percent, bytes)
+            itemView.item_progress.progress = (cache.getProgress() * 10000).toInt()
             itemView.item_progress.isEnabled = download
             itemView.item_progress.visibility = View.VISIBLE
         } else {
-            itemView.item_download_info.text = if (hasCache) Formatter.formatFileSize(itemView.context, bytes) else ""
             itemView.item_progress.visibility = View.INVISIBLE
         }
         itemView.item_download.setImageResource(
-            if (VideoCacheModel.isFinished(percent)) R.drawable.ic_cloud_done else if (download) R.drawable.ic_pause else R.drawable.ic_download
+            if (cache?.isFinished() == true) R.drawable.ic_cloud_done else if (download) R.drawable.ic_pause else R.drawable.ic_download
         )
     }
 

@@ -45,6 +45,8 @@ abstract class Provider(
         }
 
         abstract fun loadEp(episode: Episode)
+
+        abstract fun downloadEp(episode: Episode, updateInfo: (String) -> Unit)
     }
 
     @Target(AnnotationTarget.FIELD)

@@ -6,12 +6,13 @@ import androidx.appcompat.view.ContextThemeWrapper
 import com.google.android.exoplayer2.database.ExoDatabaseProvider
 import com.google.android.exoplayer2.upstream.cache.NoOpCacheEvictor
 import com.google.android.exoplayer2.upstream.cache.SimpleCache
+import soko.ekibun.bangumi.plugins.model.EpisodeCacheModel
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
-import soko.ekibun.bangumi.plugins.model.VideoCacheModel
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.util.ReflectUtil
 import soko.ekibun.bangumi.plugins.util.StorageUtil
+import java.io.File
 import java.lang.ref.WeakReference
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -19,21 +20,24 @@ import java.util.concurrent.Executors
 class App(val host: Context, val plugin: Context) {
     val handler = android.os.Handler { true }
     private val databaseProvider by lazy { ExoDatabaseProvider(host) }
+    val downloadCachePath = StorageUtil.getDiskFileDir(host, "download").absolutePath
+
     val downloadCache by lazy {
         SimpleCache(
-            StorageUtil.getDiskCacheDir(host, "video"),
+            File(downloadCachePath + File.separator + "video"),
             NoOpCacheEvictor(),
             databaseProvider
         )
     }
     val jsEngine by lazy { JsEngine(this) }
-    val videoCacheModel by lazy { VideoCacheModel(plugin) }
+    val episodeCacheModel by lazy { EpisodeCacheModel(plugin) }
     val lineProvider by lazy { LineProvider(plugin) }
     val lineInfoModel by lazy { LineInfoModel(plugin) }
 
     private val downloadService: DownloadService = DownloadService(host, plugin)
 
     init {
+        File(downloadCachePath).mkdirs()
         ReflectUtil.proxyObject(host, Plugin.IApplication::class.java)!!.remoteAction =
             { intent, flags, startId -> downloadService.onStartCommand(intent, flags, startId) }
     }

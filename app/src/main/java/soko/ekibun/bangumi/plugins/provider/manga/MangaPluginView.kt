@@ -11,11 +11,14 @@ import kotlinx.android.synthetic.main.plugin_manga.view.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
+import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.provider.Provider
+import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.ui.view.ScalableLayoutManager
 import soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadLayout
 import soko.ekibun.bangumi.plugins.util.AppUtil
+import soko.ekibun.bangumi.plugins.util.JsonUtil
 
 class MangaPluginView(val linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_manga) {
     val layoutManager = ScalableLayoutManager(linePresenter.pluginContext)
@@ -26,7 +29,11 @@ class MangaPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
         const val tapScrollRatio = 1 / 2f
     }
 
-    init {
+    private var inited = false
+    private fun init() {
+        if (inited) return
+        inited = true
+
         linePresenter.proxy.onBackListener = {
             val behavior = linePresenter.proxy.subjectPresenter.subjectView.behavior
             if (behavior.state == BottomSheetBehavior.STATE_HIDDEN) {
@@ -114,6 +121,7 @@ class MangaPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
     }
 
     override fun loadEp(episode: Episode) {
+        init()
         mangaAdapter.setNewData(null)
         view.item_pull_layout.responseRefresh(false)
         view.item_pull_layout.responseLoad(false)
@@ -132,6 +140,25 @@ class MangaPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
 
     fun loadEp(episode: Episode, isPrev: Boolean, callback: (Boolean) -> Unit) {
         val ep = episode.manga
+        val cache = App.app.episodeCacheModel.getEpisodeCache(
+            episode,
+            linePresenter.subject
+        )?.cache() as? EpisodeCache.MangaCache
+        if (cache != null) {
+            cache.request.forEach { kv ->
+                mangaAdapter.requests[cache.images[kv.key]] = kv.value
+            }
+            if (isPrev) {
+                val curItem = layoutManager.findFirstVisibleItemPosition()
+                val curOffset =
+                    layoutManager.findViewByPosition(curItem)?.let { layoutManager.getDecoratedTop(it) } ?: 0
+                mangaAdapter.addData(0, cache.images)
+                layoutManager.scrollToPositionWithOffset(curItem + cache.images.size, curOffset)
+            } else mangaAdapter.addData(cache.images)
+            callback(true)
+            return
+        }
+
         val provider =
             App.app.lineProvider.getProvider(Provider.TYPE_MANGA, ep?.site ?: "")?.provider as? MangaProvider
         if (ep == null || provider == null) {
@@ -155,4 +182,36 @@ class MangaPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
         })
     }
 
+    override fun downloadEp(episode: Episode, updateInfo: (String) -> Unit) {
+        val ep = episode.manga
+        val cache = App.app.episodeCacheModel.getEpisodeCache(episode, linePresenter.subject)
+        if (cache != null) {
+            DownloadService.download(
+                linePresenter.pluginContext,
+                episode,
+                linePresenter.proxy.subjectPresenter.subject,
+                cache
+            )
+            return
+        }
+        val provider =
+            App.app.lineProvider.getProvider(Provider.TYPE_MANGA, ep?.site ?: "")?.provider as? MangaProvider
+        if (ep == null || provider == null) return
+        updateInfo("获取图片列表")
+        provider.getManga("getManga", App.app.jsEngine, ep).enqueue({
+            updateInfo("创建下载请求")
+            DownloadService.download(
+                linePresenter.pluginContext, episode, linePresenter.proxy.subjectPresenter.subject, EpisodeCache(
+                    episode, Provider.TYPE_MANGA,
+                    JsonUtil.toJson(
+                        EpisodeCache.MangaCache(
+                            it, HashMap(), HashMap()
+                        )
+                    )
+                )
+            )
+        }, {
+            updateInfo("获取图片列表出错")
+        })
+    }
 }
