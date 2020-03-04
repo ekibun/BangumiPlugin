@@ -113,8 +113,9 @@ data class EpisodeCache(
                     ?.getImage("download_${image.site}_${image.id}", App.app.jsEngine, image)?.excute()
                 ?: return@forEachIndexed
                 request[index] = req
+                val header = req.header ?: HashMap()
                 val path = paths[index] ?: GlideUtil.with(App.app.host)?.downloadOnly()?.load(
-                    GlideUrl(req.url) { if (!req.header.containsKey("referer")) req.header.plus("referer" to req.url) else req.header }
+                    GlideUrl(req.url) { if (!header.containsKey("referer")) header.plus("referer" to req.url) else req.header }
                 )?.submit()?.get()?.absolutePath ?: return@forEachIndexed
                 paths[index] = path
                 update()

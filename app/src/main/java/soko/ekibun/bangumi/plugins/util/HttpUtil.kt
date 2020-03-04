@@ -9,6 +9,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.brotli.BrotliInterceptor
 import okhttp3.internal.http.BridgeInterceptor
+import soko.ekibun.bangumi.plugins.App
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.URI
@@ -18,13 +19,14 @@ object HttpUtil {
     val ua = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Mobile Safari/537.36"
     val httpCookieClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
-            .addInterceptor(BrotliInterceptor)
-            .addInterceptor(BridgeInterceptor(WebViewCookieHandler())).build()
+            .addInterceptor(BrotliInterceptor).also {
+                if (App.inited) it.addInterceptor(BridgeInterceptor(WebViewCookieHandler()))
+            }.build()
     }
 
     data class HttpRequest(
         val url: String,
-        val header: HashMap<String, String> = HashMap(),
+        val header: HashMap<String, String>? = null,
         val overrideExtension: String? = null
     )
 

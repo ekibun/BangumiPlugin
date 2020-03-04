@@ -9,9 +9,9 @@ import soko.ekibun.bangumi.plugins.util.JsonUtil
 
 class MangaProvider(
     search: String? = null,
-    @Code("获取剧集列表", 1) val getEpisode: String = "", // (line: LineInfo) -> List<MangaEpisode>
-    @Code("获取图片列表", 2) val getManga: String = "",   // (episode: MangaEpisode) -> List<ImageInfo>
-    @Code("获取图片", 3) val getImage: String = ""        // (image: ImageInfo) -> HttpRequest
+    @Code("获取剧集列表", 1) val getEpisode: String? = "", // (line: LineInfo) -> List<MangaEpisode>
+    @Code("获取图片列表", 2) val getManga: String? = "",   // (episode: MangaEpisode) -> List<ImageInfo>
+    @Code("获取图片", 3) val getImage: String? = ""        // (image: ImageInfo) -> HttpRequest
 ): Provider(search) {
     fun getEpisode(scriptKey: String, jsEngine: JsEngine, line: LineInfoModel.LineInfo): JsEngine.ScriptTask<List<MangaEpisode>> {
         return JsEngine.ScriptTask(jsEngine, "var line = ${JsonUtil.toJson(line)};\n$getEpisode", header, scriptKey) {
@@ -36,7 +36,7 @@ class MangaProvider(
     fun getImage(scriptKey: String, jsEngine: JsEngine, image: ImageInfo): JsEngine.ScriptTask<HttpUtil.HttpRequest> {
         return JsEngine.ScriptTask(
             jsEngine, "var image = ${JsonUtil.toJson(image)};\n${
-            if (getImage.isNotEmpty()) getImage else "return image.url;"}", header, scriptKey
+            if (!getImage.isNullOrEmpty()) getImage else "return image.url;"}", header, scriptKey
         ) {
             JsonUtil.toEntity<HttpUtil.HttpRequest>(it)!!
         }
@@ -51,8 +51,8 @@ class MangaProvider(
     )
 
     data class ImageInfo(
-        val site: String?,
-        val id: String?,
+        val site: String? = null,
+        val id: String? = null,
         val url: String,
         var ep: MangaEpisode? = null,
         var index: Int = 0

@@ -86,8 +86,9 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
             }
 
             override fun onFullscreen() {
+                if (isLandscape) showInfo(true)
                 linePresenter.activityRef.get()?.requestedOrientation = if (isLandscape)
-                    ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                    ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             }
 
             override fun onNext() {
@@ -596,6 +597,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
 
         linePresenter.proxy.subjectPresenter.subjectView.onStateChangedListener = onStateChangedListener@{ state ->
             if (!isLandscape) return@onStateChangedListener
+            if (state == BottomSheetBehavior.STATE_COLLAPSED) doPlayPause(false)
             val maskVisibility = if (state == BottomSheetBehavior.STATE_HIDDEN) View.INVISIBLE else View.VISIBLE
             linePresenter.proxy.item_mask.visibility = maskVisibility
             linePresenter.proxy.app_bar.visibility = maskVisibility
@@ -613,11 +615,15 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
 
         linePresenter.proxy.onBackListener = {
             val behavior = linePresenter.proxy.subjectPresenter.subjectView.behavior
-            if (isLandscape && behavior.state != BottomSheetBehavior.STATE_HIDDEN) {
+            if (isInMultiWindowMode && isLandscape && behavior.state != BottomSheetBehavior.STATE_HIDDEN) {
                 showInfo(false)
                 true
-            } else if (isLandscape && !isInMultiWindowMode) {
-                linePresenter.activityRef.get()?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            } else if (isInMultiWindowMode) {
+                Toast.makeText(linePresenter.pluginContext, "请先退出多窗口模式", Toast.LENGTH_LONG).show()
+                true
+            } else if (isLandscape && behavior.state == BottomSheetBehavior.STATE_HIDDEN && !isInMultiWindowMode) {
+                showInfo(true)
+                linePresenter.activityRef.get()?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 true
             } else false
         }

@@ -29,7 +29,7 @@ class App(val host: Context, val plugin: Context) {
             databaseProvider
         )
     }
-    val jsEngine by lazy { JsEngine(this) }
+    val jsEngine by lazy { JsEngine() }
     val episodeCacheModel by lazy { EpisodeCacheModel(plugin) }
     val lineProvider by lazy { LineProvider(plugin) }
     val lineInfoModel by lazy { LineInfoModel(plugin) }
@@ -45,9 +45,11 @@ class App(val host: Context, val plugin: Context) {
     companion object {
         val cachedThreadPool: ExecutorService = Executors.newCachedThreadPool()
 
+        val inited get() = ::app.isInitialized
+
         lateinit var app: App
         fun init(host: Context, plugin: Context) {
-            if (!::app.isInitialized) app = App(host, plugin)
+            if (!inited) app = App(host, plugin)
         }
 
         fun createThemeContext(activityRef: WeakReference<Activity>): Context {

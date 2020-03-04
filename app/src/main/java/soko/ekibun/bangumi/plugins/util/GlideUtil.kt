@@ -30,6 +30,7 @@ object GlideUtil {
      */
     fun loadWithProgress(req: HttpUtil.HttpRequest, context: Context, view: ImageView, onProgress: (Float)->Unit, callback: (Int, Drawable?) -> Unit): Target<Drawable>? {
         val request = with(context) ?: return null
+        val header = req.header ?: HashMap()
         ProgressAppGlideModule.expect(req.url, object : ProgressAppGlideModule.UIonProgressListener {
             override fun onProgress(bytesRead: Long, expectedLength: Long) {
                 onProgress(bytesRead * 1f / expectedLength)
@@ -39,16 +40,18 @@ object GlideUtil {
                 return 1.0f
             }
         })
-        return request.asDrawable().load(GlideUrl(req.url) {  if(!req.header.containsKey("referer")) req.header.plus("referer" to req.url) else req.header }).into(object : ImageViewTarget<Drawable>(view) {
-            override fun onLoadStarted(placeholder: Drawable?) {
-                super.onLoadStarted(placeholder)
-                callback(TYPE_PLACEHOLDER, placeholder)
-            }
+        return request.asDrawable()
+            .load(GlideUrl(req.url) { if (!header.containsKey("referer")) header.plus("referer" to req.url) else header })
+            .into(object : ImageViewTarget<Drawable>(view) {
+                override fun onLoadStarted(placeholder: Drawable?) {
+                    super.onLoadStarted(placeholder)
+                    callback(TYPE_PLACEHOLDER, placeholder)
+                }
 
-            override fun onLoadFailed(errorDrawable: Drawable?) {
-                callback(TYPE_ERROR, errorDrawable)
-                super.onLoadFailed(errorDrawable)
-            }
+                override fun onLoadFailed(errorDrawable: Drawable?) {
+                    callback(TYPE_ERROR, errorDrawable)
+                    super.onLoadFailed(errorDrawable)
+                }
 
             override fun onLoadCleared(placeholder: Drawable?) {
                 callback(TYPE_PLACEHOLDER, placeholder)

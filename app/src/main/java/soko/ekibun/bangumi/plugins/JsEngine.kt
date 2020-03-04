@@ -12,7 +12,7 @@ import soko.ekibun.bangumi.plugins.util.JsonUtil
 import java.util.*
 import kotlin.collections.HashMap
 
-class JsEngine(val app: App) {
+class JsEngine {
     private val webviewList = WeakHashMap<String, BackgroundWebView>()
     @Keep
     fun webviewload(
@@ -26,8 +26,8 @@ class JsEngine(val app: App) {
         var finished = false
         var pageFinish = false
         var lastTime = System.currentTimeMillis()
-        app.handler.post {
-            val webview = webviewList.getOrPut(key) { BackgroundWebView(app.host) }
+        App.app.handler.post {
+            val webview = webviewList.getOrPut(key) { BackgroundWebView(App.app.host) }
             webview.settings.userAgentString = header["User-Agent"] ?: webview.settings.userAgentString
             val map = HashMap<String, String>()
             map["referer"] = url
@@ -145,9 +145,14 @@ class JsEngine(val app: App) {
         var onFinish: (T) -> Unit = {}
         var onReject: (Exception) -> Unit = {}
         var exception: Exception? = null
+
+        fun runScript(): T? {
+            return converter(jsEngine.runScript(script, header, key))
+        }
+
         override fun doInBackground(vararg params: String?): T? {
             return try {
-                converter(jsEngine.runScript(script, header, key))
+                runScript()
             } catch (e: InterruptedException) {
                 null
             } catch (e: Exception) {

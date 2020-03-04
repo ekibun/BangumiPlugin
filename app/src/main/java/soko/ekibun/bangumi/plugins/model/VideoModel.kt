@@ -105,14 +105,15 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
             request: HttpUtil.HttpRequest,
             useCache: Boolean = false
         ): DefaultDataSourceFactory {
+            val header = request.header ?: HashMap()
             val httpSourceFactory = DefaultHttpDataSourceFactory(
-                request.header["User-Agent"] ?: "exoplayer",
+                header["User-Agent"] ?: "exoplayer",
                 null,
                 DefaultHttpDataSource.DEFAULT_CONNECT_TIMEOUT_MILLIS,
                 DefaultHttpDataSource.DEFAULT_READ_TIMEOUT_MILLIS,
                 true
             )
-            request.header.forEach {
+            header.forEach {
                 httpSourceFactory.defaultRequestProperties.set(it.key, it.value)
             }
             return DefaultDataSourceFactory(

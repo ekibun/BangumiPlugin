@@ -22,6 +22,7 @@ import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
+@SuppressLint("UseSparseArrays")
 class DanmakuPresenter(
     val linePresenter: LinePresenter,
     private val onFinish: (Exception?) -> Unit
@@ -136,22 +137,25 @@ class DanmakuPresenter(
         linePresenter.pluginView.view.danmaku_special.setTextColor(if (danmakuContext.SpecialDanmakuVisibility) colorActive else Color.WHITE)
         //opacity
         linePresenter.pluginView.view.danmaku_opac_seek.progress = sp.getInt(DANMAKU_OPACITY, 100)
-        linePresenter.pluginView.view.danmaku_opac_value.text = "${linePresenter.pluginView.view.danmaku_opac_seek.progress}%"
+        linePresenter.pluginView.view.danmaku_opac_value.text =
+            "${linePresenter.pluginView.view.danmaku_opac_seek.progress}%"
         danmakuContext.setDanmakuTransparency(linePresenter.pluginView.view.danmaku_opac_seek.progress / 100f)
         //size
         linePresenter.pluginView.view.danmaku_size_seek.progress = sp.getInt(DANMAKU_SIZE, 100) - 50
-        linePresenter.pluginView.view.danmaku_size_value.text = "${linePresenter.pluginView.view.danmaku_size_seek.progress + 50}%"
+        linePresenter.pluginView.view.danmaku_size_value.text =
+            "${linePresenter.pluginView.view.danmaku_size_seek.progress + 50}%"
         danmakuContext.setScaleTextSize(sizeScale * (linePresenter.pluginView.view.danmaku_size_seek.progress + 50) / 100f)
         //location
         val maxLinesPair = HashMap<Int, Int>()
         linePresenter.pluginView.view.danmaku_loc_seek.progress = sp.getInt(DANMAKU_LOCATION, 4)
-        linePresenter.pluginView.view.danmaku_loc_value.text = when (linePresenter.pluginView.view.danmaku_loc_seek.progress) {
-            0 -> "1/4屏"
-            1 -> "半屏"
-            2 -> "3/4屏"
-            3 -> "满屏"
-            else -> "无限"
-        }
+        linePresenter.pluginView.view.danmaku_loc_value.text =
+            when (linePresenter.pluginView.view.danmaku_loc_seek.progress) {
+                0 -> "1/4屏"
+                1 -> "半屏"
+                2 -> "3/4屏"
+                3 -> "满屏"
+                else -> "无限"
+            }
         maxLinesPair[BaseDanmaku.TYPE_SCROLL_RL] = Math.ceil(
             linePresenter.pluginView.view.player_container.height / (50 * sizeScale * (linePresenter.pluginView.view.danmaku_size_seek.progress + 50) / 100.0) * when (linePresenter.pluginView.view.danmaku_loc_seek.progress) {
                 0 -> 0.25
@@ -164,13 +168,14 @@ class DanmakuPresenter(
         danmakuContext.setMaximumLines(maxLinesPair)
         //speed
         linePresenter.pluginView.view.danmaku_speed_seek.progress = sp.getInt(DANMAKU_SPEED, 2)
-        linePresenter.pluginView.view.danmaku_speed_value.text = when (linePresenter.pluginView.view.danmaku_speed_seek.progress) {
-            0 -> "极慢"
-            1 -> "较慢"
-            2 -> "适中"
-            3 -> "较快"
-            else -> "极快"
-        }
+        linePresenter.pluginView.view.danmaku_speed_value.text =
+            when (linePresenter.pluginView.view.danmaku_speed_seek.progress) {
+                0 -> "极慢"
+                1 -> "较慢"
+                2 -> "适中"
+                3 -> "较快"
+                else -> "极快"
+            }
         danmakuContext.setScrollSpeedFactor(
             1.2f * when (linePresenter.pluginView.view.danmaku_speed_seek.progress) {
                 0 -> 2f
@@ -286,7 +291,7 @@ class DanmakuPresenter(
         danmakuInfo.info = " 加载弹幕..."
         linePresenter.activityRef.get()?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
         call.enqueue({
-            it.forEach {
+            it.minus(ArrayList(danmakuInfo.danmakus)).forEach {
                 danmakuInfo.danmakus.add(it)
 
                 val danmaku = danmakuContext.mDanmakuFactory.createDanmaku(it.type, danmakuContext) ?: return@forEach
