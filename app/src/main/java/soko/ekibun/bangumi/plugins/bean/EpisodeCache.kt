@@ -58,7 +58,7 @@ data class EpisodeCache(
         override fun getProgress(): Float = percentDownloaded / 100f
 
         override fun download(update: () -> Unit): Boolean {
-            var time = System.currentTimeMillis()
+            var time = 0L
             createDownloader().download { contentLength, bytesDownloaded, percentDownloaded ->
                 this.contentLength = contentLength
                 this.bytesDownloaded = bytesDownloaded
