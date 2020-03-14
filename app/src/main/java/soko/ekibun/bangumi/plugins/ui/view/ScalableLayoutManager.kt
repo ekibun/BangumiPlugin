@@ -9,10 +9,10 @@ import android.view.View
 import androidx.core.view.GestureDetectorCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.android.synthetic.main.item_image.view.*
 
 
-class ScalableLayoutManager(val context: Context) : LinearLayoutManager(context) {
+class ScalableLayoutManager(val context: Context, val updateContent: (View, ScalableLayoutManager) -> Unit) :
+    LinearLayoutManager(context) {
 
     var scale = 1f
         set(value) {
@@ -98,9 +98,8 @@ class ScalableLayoutManager(val context: Context) : LinearLayoutManager(context)
         child.measure(widthSpec, heightSpec)
     }
 
-
     override fun layoutDecoratedWithMargins(child: View, left: Int, top: Int, right: Int, bottom: Int) {
-        child.item_loading?.translationX = offsetX + width * (1 - scale) / 2
+        updateContent(child, this)
         super.layoutDecoratedWithMargins(child, left - offsetX, top, right - offsetX, bottom)
     }
 
@@ -108,9 +107,9 @@ class ScalableLayoutManager(val context: Context) : LinearLayoutManager(context)
         val ddx = Math.max(Math.min(dx, (width * (scale - 1)).toInt() - offsetX), -offsetX)
         offsetX += ddx
         offsetChildrenHorizontal(-ddx)
-        for (i in 0 until recyclerView.childCount)
-            recyclerView.getChildAt(i)?.item_loading?.translationX = offsetX + width * (1 - scale) / 2
-        return if(scale == 1f) dx else ddx
+        for (i in 0 until recyclerView.childCount) updateContent(recyclerView.getChildAt(i), this)
+
+        return if (scale == 1f) dx else ddx
     }
 
     override fun canScrollHorizontally(): Boolean = true

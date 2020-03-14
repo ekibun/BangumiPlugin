@@ -31,6 +31,7 @@ object GlideUtil {
     fun loadWithProgress(req: HttpUtil.HttpRequest, context: Context, view: ImageView, onProgress: (Float)->Unit, callback: (Int, Drawable?) -> Unit): Target<Drawable>? {
         val request = with(context) ?: return null
         val header = req.header ?: HashMap()
+        header["User-Agent"] = header["User-Agent"] ?: HttpUtil.ua
         ProgressAppGlideModule.expect(req.url, object : ProgressAppGlideModule.UIonProgressListener {
             override fun onProgress(bytesRead: Long, expectedLength: Long) {
                 onProgress(bytesRead * 1f / expectedLength)

@@ -26,5 +26,5 @@
               android:layout_width="match_parent"
               android:layout_height="36dp"/>
     </soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadLayout>
-    <include layout="@layout/manga_controller"/>
+    <include layout="@layout/controller_book"/>
 </RelativeLayout>

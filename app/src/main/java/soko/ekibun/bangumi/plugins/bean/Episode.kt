@@ -5,7 +5,7 @@ import androidx.annotation.IntDef
 import androidx.annotation.StringDef
 import androidx.annotation.StringRes
 import soko.ekibun.bangumi.plugins.R
-import soko.ekibun.bangumi.plugins.provider.manga.MangaProvider
+import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 import java.text.DecimalFormat
 
 data class Episode(
@@ -17,16 +17,18 @@ data class Episode(
     @EpisodeStatus var status: String? = null,
     @ProgressType var progress: String? = null,
     var category: String? = null,
-    var manga: MangaProvider.MangaEpisode? = null
+    var book: BookProvider.BookEpisode? = null
 ) {
-    val displayName get() = manga?.title?: if (name_cn.isNullOrEmpty()) name else name_cn
-    val isAir get() = manga != null || status == STATUS_AIR || progress == PROGRESS_WATCH || (category?.startsWith("Disc") ?: false)
+    val displayName get() = book?.title ?: if (name_cn.isNullOrEmpty()) name else name_cn
+    val isAir
+        get() = book != null || status == STATUS_AIR || progress == PROGRESS_WATCH || (category?.startsWith("Disc")
+            ?: false)
 
     /**
      * 第*话
      */
     fun parseSort(context: Context): String {
-        return manga?.sort ?: if (type == TYPE_MAIN)
+        return if (type == TYPE_MAIN)
             context.getString(R.string.parse_sort_ep, DecimalFormat("#.##").format(sort))
         else
             (category ?: context.getString(getTypeRes(type))) + " ${DecimalFormat("#.##").format(sort)}"
@@ -87,7 +89,7 @@ data class Episode(
         }
 
         fun compareEpisode(a: Episode?, b: Episode?): Boolean {
-            return if (a?.manga != null) a.manga?.id == b?.manga?.id else a?.id == b?.id || (a?.type == b?.type && a?.sort == b?.sort)
+            return if (a?.book != null) a.book?.id == b?.book?.id else a?.id == b?.id || (a?.type == b?.type && a?.sort == b?.sort)
         }
     }
 }

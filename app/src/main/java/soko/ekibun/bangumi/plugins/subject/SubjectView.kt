@@ -22,7 +22,12 @@ class SubjectView(private val linePresenter: LinePresenter, private val detail: 
                 R.string.phrase_full_eps,
                 eps?.size?:0
             ) else
-                eps?.lastOrNull()?.parseSort(linePresenter.pluginContext)?.let { linePresenter.pluginContext.getString(R.string.parse_update_to, it) }
+                eps?.lastOrNull()?.let {
+                    if (it.type == Episode.TYPE_MAIN) linePresenter.pluginContext.getString(
+                        R.string.parse_update_to,
+                        it.parseSort(linePresenter.pluginContext)
+                    ) else "所有章节"
+                }
                     ?: linePresenter.pluginContext.getString(R.string.hint_air_nothing)
 
         val maps = LinkedHashMap<String, List<Episode>>()

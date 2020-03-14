@@ -22,7 +22,7 @@ import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
-import soko.ekibun.bangumi.plugins.provider.manga.MangaProvider
+import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.ui.provider.ProviderActivity
 import soko.ekibun.bangumi.plugins.util.AppUtil
@@ -159,8 +159,19 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
         activityRef.get()?.startActivityForResult(intent, AppUtil.REQUEST_PROVIDER)
     }
 
+    fun updateProgress() {
+        val cats = episodeAdapter.data.map { it.category }.distinct()
+        episodeAdapter.data.forEach { episode ->
+            episode.progress = if (cats.indexOf(episode.category) + 1 < subject.vol_status ||
+                (cats.indexOf(episode.category) + 1 == subject.vol_status && episode.sort <= subject.ep_status)
+            )
+                Episode.PROGRESS_WATCH else Episode.PROGRESS_REMOVE
+        }
+        episodeAdapter.notifyDataSetChanged()
+    }
+
     var selectCache = false
-    var epCall: Pair<LineProvider.ProviderInfo, JsEngine.ScriptTask<List<MangaProvider.MangaEpisode>>>? = null
+    var epCall: Pair<LineProvider.ProviderInfo, JsEngine.ScriptTask<List<BookProvider.BookEpisode>>>? = null
     fun refreshLines() {
         val infos = App.app.lineInfoModel.getInfos(subject)
 
@@ -172,10 +183,11 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
             val popupMenu = PopupMenu(pluginContext, v)
             popupMenu.menu.add("看到")
             popupMenu.menu.add("打开")
-            popupMenu.setOnMenuItemClickListener {
-                when (it.title) {
-                    "看到" -> proxy.subjectPresenter.updateSubjectProgress(null, ep.sort.toInt())
-                    "打开" -> activityRef.get()?.let { ctx -> AppUtil.openBrowser(ctx, ep.manga?.url ?: "") }
+            popupMenu.setOnMenuItemClickListener { menu ->
+                val cats = episodeAdapter.data.map { it.category }.distinct()
+                when (menu.title) {
+                    "看到" -> proxy.subjectPresenter.updateSubjectProgress(cats.indexOf(ep.category) + 1, ep.sort.toInt())
+                    "打开" -> activityRef.get()?.let { ctx -> AppUtil.openBrowser(ctx, ep.book?.url ?: "") }
                 }
 
                 false
@@ -313,41 +325,36 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                     list.add(0, EpisodeAdapter.EpisodeSection(true, "已缓存"))
                     episodeDetailAdapter.setNewData(list)
                     epView.btn_detail.text = pluginContext.getString(R.string.parse_cache_eps, eps?.size ?: 0)
-                } else if (epCall?.first != provider) (provider?.provider as? MangaProvider)?.let {
+                } else if (epCall?.first != provider) (provider?.provider as? BookProvider)?.let {
                     emptyView.text = "加载中..."
                     episodeAdapter.setNewData(null)
                     epCall = provider to it.getEpisode("loadEps", App.app.jsEngine, defaultLine)
                     epCall?.second?.enqueue({ eps ->
+                        val cats = eps.map { it.category }.distinct()
                         if (epCall?.first == provider) {
                             emptyView.text = "什么都没有哦"
-                            subject.eps = eps.map { mangaEpisode ->
-                                val sort = Regex("(\\d+)").find(
-                                    mangaEpisode.sort
-                                )?.groupValues?.getOrNull(1)?.toFloatOrNull() ?: 0f
+                            subject.eps = eps.map { bookEpisode ->
                                 Episode(
-                                    sort = sort,
-                                    progress = if (sort > subject.ep_status) Episode.PROGRESS_REMOVE else Episode.PROGRESS_WATCH,
-                                    manga = mangaEpisode
+                                    type = if (bookEpisode.category.isNullOrEmpty()) Episode.TYPE_MAIN else Episode.TYPE_MUSIC,
+                                    sort = bookEpisode.sort,
+                                    category = bookEpisode.category,
+                                    book = bookEpisode
                                 )
                             }
                             episodeAdapter.setNewData(subject.eps)
                             subjectView.updateEpisode(subject)
+                            updateProgress()
                         }
-
                         (epView.episode_list.layoutManager as LinearLayoutManager)
                             .scrollToPositionWithOffset(
-                                episodeAdapter.data.indexOfLast { it.sort <= subject.ep_status },
+                                episodeAdapter.data.indexOfLast { it.progress == Episode.PROGRESS_WATCH },
                                 0
                             )
                     }, { e ->
                         emptyView.text = e.message
                     })
                 }
-                episodeAdapter.data.forEach { episode ->
-                    episode.progress =
-                        if (episode.sort > subject.ep_status) Episode.PROGRESS_REMOVE else Episode.PROGRESS_WATCH
-                }
-                episodeAdapter.notifyDataSetChanged()
+                updateProgress()
             } else {
                 epView.episodes_line_site.visibility = View.GONE
                 epView.episodes_line_id.text = "+ 添加线路"
@@ -358,7 +365,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                 episodeAdapter.setNewData(null)
             }
 
-            (if (type == Provider.TYPE_MANGA || selectCache) episodeAdapter else subjectView.episodeAdapter).also { adapter ->
+            (if (type == Provider.TYPE_BOOK || selectCache) episodeAdapter else subjectView.episodeAdapter).also { adapter ->
                 if (epView.episode_list.adapter != adapter) epView.episode_list.adapter = adapter
             }
         }

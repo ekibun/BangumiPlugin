@@ -7,7 +7,7 @@ import com.google.android.exoplayer2.offline.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.model.VideoModel
 import soko.ekibun.bangumi.plugins.provider.Provider
-import soko.ekibun.bangumi.plugins.provider.manga.MangaProvider
+import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 import soko.ekibun.bangumi.plugins.util.GlideUtil
 import soko.ekibun.bangumi.plugins.util.HttpUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
@@ -20,7 +20,7 @@ data class EpisodeCache(
 ) {
     fun cache(): Cache? = when (type) {
         Provider.TYPE_VIDEO -> JsonUtil.toEntity<VideoCache>(cache)
-        Provider.TYPE_MANGA -> JsonUtil.toEntity<MangaCache>(cache)
+        Provider.TYPE_BOOK -> JsonUtil.toEntity<BookCache>(cache)
         else -> null
     }
 
@@ -93,24 +93,30 @@ data class EpisodeCache(
         }
     }
 
-    class MangaCache(
-        val images: List<MangaProvider.ImageInfo>,
+    class BookCache(
+        val pages: List<BookProvider.PageInfo>,
         val request: HashMap<Int, HttpUtil.HttpRequest>,
         val paths: HashMap<Int, String>
     ) : Cache {
-        override fun isFinished(): Boolean = paths.size >= images.size
+        override fun isFinished(): Boolean = paths.size >= pages.size
 
-        override fun getProgressInfo(): String = "${paths.size}/${images.size}"
+        override fun getProgressInfo(): String = "${paths.size}/${pages.size}"
 
-        override fun getProgress(): Float = paths.size * 1f / images.size
+        override fun getProgress(): Float = paths.size * 1f / pages.size
 
         override fun download(update: () -> Unit): Boolean {
-            images.forEachIndexed { index, image ->
-                val req = request[index] ?: (App.app.lineProvider.getProvider(
-                    Provider.TYPE_MANGA,
-                    image.site ?: ""
-                )?.provider as? MangaProvider)
-                    ?.getImage("download_${image.site}_${image.id}", App.app.jsEngine, image)?.excute()
+            pages.forEachIndexed { index, page ->
+                if (!page.content.isNullOrEmpty()) {
+                    paths[index] = "content"
+                    update()
+                    return@forEachIndexed
+                }
+                val req = request[index] ?: (if (page.site.isNullOrEmpty()) page.image else null)
+                ?: (App.app.lineProvider.getProvider(
+                    Provider.TYPE_BOOK,
+                    page.site ?: ""
+                )?.provider as? BookProvider)
+                    ?.getImage("download_${page.site}_${page.index}", App.app.jsEngine, page)?.excute()
                 ?: return@forEachIndexed
                 request[index] = req
                 val header = req.header ?: HashMap()
@@ -120,6 +126,7 @@ data class EpisodeCache(
                 paths[index] = path
                 update()
             }
+            update()
             return !isFinished()
         }
 

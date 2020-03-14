@@ -20,7 +20,7 @@ class DownloadService(val app: Context, val pluginContext: Context) {
     private val taskCollection = HashMap<String, DownloadTask>()
 
     private fun getTaskKey(episode: Episode, subject: Subject): String {
-        return subject.prefKey + "_${episode.manga?.id ?: episode.id}"
+        return subject.prefKey + "_${episode.book?.id ?: episode.id}"
     }
 
     private fun getGroupSummary(status: Int): String {

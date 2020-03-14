@@ -85,6 +85,11 @@ class JsEngine {
             |       }else if(encoding == "gzip"){
             |           return "" + new java.lang.String(_http.inflate(bytes, false));
             |       }else return "" + new java.lang.String(bytes, encoding);
+            |   },
+            |   html2text(html){
+            |       var doc = Jsoup.parse(html)
+            |       doc.select("br").after("\\n")
+            |       return doc.body().text().replace(/\\n/g, "\n")
             |   }
             |}
             |var webview = {

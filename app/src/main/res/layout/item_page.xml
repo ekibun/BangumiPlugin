@@ -55,4 +55,12 @@
             app:layout_constraintTop_toTopOf="parent"
             tools:visibility="invisible"
             tools:ignore="ContentDescription"/>
+    <TextView
+            android:id="@+id/item_content"
+            android:layout_width="0dp"
+            app:layout_constraintStart_toStartOf="parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toTopOf="parent"
+            android:padding="24dp"
+            android:lineSpacingMultiplier="1.2"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

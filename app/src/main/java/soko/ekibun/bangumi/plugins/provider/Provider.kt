@@ -7,7 +7,7 @@ import soko.ekibun.bangumi.plugins.JsEngine
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.Subject
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
-import soko.ekibun.bangumi.plugins.provider.manga.MangaProvider
+import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 import soko.ekibun.bangumi.plugins.provider.video.VideoProvider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.util.JsonUtil
@@ -54,17 +54,17 @@ abstract class Provider(
 
     companion object {
         const val TYPE_VIDEO = "video"
-        const val TYPE_MANGA = "manga"
+        const val TYPE_BOOK = "book"
 
         val providers: Map<String, Class<out Provider>> = mapOf(
             TYPE_VIDEO to VideoProvider::class.java,
-            TYPE_MANGA to MangaProvider::class.java
+            TYPE_BOOK to BookProvider::class.java
         )
 
         fun getProviderType(subject: Subject): String {
             return when (subject.type) {
                 Subject.TYPE_ANIME, Subject.TYPE_REAL -> TYPE_VIDEO
-                Subject.TYPE_BOOK -> TYPE_MANGA
+                Subject.TYPE_BOOK -> TYPE_BOOK
                 else -> ""
             }
         }
@@ -72,7 +72,7 @@ abstract class Provider(
         fun getProviderFileType(type: String): String {
             return when (type) {
                 TYPE_VIDEO -> "video/*"
-                TYPE_MANGA -> "image/*"
+                TYPE_BOOK -> "image/*"
                 else -> ""
             }
         }
