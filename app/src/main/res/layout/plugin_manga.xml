@@ -1,23 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadLayout
+<RelativeLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
-        android:id="@+id/item_pull_layout"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:load_fixed="true"
-        app:refresh_fixed="true"
+        xmlns:tools="http://schemas.android.com/tools"
         android:visibility="invisible"
-        android:background="@android:color/black"
-        android:theme="@style/ThemeOverlay.AppCompat.Dark">
-    <view class="soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadView$PullLoadViewPrev"
-          android:layout_width="match_parent"
-          android:layout_height="36dp"/>
-    <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/item_manga"
+        tools:visibility="visible"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+    <soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadLayout
+            android:id="@+id/item_pull_layout"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
-    <view class="soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadView$PullLoadViewNext"
-          android:layout_width="match_parent"
-          android:layout_height="36dp"/>
-</soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadLayout>
+            android:layout_height="match_parent"
+            app:load_fixed="true"
+            app:refresh_fixed="true"
+            android:background="@android:color/black"
+            android:theme="@style/ThemeOverlay.AppCompat.Dark">
+        <view class="soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadView$PullLoadViewPrev"
+              android:layout_width="match_parent"
+              android:layout_height="36dp"/>
+        <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/item_manga"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+        <view class="soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadView$PullLoadViewNext"
+              android:layout_width="match_parent"
+              android:layout_height="36dp"/>
+    </soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadLayout>
+    <include layout="@layout/manga_controller"/>
+</RelativeLayout>

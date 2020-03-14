@@ -1,12 +1,16 @@
 package soko.ekibun.bangumi.plugins.provider.manga
 
+import android.annotation.SuppressLint
 import android.os.Build
 import android.view.View
+import android.view.animation.AnimationUtils
+import android.widget.SeekBar
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.android.synthetic.main.item_image.view.*
+import kotlinx.android.synthetic.main.manga_controller.view.*
 import kotlinx.android.synthetic.main.plugin_manga.view.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
@@ -29,10 +33,53 @@ class MangaPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
         const val tapScrollRatio = 1 / 2f
     }
 
+    private fun showControl(show: Boolean) {
+        if (view.control_container.visibility == if (show) View.VISIBLE else View.INVISIBLE) return
+        view.control_container.visibility = if (show) View.VISIBLE else View.INVISIBLE
+        view.control_container.animation = AnimationUtils.loadAnimation(
+            linePresenter.pluginContext,
+            if (show) R.anim.move_in_bottom else R.anim.move_out_bottom
+        )
+    }
+
     private var inited = false
     private fun init() {
         if (inited) return
         inited = true
+
+        view.control_container.setOnClickListener {
+            showControl(false)
+        }
+        view.btn_next.setOnClickListener {
+            val visibleItem = mangaAdapter.data.getOrNull(layoutManager.findFirstVisibleItemPosition())
+            val curIndex = linePresenter.episodeAdapter.data.indexOfFirst { it.manga == visibleItem?.ep }
+            linePresenter.episodeAdapter.data.getOrNull(curIndex + 1)?.let { ep -> loadEp(ep) } ?: {
+                Toast.makeText(App.app.plugin, "没有下一章了", Toast.LENGTH_LONG).show()
+            }()
+        }
+        view.btn_prev.setOnClickListener {
+            val visibleItem = mangaAdapter.data.getOrNull(layoutManager.findFirstVisibleItemPosition())
+            val curIndex = linePresenter.episodeAdapter.data.indexOfFirst { it.manga == visibleItem?.ep }
+            linePresenter.episodeAdapter.data.getOrNull(curIndex - 1)?.let { ep -> loadEp(ep) } ?: {
+                Toast.makeText(App.app.plugin, "没有上一章了", Toast.LENGTH_LONG).show()
+            }()
+        }
+        view.read_progress.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (!fromUser) return
+                val visibleItem = mangaAdapter.data.getOrNull(layoutManager.findFirstVisibleItemPosition())
+                layoutManager.scrollToPositionWithOffset(
+                    mangaAdapter.data.indexOfFirst { it.ep == visibleItem?.ep && it.index == progress + 1 },
+                    0
+                )
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
+        view.btn_title.setOnClickListener {
+            linePresenter.proxy.subjectPresenter.subjectView.behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        }
 
         linePresenter.proxy.onBackListener = {
             val behavior = linePresenter.proxy.subjectPresenter.subjectView.behavior
@@ -64,8 +111,7 @@ class MangaPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
                 when {
                     y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, -(h * tapScrollRatio).toInt())
                     h - y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, (h * tapScrollRatio).toInt())
-                    else -> linePresenter.proxy.subjectPresenter.subjectView.behavior.state =
-                        BottomSheetBehavior.STATE_COLLAPSED
+                    else -> showControl(true)
                 }
             })
         { view, index ->
@@ -129,11 +175,18 @@ class MangaPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
         loadEp(episode, false) {}
     }
 
+    @SuppressLint("SetTextI18n")
     private fun updateProgress() {
+        view.read_progress.isEnabled = false
         mangaAdapter.data.getOrNull(layoutManager.findFirstVisibleItemPosition())?.let {
+            val last = mangaAdapter.data.lastOrNull { l -> l.ep == it.ep } ?: it
+            view.read_progress.isEnabled = true
+            view.read_progress.progress = it.index - 1
+            view.read_progress.max = last.index - 1
+            view.btn_title.text = "${it.ep?.title}-${it.index}/${last.index}"
             linePresenter.proxy.subjectPresenter.subjectView.collapsibleAppBarHelper.setTitle(
                 null,
-                "${it.ep?.sort}-${it.index}/${mangaAdapter.data.lastOrNull { l -> l.ep == it.ep }?.index}", null
+                "${it.ep?.sort}-${it.index}/${last.index}", null
             )
         }
     }
@@ -155,6 +208,7 @@ class MangaPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
                 mangaAdapter.addData(0, cache.images)
                 layoutManager.scrollToPositionWithOffset(curItem + cache.images.size, curOffset)
             } else mangaAdapter.addData(cache.images)
+            updateProgress()
             callback(true)
             return
         }
@@ -175,9 +229,11 @@ class MangaPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
                 mangaAdapter.addData(0, it)
                 layoutManager.scrollToPositionWithOffset(curItem + it.size, curOffset)
             } else mangaAdapter.addData(it)
+            updateProgress()
             callback(true)
         }, {
             Toast.makeText(App.app.plugin, it.message, Toast.LENGTH_LONG).show()
+            updateProgress()
             callback(false)
         })
     }
