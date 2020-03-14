@@ -35,7 +35,12 @@ class ScalableLayoutManager(val context: Context, val updateContent: (View, Scal
 
     lateinit var recyclerView: RecyclerView
     @SuppressLint("ClickableViewAccessibility")
-    fun setupWithRecyclerView(view: RecyclerView, onTap: (Int, Int) -> Unit, onPress: (View, Int) -> Unit) {
+    fun setupWithRecyclerView(
+        view: RecyclerView,
+        onTap: (Int, Int) -> Unit,
+        onPress: (View, Int) -> Unit,
+        onTouch: (MotionEvent) -> Unit
+    ) {
         recyclerView = view
         view.layoutManager = this
         var beginScale = scale
@@ -74,6 +79,7 @@ class ScalableLayoutManager(val context: Context, val updateContent: (View, Scal
             }
         })
         view.setOnTouchListener { v, event ->
+            onTouch(event)
             scaleGestureDetector.onTouchEvent(event)
             gestureDetector.onTouchEvent(event)
             false

@@ -23,6 +23,8 @@ import soko.ekibun.bangumi.plugins.ui.view.ScalableLayoutManager
 import soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadLayout
 import soko.ekibun.bangumi.plugins.util.AppUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
+import java.util.*
+import kotlin.collections.HashMap
 
 class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_book) {
     val baseTextSize = 16f
@@ -43,8 +45,12 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
         const val tapScrollRatio = 1 / 2f
     }
 
+    var lastChangeTime = 0L
     private fun showControl(show: Boolean) {
         if (view.control_container.visibility == if (show) View.VISIBLE else View.INVISIBLE) return
+        val curTime = Calendar.getInstance().timeInMillis
+        if (curTime - lastChangeTime < 500) return
+        lastChangeTime = curTime
         if (show) updateProgress()
         view.control_container.visibility = if (show) View.VISIBLE else View.INVISIBLE
         view.control_container.animation = AnimationUtils.loadAnimation(
@@ -130,26 +136,26 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
                 when {
                     y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, -(h * tapScrollRatio).toInt())
                     h - y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, (h * tapScrollRatio).toInt())
-                    else -> showControl(view.control_container.visibility != View.VISIBLE)
+                    else -> showControl(true)
                 }
-            })
-        { view, index ->
+            }, { view, index ->
+                val systemUiVisibility = view.systemUiVisibility
+                val url = mangaAdapter.data[index].image?.url ?: return@setupWithRecyclerView
+                val dialog = AlertDialog.Builder(linePresenter.pluginContext)
+                    .setTitle(url)
+                    .setItems(arrayOf("分享"))
+                    { _, _ ->
+                        linePresenter.activityRef.get()
+                            ?.let { AppUtil.shareDrawable(it, view.item_image.drawable ?: return@setItems) }
+                    }.setOnDismissListener {
+                        view.systemUiVisibility = systemUiVisibility
+                    }.create()
+                dialog.window?.decorView?.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
+                dialog.show()
+            }) {
             showControl(false)
-            val systemUiVisibility = view.systemUiVisibility
-            val url = mangaAdapter.data[index].image?.url ?: return@setupWithRecyclerView
-            val dialog = AlertDialog.Builder(linePresenter.pluginContext)
-                .setTitle(url)
-                .setItems(arrayOf("分享"))
-                { _, _ ->
-                    linePresenter.activityRef.get()
-                        ?.let { AppUtil.shareDrawable(it, view.item_image.drawable ?: return@setItems) }
-                }.setOnDismissListener {
-                    view.systemUiVisibility = systemUiVisibility
-                }.create()
-            dialog.window?.decorView?.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
-            dialog.show()
         }
         linePresenter.proxy.subjectPresenter.subjectView.let {
             it.behavior.isHideable = true

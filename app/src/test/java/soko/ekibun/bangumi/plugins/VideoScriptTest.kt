@@ -4,7 +4,6 @@ import org.junit.Test
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
-import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 import soko.ekibun.bangumi.plugins.provider.video.VideoProvider
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import java.io.File
@@ -81,7 +80,7 @@ class VideoScriptTest {
     fun printProvider() {
         val file = File("${ScriptTest.SCRIPT_PATH}/videos.json")
         file.writeText(JsonUtil.toJson(scriptList.map {
-            it.info.code = JsonUtil.toJson(ScriptTest.getProvider<BookProvider>(it.info.site))
+            it.info.code = JsonUtil.toJson(ScriptTest.getProvider<VideoProvider>(it.info.site))
             it.info
         }))
     }

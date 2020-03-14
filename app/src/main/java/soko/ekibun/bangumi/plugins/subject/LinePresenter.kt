@@ -160,7 +160,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
     }
 
     fun updateProgress() {
-        val cats = episodeAdapter.data.map { it.category }.distinct()
+        val cats = episodeAdapter.data.mapNotNull { it.category }.distinct()
         episodeAdapter.data.forEach { episode ->
             episode.progress = if (cats.indexOf(episode.category) + 1 < subject.vol_status ||
                 (cats.indexOf(episode.category) + 1 == subject.vol_status && episode.sort <= subject.ep_status)
