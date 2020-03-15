@@ -30,6 +30,7 @@ class ScalableLayoutManager(val context: Context, val updateContent: (View, Scal
     }
 
     fun scrollOnScale(x: Float, y: Float, oldScale: Float) {
+        recyclerView.scrollBy(((offsetX + x) * (scale - oldScale) / oldScale).toInt(), 0)
         val adapter = recyclerView.adapter
         val anchorPos = (if (adapter is ScalableAdapter) {
             (findFirstVisibleItemPosition()..findLastVisibleItemPosition()).firstOrNull {
