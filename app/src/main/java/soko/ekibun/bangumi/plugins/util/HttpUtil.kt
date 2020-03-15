@@ -13,12 +13,14 @@ import soko.ekibun.bangumi.plugins.App
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.URI
+import java.util.concurrent.TimeUnit
 import java.util.zip.Inflater
 
 object HttpUtil {
     val ua = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Mobile Safari/537.36"
     val httpCookieClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
+            .readTimeout(30L, TimeUnit.SECONDS)
             .addInterceptor(BrotliInterceptor).also {
                 if (App.inited) it.addInterceptor(BridgeInterceptor(WebViewCookieHandler()))
             }.build()

@@ -25,11 +25,22 @@ class ScalableLayoutManager(val context: Context, val updateContent: (View, Scal
         offsetX = 0
     }
 
-    fun scrollOnScale(x: Float, y: Float, oldScale: Float){
-        recyclerView.scrollBy(((offsetX + x) * (scale - oldScale) / oldScale).toInt(), 0)
-        val pos = findFirstVisibleItemPosition()
-        findViewByPosition(pos)?.let {
-            scrollToPositionWithOffset(pos, (y - (-getDecoratedTop(it) + y) * scale / oldScale).toInt())
+    interface ScalableAdapter {
+        fun isItemScalable(pos: Int, layoutManager: ScalableLayoutManager): Boolean
+    }
+
+    fun scrollOnScale(x: Float, y: Float, oldScale: Float) {
+        val adapter = recyclerView.adapter
+        val anchorPos = (if (adapter is ScalableAdapter) {
+            (findFirstVisibleItemPosition()..findLastVisibleItemPosition()).firstOrNull {
+                adapter.isItemScalable(
+                    it,
+                    this
+                )
+            }
+        } else findFirstVisibleItemPosition()) ?: return
+        findViewByPosition(anchorPos)?.let {
+            scrollToPositionWithOffset(anchorPos, (y - (-getDecoratedTop(it) + y) * scale / oldScale).toInt())
         }
     }
 
@@ -114,7 +125,6 @@ class ScalableLayoutManager(val context: Context, val updateContent: (View, Scal
         offsetX += ddx
         offsetChildrenHorizontal(-ddx)
         for (i in 0 until recyclerView.childCount) updateContent(recyclerView.getChildAt(i), this)
-
         return if (scale == 1f) dx else ddx
     }
 

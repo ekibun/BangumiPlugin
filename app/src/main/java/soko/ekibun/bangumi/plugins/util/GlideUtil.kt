@@ -43,6 +43,7 @@ object GlideUtil {
         })
         return request.asDrawable()
             .load(GlideUrl(req.url) { if (!header.containsKey("referer")) header.plus("referer" to req.url) else header })
+            .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
             .into(object : ImageViewTarget<Drawable>(view) {
                 override fun onLoadStarted(placeholder: Drawable?) {
                     super.onLoadStarted(placeholder)

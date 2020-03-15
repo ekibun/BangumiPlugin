@@ -27,18 +27,16 @@ import java.util.*
 import kotlin.collections.HashMap
 
 class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_book) {
-    val baseTextSize = 16f
 
     val layoutManager = ScalableLayoutManager(linePresenter.pluginContext) { child, lm ->
-        child.item_content?.let {
+        child.content_container?.let {
             if (it.visibility != View.VISIBLE) return@let
-            it.width = lm.recyclerView.width
-            it.textSize = baseTextSize * ((lm.scale - 1) / 2 + 1)
+            it.layoutParams.width = lm.recyclerView.width
             it.translationX = lm.offsetX.toFloat()
         }
         child.item_loading?.translationX = lm.offsetX + lm.width * (1 - lm.scale) / 2
     }
-    val mangaAdapter = BookAdapter()
+    val bookAdapter = BookAdapter()
 
     companion object {
         const val tapScrollRange = 1 / 4f
@@ -65,14 +63,14 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
         inited = true
 
         view.btn_next.setOnClickListener {
-            val visibleItem = mangaAdapter.data.getOrNull(layoutManager.findFirstVisibleItemPosition())
+            val visibleItem = bookAdapter.data.getOrNull(layoutManager.findFirstVisibleItemPosition())
             val curIndex = linePresenter.episodeAdapter.data.indexOfFirst { it.book == visibleItem?.ep }
             linePresenter.episodeAdapter.data.getOrNull(curIndex + 1)?.let { ep -> loadEp(ep) } ?: {
                 Toast.makeText(App.app.plugin, "没有下一章了", Toast.LENGTH_LONG).show()
             }()
         }
         view.btn_prev.setOnClickListener {
-            val visibleItem = mangaAdapter.data.getOrNull(layoutManager.findFirstVisibleItemPosition())
+            val visibleItem = bookAdapter.data.getOrNull(layoutManager.findFirstVisibleItemPosition())
             val curIndex = linePresenter.episodeAdapter.data.indexOfFirst { it.book == visibleItem?.ep }
             linePresenter.episodeAdapter.data.getOrNull(curIndex - 1)?.let { ep -> loadEp(ep) } ?: {
                 Toast.makeText(App.app.plugin, "没有上一章了", Toast.LENGTH_LONG).show()
@@ -82,21 +80,8 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 if (!fromUser) return
                 val visiblePos = layoutManager.findFirstVisibleItemPosition()
-                val visibleIndex = (mangaAdapter.data.getOrNull(visiblePos)?.index ?: 1) - 1
-                val visibleViewAdditionProgress = layoutManager.findViewByPosition(visiblePos)?.let {
-                    Math.max(layoutManager.getDecoratedMeasuredHeight(it) / layoutManager.recyclerView.height - 1, 0)
-                } ?: 0
-                layoutManager.scrollToPositionWithOffset(
-                    visiblePos + when {
-                        progress < visibleIndex -> progress - visibleIndex
-                        progress > visibleIndex + visibleViewAdditionProgress ->
-                            progress - visibleIndex - visibleViewAdditionProgress
-                        else -> 0
-                    },
-                    if (progress > visibleIndex && progress <= visibleIndex + visibleViewAdditionProgress)
-                        -(progress - visibleIndex) * layoutManager.recyclerView.height
-                    else 0
-                )
+                val visibleIndex = (bookAdapter.data.getOrNull(visiblePos)?.index ?: 1) - 1
+                layoutManager.scrollToPositionWithOffset(visiblePos + progress - visibleIndex, 0)
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
@@ -140,7 +125,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
                 }
             }, { view, index ->
                 val systemUiVisibility = view.systemUiVisibility
-                val url = mangaAdapter.data[index].image?.url ?: return@setupWithRecyclerView
+                val url = bookAdapter.data[index].image?.url ?: return@setupWithRecyclerView
                 val dialog = AlertDialog.Builder(linePresenter.pluginContext)
                     .setTitle(url)
                     .setItems(arrayOf("分享"))
@@ -162,7 +147,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             it.behavior.state = BottomSheetBehavior.STATE_COLLAPSED
             it.peakRatio = 1 / 3f
         }
-        view.item_manga.adapter = mangaAdapter
+        bookAdapter.bindToRecyclerView(view.item_manga)
         view.item_manga.addOnScrollListener(
             object : RecyclerView.OnScrollListener() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
@@ -175,7 +160,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             object : PullLoadLayout.OnPullListener {
                 override fun onRefreshStart(pullLayout: PullLoadLayout?) {
                     val curIndex =
-                        linePresenter.episodeAdapter.data.indexOfFirst { it.book == mangaAdapter.data.firstOrNull()?.ep }
+                        linePresenter.episodeAdapter.data.indexOfFirst { it.book == bookAdapter.data.firstOrNull()?.ep }
                     linePresenter.episodeAdapter.data.getOrNull(curIndex - 1)?.let { ep ->
                         loadEp(ep, true) { view.item_pull_layout.responseRefresh(it) }
                     } ?: view.item_pull_layout.responseRefresh(false)
@@ -183,7 +168,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
 
                 override fun onLoadStart(pullLayout: PullLoadLayout?) {
                     val curIndex =
-                        linePresenter.episodeAdapter.data.indexOfFirst { it.book == mangaAdapter.data.lastOrNull()?.ep }
+                        linePresenter.episodeAdapter.data.indexOfFirst { it.book == bookAdapter.data.lastOrNull()?.ep }
                     linePresenter.episodeAdapter.data.getOrNull(curIndex + 1)?.let { ep ->
                         loadEp(ep, false) { view.item_pull_layout.responseLoad(it) }
                     } ?: view.item_pull_layout.responseLoad(false)
@@ -195,7 +180,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
 
     override fun loadEp(episode: Episode) {
         init()
-        mangaAdapter.setNewData(null)
+        bookAdapter.setNewData(null)
         view.item_pull_layout.responseRefresh(false)
         view.item_pull_layout.responseLoad(false)
         view.visibility = View.VISIBLE
@@ -206,23 +191,27 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
     private fun updateProgress() {
         view.read_progress.isEnabled = false
         val visiblePos = layoutManager.findFirstVisibleItemPosition()
-        mangaAdapter.data.getOrNull(visiblePos)?.let {
-            val last = mangaAdapter.data.lastOrNull { l -> l.ep == it.ep } ?: it
+        bookAdapter.data.getOrNull(visiblePos)?.let {
+            val last = bookAdapter.data.lastOrNull { l -> l.ep == it.ep } ?: it
             view.read_progress.isEnabled = true
             view.read_progress.progress = it.index - 1
             view.read_progress.max = last.index - 1
-            layoutManager.findViewByPosition(visiblePos)?.let {
-                val top = layoutManager.getDecoratedTop(it)
-                val height = layoutManager.getDecoratedMeasuredHeight(it)
-                view.read_progress.max += Math.max(height / layoutManager.recyclerView.height - 1, 0)
-                view.read_progress.progress -= top / layoutManager.recyclerView.height
-            }
             view.btn_title.text = "${it.ep?.title}-${it.index}/${last.index}"
             linePresenter.proxy.subjectPresenter.subjectView.collapsibleAppBarHelper.setTitle(
                 null,
                 "${it.ep?.title}-${it.index}/${last.index}", null
             )
         }
+    }
+
+    private fun updatePage(pages: List<BookProvider.PageInfo>, isPrev: Boolean) {
+        if (isPrev) {
+            val curIndex = layoutManager.findFirstVisibleItemPosition()
+            val curItem = bookAdapter.getItem(curIndex)
+            val curOffset = layoutManager.findViewByPosition(curIndex)?.let { layoutManager.getDecoratedTop(it) } ?: 0
+            bookAdapter.addData(0, pages.toMutableList())
+            layoutManager.scrollToPositionWithOffset(bookAdapter.data.indexOf(curItem), curOffset)
+        } else bookAdapter.addData(pages.toMutableList())
     }
 
     fun loadEp(episode: Episode, isPrev: Boolean, callback: (Boolean) -> Unit) {
@@ -233,15 +222,9 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
         )?.cache() as? EpisodeCache.BookCache
         if (cache != null) {
             cache.request.forEach { kv ->
-                mangaAdapter.requests[cache.pages[kv.key]] = kv.value
+                bookAdapter.requests[cache.pages[kv.key]] = kv.value
             }
-            if (isPrev) {
-                val curItem = layoutManager.findFirstVisibleItemPosition()
-                val curOffset =
-                    layoutManager.findViewByPosition(curItem)?.let { layoutManager.getDecoratedTop(it) } ?: 0
-                mangaAdapter.addData(0, cache.pages)
-                layoutManager.scrollToPositionWithOffset(curItem + cache.pages.size, curOffset)
-            } else mangaAdapter.addData(cache.pages)
+            updatePage(cache.pages, isPrev)
             updateProgress()
             callback(true)
             return
@@ -256,13 +239,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
         linePresenter.proxy.subjectPresenter.subjectView.collapsibleAppBarHelper.setTitle(null, ep.title, null)
         layoutManager.reset()
         provider.getPages("getManga", App.app.jsEngine, ep).enqueue({
-            if (isPrev) {
-                val curItem = layoutManager.findFirstVisibleItemPosition()
-                val curOffset =
-                    layoutManager.findViewByPosition(curItem)?.let { layoutManager.getDecoratedTop(it) } ?: 0
-                mangaAdapter.addData(0, it)
-                layoutManager.scrollToPositionWithOffset(curItem + it.size, curOffset)
-            } else mangaAdapter.addData(it)
+            updatePage(it, isPrev)
             updateProgress()
             callback(true)
         }, {
