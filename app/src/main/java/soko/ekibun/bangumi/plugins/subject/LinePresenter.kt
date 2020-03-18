@@ -133,6 +133,8 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
             subject.eps = if (newSubject.eps?.size ?: 0 > 0) newSubject.eps else subject.eps
             subject.eps_count = newSubject.eps_count
             subject.ep_status = newSubject.ep_status
+            subject.vol_count = newSubject.vol_count
+            subject.vol_status = newSubject.vol_status
             subjectView.updateEpisode(subject)
             refreshLines()
         }
@@ -159,7 +161,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
         activityRef.get()?.startActivityForResult(intent, AppUtil.REQUEST_PROVIDER)
     }
 
-    fun updateProgress() {
+    private fun updateProgress() {
         val cats = episodeAdapter.data.mapNotNull { it.category }.distinct()
         episodeAdapter.data.forEach { episode ->
             episode.progress = if (cats.indexOf(episode.category) + 1 < subject.vol_status ||
@@ -168,6 +170,26 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                 Episode.PROGRESS_WATCH else Episode.PROGRESS_REMOVE
         }
         episodeAdapter.notifyDataSetChanged()
+    }
+
+    private fun showEpDialog(ep: Episode, v: View) {
+        if (ep.book == null) {
+            proxy.subjectPresenter.showEpisodeDialog(ep.id)
+            return
+        }
+        val popupMenu = PopupMenu(pluginContext, v)
+        popupMenu.menu.add("看到")
+        popupMenu.menu.add("打开")
+        popupMenu.setOnMenuItemClickListener { menu ->
+            val cats = episodeAdapter.data.mapNotNull { it.category }.distinct()
+            when (menu.title) {
+                "看到" -> proxy.subjectPresenter.updateSubjectProgress(cats.indexOf(ep.category) + 1, ep.sort.toInt())
+                "打开" -> activityRef.get()?.let { ctx -> AppUtil.openBrowser(ctx, ep.book?.url ?: "") }
+            }
+
+            false
+        }
+        popupMenu.show()
     }
 
     var selectCache = false
@@ -179,20 +201,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
             pluginView.loadEp(episodeAdapter.data[position])
         }
         episodeAdapter.setOnItemChildLongClickListener { _, v, position ->
-            val ep = episodeAdapter.data[position]
-            val popupMenu = PopupMenu(pluginContext, v)
-            popupMenu.menu.add("看到")
-            popupMenu.menu.add("打开")
-            popupMenu.setOnMenuItemClickListener { menu ->
-                val cats = episodeAdapter.data.map { it.category }.distinct()
-                when (menu.title) {
-                    "看到" -> proxy.subjectPresenter.updateSubjectProgress(cats.indexOf(ep.category) + 1, ep.sort.toInt())
-                    "打开" -> activityRef.get()?.let { ctx -> AppUtil.openBrowser(ctx, ep.book?.url ?: "") }
-                }
-
-                false
-            }
-            popupMenu.show()
+            showEpDialog(episodeAdapter.data[position], v)
             true
         }
         subjectView.episodeAdapter.setOnItemChildClickListener { _, _, position ->
@@ -209,9 +218,9 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                 subjectView.episodeDetailAdapter.data[position].t?.let { pluginView.loadEp(it) }
             } ?: Toast.makeText(pluginContext, "请先添加播放源", Toast.LENGTH_SHORT).show()
         }
-        subjectView.episodeDetailAdapter.setOnItemLongClickListener { _, _, position ->
+        subjectView.episodeDetailAdapter.setOnItemLongClickListener { _, v, position ->
             subjectView.episodeDetailAdapter.data[position].t?.let {
-                proxy.subjectPresenter.showEpisodeDialog(it.id)
+                showEpDialog(it, v)
             }
             true
         }
