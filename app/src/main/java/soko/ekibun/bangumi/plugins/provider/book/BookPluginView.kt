@@ -19,8 +19,8 @@ import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
+import soko.ekibun.bangumi.plugins.ui.view.PullLoadLayout
 import soko.ekibun.bangumi.plugins.ui.view.ScalableLayoutManager
-import soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadLayout
 import soko.ekibun.bangumi.plugins.util.AppUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import java.util.*
@@ -156,33 +156,29 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
                 }
             })
 
-        view.item_pull_layout.setOnPullListener(
-            object : PullLoadLayout.OnPullListener {
-                override fun onRefreshStart(pullLayout: PullLoadLayout?) {
-                    val curIndex =
-                        linePresenter.episodeAdapter.data.indexOfFirst { it.book == bookAdapter.data.firstOrNull()?.ep }
-                    linePresenter.episodeAdapter.data.getOrNull(curIndex - 1)?.let { ep ->
-                        loadEp(ep, true) { view.item_pull_layout.responseRefresh(it) }
-                    } ?: view.item_pull_layout.responseRefresh(false)
-                }
+        view.item_pull_layout.listener = object : PullLoadLayout.PullLoadListener {
+            override fun onRefresh() {
+                val curIndex =
+                    linePresenter.episodeAdapter.data.indexOfFirst { it.book == bookAdapter.data.firstOrNull()?.ep }
+                linePresenter.episodeAdapter.data.getOrNull(curIndex - 1)?.let { ep ->
+                    loadEp(ep, true) { view.item_pull_layout.response(it) }
+                } ?: view.item_pull_layout.response(false)
+            }
 
-                override fun onLoadStart(pullLayout: PullLoadLayout?) {
-                    val curIndex =
-                        linePresenter.episodeAdapter.data.indexOfFirst { it.book == bookAdapter.data.lastOrNull()?.ep }
-                    linePresenter.episodeAdapter.data.getOrNull(curIndex + 1)?.let { ep ->
-                        loadEp(ep, false) { view.item_pull_layout.responseLoad(it) }
-                    } ?: view.item_pull_layout.responseLoad(false)
-
-                }
-
-            })
+            override fun onLoad() {
+                val curIndex =
+                    linePresenter.episodeAdapter.data.indexOfFirst { it.book == bookAdapter.data.lastOrNull()?.ep }
+                linePresenter.episodeAdapter.data.getOrNull(curIndex + 1)?.let { ep ->
+                    loadEp(ep, false) { view.item_pull_layout.response(it) }
+                } ?: view.item_pull_layout.response(false)
+            }
+        }
     }
 
     override fun loadEp(episode: Episode) {
         init()
         bookAdapter.setNewData(null)
-        view.item_pull_layout.responseRefresh(false)
-        view.item_pull_layout.responseLoad(false)
+        view.item_pull_layout.response(false)
         view.visibility = View.VISIBLE
         loadEp(episode, false) {}
     }

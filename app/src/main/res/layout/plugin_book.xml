@@ -7,7 +7,7 @@
         tools:visibility="visible"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-    <soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadLayout
+    <soko.ekibun.bangumi.plugins.ui.view.PullLoadLayout
             android:id="@+id/item_pull_layout"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -15,16 +15,10 @@
             app:refresh_fixed="true"
             android:background="@android:color/black"
             android:theme="@style/ThemeOverlay.AppCompat.Dark">
-        <view class="soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadView$PullLoadViewPrev"
-              android:layout_width="match_parent"
-              android:layout_height="36dp"/>
         <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/item_manga"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"/>
-        <view class="soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadView$PullLoadViewNext"
-              android:layout_width="match_parent"
-              android:layout_height="36dp"/>
-    </soko.ekibun.bangumi.plugins.ui.view.pull.PullLoadLayout>
+    </soko.ekibun.bangumi.plugins.ui.view.PullLoadLayout>
     <include layout="@layout/controller_book"/>
 </RelativeLayout>
