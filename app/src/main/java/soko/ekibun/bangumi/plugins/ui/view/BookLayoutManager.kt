@@ -41,9 +41,9 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
     override fun onLayoutChildren(recycler: RecyclerView.Recycler, state: RecyclerView.State) {
         if (orientation == VERTICAL) return super.onLayoutChildren(recycler, state)
         detachAndScrapAttachedViews(recycler)
-        if (state.itemCount <= 0 || state.isPreLayout) return
 
-        currentPos = Math.max(0f, Math.min(currentPos, state.itemCount - 1f))
+        currentPos = Math.max(0f, Math.min(currentPos, itemCount - 1f))
+        if (state.itemCount <= 0 || state.isPreLayout) return
         downPage = currentPos.toInt()
 
         val currentIndex = currentPos.toInt()
@@ -75,9 +75,6 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
 
     fun scrollOnScale(x: Float, y: Float, oldScale: Float) {
         val adapter = recyclerView.adapter
-        if (orientation == HORIZONTAL && adapter is ScalableAdapter &&
-            !adapter.isItemScalable(downPage, this)
-        ) scale = 1f
         val anchorPos = (if (adapter is ScalableAdapter) {
             (findFirstVisibleItemPosition()..findLastVisibleItemPosition()).firstOrNull {
                 adapter.isItemScalable(it, this)
@@ -93,6 +90,22 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
         if (orientation == VERTICAL) findViewByPosition(anchorPos)?.let {
             scrollToPositionWithOffset(anchorPos, (y - (-getDecoratedTop(it) + y) * scale / oldScale).toInt())
         }
+    }
+
+    override fun findFirstVisibleItemPosition(): Int {
+        return if (orientation == VERTICAL) super.findFirstVisibleItemPosition() else currentPos.toInt()
+    }
+
+    override fun findLastVisibleItemPosition(): Int {
+        return if (orientation == VERTICAL) super.findLastVisibleItemPosition() else currentPos.toInt()
+    }
+
+    override fun findFirstCompletelyVisibleItemPosition(): Int {
+        return if (orientation == VERTICAL) super.findFirstCompletelyVisibleItemPosition() else currentPos.toInt()
+    }
+
+    override fun findLastCompletelyVisibleItemPosition(): Int {
+        return if (orientation == VERTICAL) super.findLastCompletelyVisibleItemPosition() else currentPos.toInt()
     }
 
     var currentPos = 0f
@@ -130,7 +143,10 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
 
     override fun layoutDecoratedWithMargins(child: View, left: Int, top: Int, right: Int, bottom: Int) {
         updateContent(child, this)
-        if (orientation == VERTICAL) child.translationZ = 0f
+        if (orientation == VERTICAL) {
+            child.translationX = 0f
+            child.translationZ = 0f
+        }
         offsetX = Math.max(0, Math.min(right - left - width, offsetX))
         offsetY = Math.max(0, Math.min(bottom - top - height, offsetY))
         super.layoutDecoratedWithMargins(child, left - offsetX, top - offsetY, right - offsetX, bottom - offsetY)

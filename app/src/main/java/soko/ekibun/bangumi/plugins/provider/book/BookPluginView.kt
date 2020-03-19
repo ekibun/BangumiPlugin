@@ -2,11 +2,13 @@ package soko.ekibun.bangumi.plugins.provider.book
 
 import android.annotation.SuppressLint
 import android.os.Build
+import android.view.MotionEvent
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -24,8 +26,6 @@ import soko.ekibun.bangumi.plugins.ui.view.BookLayoutManager
 import soko.ekibun.bangumi.plugins.ui.view.PullLoadLayout
 import soko.ekibun.bangumi.plugins.util.AppUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
-import java.util.*
-import kotlin.collections.HashMap
 
 class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_book) {
 
@@ -44,13 +44,48 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
         const val tapScrollRatio = 1 / 2f
     }
 
-    var lastChangeTime = 0L
+    val textSizeList = arrayOf(10f, 12f, 15f, 18f, 22f)
+    val sp = PreferenceManager.getDefaultSharedPreferences(App.app.plugin)
+    private fun updateConfigAndProgress() {
+        val direction = sp.getInt("plugin_book_direction", RecyclerView.VERTICAL)
+        view.btn_direction.text = if (direction == RecyclerView.VERTICAL) "纵向" else "横向"
+        if (layoutManager.orientation != direction) {
+            val curIndex = layoutManager.findFirstVisibleItemPosition()
+            val curOffset = layoutManager.findViewByPosition(curIndex)?.let { layoutManager.getDecoratedTop(it) } ?: 0
+            layoutManager.orientation = direction
+            bookAdapter.notifyDataSetChanged()
+            layoutManager.scrollToPositionWithOffset(curIndex, curOffset)
+        }
+        view.btn_direction.setOnClickListener {
+            sp.edit().putInt(
+                "plugin_book_direction",
+                if (direction == RecyclerView.VERTICAL) RecyclerView.HORIZONTAL else RecyclerView.VERTICAL
+            ).apply()
+            updateConfigAndProgress()
+        }
+        val textSizeIndex = sp.getInt("plugin_book_text_size", 2)
+        val textSize = textSizeList[textSizeIndex]
+        bookAdapter.updateTextSize(textSize)
+        view.btn_size_plus.setOnClickListener {
+            if (textSizeIndex + 1 < textSizeList.size) {
+                sp.edit().putInt("plugin_book_text_size", textSizeIndex + 1).apply()
+                updateConfigAndProgress()
+            }
+        }
+        view.btn_size_minus.setOnClickListener {
+            if (textSizeIndex - 1 >= 0) {
+                sp.edit().putInt("plugin_book_text_size", textSizeIndex - 1).apply()
+                updateConfigAndProgress()
+            }
+        }
+        updateProgress()
+    }
+
+    var cancelOnDown = false
     private fun showControl(show: Boolean) {
-        if (view.control_container.visibility == if (show) View.VISIBLE else View.INVISIBLE) return
-        val curTime = Calendar.getInstance().timeInMillis
-        if (curTime - lastChangeTime < 500) return
-        lastChangeTime = curTime
-        if (show) updateProgress()
+        if (cancelOnDown || view.control_container.visibility == if (show) View.VISIBLE else View.INVISIBLE) return
+        cancelOnDown = true
+        if (show) updateConfigAndProgress()
         view.control_container.visibility = if (show) View.VISIBLE else View.INVISIBLE
         view.control_container.animation = AnimationUtils.loadAnimation(
             linePresenter.pluginContext,
@@ -151,7 +186,10 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
                         or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
                 dialog.show()
             }) {
-            showControl(false)
+            if (it.action == MotionEvent.ACTION_DOWN) {
+                cancelOnDown = false
+                showControl(false)
+            }
         }
         linePresenter.proxy.subjectPresenter.subjectView.let {
             it.behavior.isHideable = true
@@ -159,6 +197,8 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             it.peakRatio = 1 / 3f
         }
         bookAdapter.bindToRecyclerView(view.item_manga)
+        updateConfigAndProgress()
+
         view.item_manga.addOnScrollListener(
             object : RecyclerView.OnScrollListener() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
@@ -189,9 +229,12 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
     override fun loadEp(episode: Episode) {
         init()
         bookAdapter.setNewData(null)
+        view.book_loading.visibility = View.VISIBLE
         view.item_pull_layout.response(false)
         view.visibility = View.VISIBLE
-        loadEp(episode, false) {}
+        loadEp(episode, false) {
+            view.book_loading.visibility = View.INVISIBLE
+        }
     }
 
     @SuppressLint("SetTextI18n")

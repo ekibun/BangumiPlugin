@@ -6,6 +6,7 @@ import android.text.StaticLayout
 import android.util.Log
 import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.BaseViewHolder
 import kotlinx.android.synthetic.main.item_page.view.*
@@ -39,6 +40,28 @@ class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
         return "${page.ep?.category ?: ""} ${page.ep?.title}".trim()
     }
 
+    var textSize = 0f
+    fun updateTextSize(textSize: Float) {
+        if (this.textSize == textSize) return
+        referHolder.itemView.item_content.textSize = textSize
+        this.textSize = textSize
+        val layoutManager = recyclerView.layoutManager as? LinearLayoutManager
+        val currentIndex = layoutManager?.findFirstVisibleItemPosition() ?: 0
+        val currentOffset =
+            layoutManager?.findViewByPosition(currentIndex)?.let { layoutManager.getDecoratedTop(it) } ?: 0
+        val currentPageInfo = data.getOrNull(currentIndex)
+        val currentInfo = currentPageInfo?.rawInfo ?: currentPageInfo
+        val currentInfoPos = currentPageInfo?.rawRange?.first ?: 0
+        setNewData(wrapData(data.map { it.rawInfo ?: it }.distinct()))
+        currentInfo?.let { current ->
+            (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(
+                data.indexOfFirst {
+                    (it.rawInfo ?: it) == current && (it.rawInfo == null || it.rawRange?.second ?: 0 > currentInfoPos)
+                }, currentOffset
+            )
+        }
+    }
+
     private fun wrapData(data: List<BookProvider.PageInfo>): List<BookProvider.PageInfo> {
         val ret = ArrayList<BookProvider.PageInfo>()
         data.forEach { page ->
@@ -70,7 +93,7 @@ class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
                     )
                 }
                 val pageHeight =
-                    recyclerView.height - referHolder.itemView.content_container.let { it.paddingTop + it.paddingBottom }
+                    recyclerView.height - referHolder.itemView.content_container.let { it.paddingTop + it.paddingBottom } - 1
                 var lastTextIndex = 0
                 var lastLineBottom = 0
                 for (i in 0 until layout.lineCount) {
@@ -79,29 +102,46 @@ class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
                     val prevLineEndIndex = layout.getLineStart(i)
                     ret += BookProvider.PageInfo(
                         content = page.content.substring(lastTextIndex, prevLineEndIndex).trim('\n'),
-                        ep = page.ep
+                        ep = page.ep,
+                        rawInfo = page,
+                        rawRange = Pair(lastTextIndex, prevLineEndIndex)
                     )
                     lastTextIndex = prevLineEndIndex
                     lastLineBottom = layout.getLineTop(i) + titleHeight
                 }
                 ret += BookProvider.PageInfo(
                     content = page.content.substring(lastTextIndex),
-                    ep = page.ep
+                    ep = page.ep,
+                    rawInfo = page,
+                    rawRange = Pair(lastTextIndex, page.content.length)
                 )
             }
         }
+        var lastEp: BookProvider.BookEpisode? = null
+        var lastIndex = 0
         ret.forEachIndexed { index, page ->
-            page.index = index + 1
+            if (lastEp != page.ep) lastIndex = 0
+            lastEp = page.ep
+            lastIndex += 1
+            page.index = lastIndex
         }
         return ret
     }
 
     override fun convert(helper: BaseViewHolder, item: BookProvider.PageInfo) {
         helper.itemView.image_sort.text = item.index.toString()
+        helper.itemView.item_content.textSize = textSize
         helper.itemView.tag = item
         helper.itemView.loading_text.setOnClickListener {
             if (helper.itemView.tag == item) loadData(helper, item)
         }
+        val isHorizontal = (recyclerView.layoutManager as? LinearLayoutManager)?.orientation == RecyclerView.HORIZONTAL
+        helper.itemView.content_container.setPadding(
+            helper.itemView.content_container.paddingLeft,
+            if (isHorizontal || item.index <= 1) helper.itemView.content_container.paddingLeft else 0,
+            helper.itemView.content_container.paddingRight,
+            if (isHorizontal || data.getOrNull(helper.adapterPosition + 1)?.index ?: 0 <= 1) helper.itemView.content_container.paddingLeft else 0
+        )
         helper.itemView.content_container.layoutParams.width = recyclerView.width
         loadData(helper, item)
     }

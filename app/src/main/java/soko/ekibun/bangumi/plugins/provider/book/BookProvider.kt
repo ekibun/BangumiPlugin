@@ -62,7 +62,9 @@ class BookProvider(
         val image: HttpUtil.HttpRequest? = null,
         val content: String? = null,
         var ep: BookEpisode? = null,
-        var index: Int = 0
+        var index: Int = 0,
+        @Transient var rawInfo: PageInfo? = null,
+        @Transient var rawRange: Pair<Int, Int>? = null
     )
 
     override fun createPluginView(linePresenter: LinePresenter): PluginView {
