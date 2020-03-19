@@ -5,13 +5,14 @@ import android.text.Layout
 import android.text.StaticLayout
 import android.util.Log
 import android.view.View
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.BaseViewHolder
 import kotlinx.android.synthetic.main.item_page.view.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.provider.Provider
-import soko.ekibun.bangumi.plugins.ui.view.ScalableLayoutManager
+import soko.ekibun.bangumi.plugins.ui.view.BookLayoutManager
 import soko.ekibun.bangumi.plugins.util.GlideUtil
 import soko.ekibun.bangumi.plugins.util.HttpUtil
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
@@ -19,7 +20,7 @@ import soko.ekibun.bangumi.plugins.util.ResourceUtil
 @Suppress("DEPRECATION")
 class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
     BaseQuickAdapter<BookProvider.PageInfo, BaseViewHolder>(R.layout.item_page, data),
-    ScalableLayoutManager.ScalableAdapter {
+    BookLayoutManager.ScalableAdapter {
     val requests = HashMap<BookProvider.PageInfo, HttpUtil.HttpRequest>()
 
     private val referHolder by lazy { createViewHolder(recyclerView, 0) }
@@ -72,16 +73,16 @@ class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
                     recyclerView.height - referHolder.itemView.content_container.let { it.paddingTop + it.paddingBottom }
                 var lastTextIndex = 0
                 var lastLineBottom = 0
-                for (i in 1 until layout.lineCount) {
+                for (i in 0 until layout.lineCount) {
                     val curLineBottom = layout.getLineBottom(i) + titleHeight
                     if (curLineBottom - lastLineBottom < pageHeight) continue
                     val prevLineEndIndex = layout.getLineStart(i)
                     ret += BookProvider.PageInfo(
-                        content = page.content.substring(lastTextIndex, prevLineEndIndex),
+                        content = page.content.substring(lastTextIndex, prevLineEndIndex).trim('\n'),
                         ep = page.ep
                     )
                     lastTextIndex = prevLineEndIndex
-                    lastLineBottom = curLineBottom
+                    lastLineBottom = layout.getLineTop(i) + titleHeight
                 }
                 ret += BookProvider.PageInfo(
                     content = page.content.substring(lastTextIndex),
@@ -164,7 +165,7 @@ class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
         })
     }
 
-    override fun isItemScalable(pos: Int, layoutManager: ScalableLayoutManager): Boolean {
+    override fun isItemScalable(pos: Int, layoutManager: LinearLayoutManager): Boolean {
         return layoutManager.findViewByPosition(pos)?.content_container?.visibility != View.VISIBLE
     }
 }

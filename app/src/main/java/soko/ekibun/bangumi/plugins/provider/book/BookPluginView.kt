@@ -7,6 +7,7 @@ import android.view.animation.AnimationUtils
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.android.synthetic.main.controller_book.view.*
@@ -19,8 +20,8 @@ import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
+import soko.ekibun.bangumi.plugins.ui.view.BookLayoutManager
 import soko.ekibun.bangumi.plugins.ui.view.PullLoadLayout
-import soko.ekibun.bangumi.plugins.ui.view.ScalableLayoutManager
 import soko.ekibun.bangumi.plugins.util.AppUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import java.util.*
@@ -28,7 +29,7 @@ import kotlin.collections.HashMap
 
 class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_book) {
 
-    val layoutManager = ScalableLayoutManager(linePresenter.pluginContext) { child, lm ->
+    val layoutManager = BookLayoutManager(linePresenter.pluginContext) { child, lm ->
         child.content_container?.let {
             if (it.visibility != View.VISIBLE) return@let
             it.layoutParams.width = lm.recyclerView.width
@@ -116,13 +117,23 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
                         or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
         }
         layoutManager.setupWithRecyclerView(view.item_manga,
-            { _, y ->
-                val h = view.item_manga.height
-                when {
-                    y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, -(h * tapScrollRatio).toInt())
-                    h - y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, (h * tapScrollRatio).toInt())
-                    else -> showControl(true)
+            { x, y ->
+                if (layoutManager.orientation == LinearLayoutManager.VERTICAL) {
+                    val h = view.item_manga.height
+                    when {
+                        y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, -(h * tapScrollRatio).toInt())
+                        h - y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, (h * tapScrollRatio).toInt())
+                        else -> showControl(true)
+                    }
+                } else {
+                    val w = view.item_manga.width
+                    when {
+                        x < w * tapScrollRange -> layoutManager.snapToTarget(layoutManager.currentPos.toInt() - 1)
+                        w - x < w * tapScrollRange -> layoutManager.snapToTarget(layoutManager.currentPos.toInt() + 1)
+                        else -> showControl(true)
+                    }
                 }
+
             }, { view, index ->
                 val systemUiVisibility = view.systemUiVisibility
                 val url = bookAdapter.data[index].image?.url ?: return@setupWithRecyclerView
