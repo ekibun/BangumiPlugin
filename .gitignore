@@ -12,3 +12,5 @@
 /captures
 .externalNativeBuild
 .cxx
+/app/src/test/java/soko/ekibun/bangumi/plugins/scripts/books.json
+/app/src/test/java/soko/ekibun/bangumi/plugins/scripts/videos.json

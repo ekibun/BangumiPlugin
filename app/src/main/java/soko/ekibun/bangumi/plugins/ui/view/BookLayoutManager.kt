@@ -19,7 +19,8 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
     var scale = 1f
         set(value) {
             field = Math.max(1f, Math.min(value, 2f))
-            findViewByPosition(downPage - 1)?.translationX = width * field
+            if (orientation == HORIZONTAL)
+                findViewByPosition(downPage - 1)?.translationX = width * field
         }
     var offsetX = 0
     var offsetY = 0
@@ -28,10 +29,6 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
         scale = 1f
         offsetX = 0
         offsetY = 0
-    }
-
-    init {
-        orientation = HORIZONTAL
     }
 
     interface ScalableAdapter {
@@ -130,15 +127,30 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
             canScrollVertically()
         )
         child.measure(widthSpec, heightSpec)
-        if (orientation == VERTICAL || child.measuredHeight >= height) return
-        child.measure(
-            widthSpec, RecyclerView.LayoutManager.getChildMeasureSpec(
-                height, heightMode,
-                paddingTop + paddingBottom
-                        + lp.topMargin + lp.bottomMargin + heightUsed, RecyclerView.LayoutParams.MATCH_PARENT,
-                canScrollVertically()
+        if (orientation == VERTICAL) return
+        if (child.measuredHeight > height * scale)
+            child.measure(
+                RecyclerView.LayoutManager.getChildMeasureSpec(
+                    Math.max(width, (height * scale * width * scale / child.measuredHeight).toInt()), widthMode,
+                    paddingLeft + paddingRight
+                            + lp.leftMargin + lp.rightMargin + widthUsed, lp.width,
+                    canScrollHorizontally()
+                ), RecyclerView.LayoutManager.getChildMeasureSpec(
+                    (height * scale).toInt(), heightMode,
+                    paddingTop + paddingBottom
+                            + lp.topMargin + lp.bottomMargin + heightUsed, RecyclerView.LayoutParams.MATCH_PARENT,
+                    canScrollVertically()
+                )
             )
-        )
+        else if (child.measuredHeight < height)
+            child.measure(
+                widthSpec, RecyclerView.LayoutManager.getChildMeasureSpec(
+                    height, heightMode,
+                    paddingTop + paddingBottom
+                            + lp.topMargin + lp.bottomMargin + heightUsed, RecyclerView.LayoutParams.MATCH_PARENT,
+                    canScrollVertically()
+                )
+            )
     }
 
     override fun layoutDecoratedWithMargins(child: View, left: Int, top: Int, right: Int, bottom: Int) {
@@ -148,7 +160,7 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
             child.translationZ = 0f
         }
         offsetX = Math.max(0, Math.min(right - left - width, offsetX))
-        offsetY = Math.max(0, Math.min(bottom - top - height, offsetY))
+        offsetY = if (orientation == VERTICAL) 0 else Math.max(0, Math.min(bottom - top - height, offsetY))
         super.layoutDecoratedWithMargins(child, left - offsetX, top - offsetY, right - offsetX, bottom - offsetY)
     }
 
