@@ -3,7 +3,6 @@ package soko.ekibun.bangumi.plugins.ui.view
 import android.animation.ValueAnimator
 import android.content.Context
 import android.util.AttributeSet
-import android.util.Log
 import android.view.*
 import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -168,7 +167,6 @@ class PullLoadLayout constructor(context: Context, attrs: AttributeSet) : ViewGr
         animator?.cancel()
         val from = offset
         val to = if (loading) anchorDistance * sign(offset.toFloat()).toInt() else 0
-        Log.v("animate", "$from $to")
         if (from == to) return
         animator = ValueAnimator.ofInt(from, to)
         animator?.duration = 300

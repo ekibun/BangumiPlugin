@@ -3,7 +3,6 @@ package soko.ekibun.bangumi.plugins.ui.view
 import android.annotation.SuppressLint
 import android.content.Context
 import android.util.DisplayMetrics
-import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -41,7 +40,6 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
 
         currentPos = Math.max(0f, Math.min(currentPos, itemCount - 1f))
         if (state.itemCount <= 0 || state.isPreLayout) return
-        downPage = currentPos.toInt()
 
         val currentIndex = currentPos.toInt()
         val view = recycler.getViewForPosition(currentIndex)
@@ -108,6 +106,7 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
     var currentPos = 0f
     override fun scrollToPositionWithOffset(position: Int, offset: Int) {
         currentPos = position.toFloat()
+        downPage = position
         super.scrollToPositionWithOffset(position, offset)
     }
 
@@ -190,7 +189,11 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
 
         if (orientation == VERTICAL || scale > 1 || doingScale || view == null) return if (scale == 1f) dx else ddx
 
-        currentPos = Math.max(downPage - 1f, Math.min(currentPos + dx.toFloat() / width, downPage + 1f))
+        if (downDirection == 0) downDirection = dx
+        currentPos = Math.max(
+            downPage - if (downDirection > 0) 0f else 1f,
+            Math.min(currentPos + dx.toFloat() / width, downPage + if (downDirection < 0) 0f else 1f)
+        )
         currentPos = Math.max(0f, Math.min(currentPos, itemCount - 1f))
         view.translationX = -Math.max((currentPos - downPage) * width, 0f)
         if (currentPos < downPage) findViewByPosition(downPage - 1)?.translationX = -(currentPos - downPage + 1) * width
@@ -209,6 +212,13 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
     }
 
     var downPage = 0
+
+    /**
+     * 翻页方向，滑动一次只操作一页
+     * -1 上一页
+     * 1 下一页
+     */
+    var downDirection = 0
 
     override fun canScrollHorizontally(): Boolean = true
     override fun canScrollVertically(): Boolean = true
@@ -270,6 +280,8 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
                     doingScale = false
                     if (Math.abs(currentPos - Math.round(currentPos)) * width < 5)
                         currentPos = Math.round(currentPos).toFloat()
+                    downDirection = if (currentPos - currentPos.toInt() > 0) 1 else 0
+                    downPage = currentPos.toInt()
                     requestLayout()
                 }
             }
@@ -315,7 +327,6 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
     private fun createSnapScroller(targetPos: Int): LinearSmoothScroller {
         return object : LinearSmoothScroller(recyclerView.context) {
             override fun onTargetFound(targetView: View, state: RecyclerView.State, action: Action) {
-                Log.v("snap", "$currentPos $targetPos")
                 val dx = -((currentPos - targetPos) * (width + 0.5f)).toInt()
                 val time = calculateTimeForDeceleration(Math.abs(dx))
                 if (time > 0) {

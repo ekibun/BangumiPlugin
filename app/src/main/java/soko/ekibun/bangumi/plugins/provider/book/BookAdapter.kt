@@ -3,7 +3,6 @@ package soko.ekibun.bangumi.plugins.provider.book
 import android.annotation.SuppressLint
 import android.text.Layout
 import android.text.StaticLayout
-import android.util.Log
 import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -80,7 +79,6 @@ class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
                         it.includeFontPadding
                     ).height + it.paddingBottom
                 } else 0
-                Log.v("height", titleHeight.toString())
                 val layout = referHolder.itemView.item_content.let {
                     StaticLayout(
                         page.content,

@@ -203,7 +203,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             object : RecyclerView.OnScrollListener() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     super.onScrolled(recyclerView, dx, dy)
-                    updateProgress()
+                    if (view.control_container.visibility == View.VISIBLE) updateProgress()
                 }
             })
 
@@ -247,10 +247,6 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             view.read_progress.progress = it.index - 1
             view.read_progress.max = last.index - 1
             view.btn_title.text = "${it.ep?.title}-${it.index}/${last.index}"
-            linePresenter.proxy.subjectPresenter.subjectView.collapsibleAppBarHelper.setTitle(
-                null,
-                "${it.ep?.title}-${it.index}/${last.index}", null
-            )
         }
     }
 
@@ -286,7 +282,6 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             callback(false)
             return
         }
-        linePresenter.proxy.subjectPresenter.subjectView.collapsibleAppBarHelper.setTitle(null, ep.title, null)
         layoutManager.reset()
         provider.getPages("getManga", App.app.jsEngine, ep).enqueue({
             updatePage(it, isPrev)
