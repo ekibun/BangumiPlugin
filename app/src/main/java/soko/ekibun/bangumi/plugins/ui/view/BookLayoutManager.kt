@@ -57,6 +57,8 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
         measureChildWithMargins(view, 0, 0)
         view.translationZ = 50f
         view.translationX = -(currentPos - currentIndex) * width
+        offsetX = Math.max(0, Math.min(view.measuredWidth - width, offsetX))
+        offsetY = Math.max(0, Math.min(view.measuredHeight - height, offsetY))
         layoutDecoratedWithMargins(view, 0, 0, view.measuredWidth, view.measuredHeight)
         // 前一个
         if (currentIndex - 1 >= 0) {
@@ -158,9 +160,8 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
         if (orientation == VERTICAL) {
             child.translationX = 0f
             child.translationZ = 0f
+            offsetX = Math.max(0, Math.min(right - left - width, offsetX))
         }
-        offsetX = Math.max(0, Math.min(right - left - width, offsetX))
-        offsetY = if (orientation == VERTICAL) 0 else Math.max(0, Math.min(bottom - top - height, offsetY))
         super.layoutDecoratedWithMargins(child, left - offsetX, top - offsetY, right - offsetX, bottom - offsetY)
     }
 
@@ -328,7 +329,7 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
     private fun createSnapScroller(targetPos: Int): LinearSmoothScroller {
         return object : LinearSmoothScroller(recyclerView.context) {
             override fun onTargetFound(targetView: View, state: RecyclerView.State, action: Action) {
-                val dx = -((currentPos - targetPos) * (width + 0.5f)).toInt()
+                val dx = -((currentPos - targetPos) * (width + 1f)).toInt()
                 val time = calculateTimeForDeceleration(Math.abs(dx))
                 if (time > 0) {
                     action.update(dx, 0, time, mDecelerateInterpolator)
