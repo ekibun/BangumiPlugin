@@ -204,12 +204,12 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
 
     override fun computeHorizontalScrollOffset(state: RecyclerView.State): Int {
         return if (orientation == VERTICAL) super.computeHorizontalScrollOffset(state)
-        else (currentPos * (if (scale > 1f) 1f else itemCount / (itemCount - 1f)) * width).toInt() + if (scale > 1f) 1 else 0
+        else (currentPos * width).toInt() + if (scale > 1f) 1 else 0
     }
 
     override fun computeHorizontalScrollRange(state: RecyclerView.State): Int {
         return if (orientation == VERTICAL) super.computeHorizontalScrollRange(state)
-        else (itemCount + 1) * width
+        else (itemCount * width * scale).toInt()
     }
 
     var downPage = 0
