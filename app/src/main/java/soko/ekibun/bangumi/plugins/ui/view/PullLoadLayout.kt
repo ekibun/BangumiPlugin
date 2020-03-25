@@ -30,7 +30,7 @@ class PullLoadLayout constructor(context: Context, attrs: AttributeSet) : ViewGr
 
     val anchorDistance = ResourceUtil.dip2px(context, 36f)
 
-    val triggerDistance = 2 * anchorDistance
+    val triggerDistance = 1.5f * anchorDistance
 
     val touchSlop = ResourceUtil.dip2px(context, 1f)
 
@@ -174,8 +174,10 @@ class PullLoadLayout constructor(context: Context, attrs: AttributeSet) : ViewGr
         animator?.addUpdateListener {
             val lastOffset = offset
             offset = it.animatedValue as Int
-            val delta = offset - lastOffset
-            contentView.scrollBy(if (isHorizontal) delta else 0, if (isHorizontal) 0 else delta)
+            if (Math.abs(offset) < anchorDistance) {
+                val delta = offset - Math.max(-anchorDistance, Math.min(anchorDistance, lastOffset))
+                contentView.scrollBy(if (isHorizontal) delta else 0, if (isHorizontal) 0 else delta)
+            }
             requestLayout()
         }
         animator?.start()

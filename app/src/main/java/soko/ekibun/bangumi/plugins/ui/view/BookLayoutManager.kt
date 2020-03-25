@@ -42,6 +42,16 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
         if (state.itemCount <= 0 || state.isPreLayout) return
 
         val currentIndex = currentPos.toInt()
+        // 后一个
+        val prefetchCount = 2
+        for (i in prefetchCount downTo 1) if (currentIndex + i < state.itemCount) {
+            val nextView = recycler.getViewForPosition(currentIndex + i)
+            addView(nextView)
+            nextView.translationX = 0f
+            nextView.translationZ = 0f
+            measureChildWithMargins(nextView, 0, 0)
+            layoutDecoratedWithMargins(nextView, 0, 0, nextView.measuredWidth, nextView.measuredHeight)
+        }
         val view = recycler.getViewForPosition(currentIndex)
         addView(view)
         measureChildWithMargins(view, 0, 0)
@@ -55,16 +65,7 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
             nextView.translationX = -width * scale
             nextView.translationZ = 100f
             measureChildWithMargins(nextView, 0, 0)
-            layoutDecoratedWithMargins(nextView, 0, 0, view.measuredWidth, view.measuredHeight)
-        }
-        // 后一个
-        if (currentIndex + 1 < state.itemCount) {
-            val nextView = recycler.getViewForPosition(currentIndex + 1)
-            addView(nextView)
-            nextView.translationX = 0f
-            nextView.translationZ = 0f
-            measureChildWithMargins(nextView, 0, 0)
-            layoutDecoratedWithMargins(nextView, 0, 0, view.measuredWidth, view.measuredHeight)
+            layoutDecoratedWithMargins(nextView, 0, 0, nextView.measuredWidth, nextView.measuredHeight)
         }
     }
 
@@ -203,12 +204,12 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
 
     override fun computeHorizontalScrollOffset(state: RecyclerView.State): Int {
         return if (orientation == VERTICAL) super.computeHorizontalScrollOffset(state)
-        else (currentPos * width).toInt() + if (scale > 1f) 1 else 0
+        else (currentPos * (if (scale > 1f) 1f else itemCount / (itemCount - 1f)) * width).toInt() + if (scale > 1f) 1 else 0
     }
 
     override fun computeHorizontalScrollRange(state: RecyclerView.State): Int {
         return if (orientation == VERTICAL) super.computeHorizontalScrollRange(state)
-        else itemCount * width
+        else (itemCount + 1) * width
     }
 
     var downPage = 0
