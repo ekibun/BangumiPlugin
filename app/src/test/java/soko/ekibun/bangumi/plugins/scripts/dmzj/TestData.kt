@@ -13,10 +13,10 @@ class TestData : BookScriptTest.BookTestData() {
         title = "动漫之家",
         type = Provider.TYPE_BOOK
     )
-    override val searchKey = "刺客守则"
+    override val searchKey = "摇曳百合"
     override val lineInfo = LineInfoModel.LineInfo(
         "dmzj",
-        id = "40523",
+        id = "7020",
         extra = ""
     )
     override val episode = BookProvider.BookEpisode(
