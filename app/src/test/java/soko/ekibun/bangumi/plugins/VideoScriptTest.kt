@@ -78,6 +78,13 @@ class VideoScriptTest {
 
     @Test
     fun printProvider() {
+        println(JsonUtil.toJson(testData.info.also {
+            it.code = JsonUtil.toJson(ScriptTest.getProvider<VideoProvider>(it.site))
+        }))
+    }
+
+    @Test
+    fun writeProvider() {
         val file = File("${ScriptTest.SCRIPT_PATH}/videos.json")
         file.writeText(JsonUtil.toJson(scriptList.map {
             it.info.code = JsonUtil.toJson(ScriptTest.getProvider<VideoProvider>(it.info.site))

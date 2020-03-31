@@ -147,10 +147,12 @@ class LineDialog(private val linePresenter: LinePresenter) :
                             clipboardManager.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
                         )?.let { list ->
                             list.forEach { addProvider(it) }
+                            Toast.makeText(view.context, "已添加${list.size}个接口", Toast.LENGTH_SHORT).show()
                         } ?: JsonUtil.toEntity<JsonObject>(
                             clipboardManager.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
                         )?.let {
                             addProvider(it)
+                            Toast.makeText(view.context, "已添加1个接口", Toast.LENGTH_SHORT).show()
                         } ?: {
                             Toast.makeText(view.context, "剪贴板没有数据", Toast.LENGTH_SHORT).show()
                         }()

@@ -3,6 +3,7 @@ package soko.ekibun.bangumi.plugins.util;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import androidx.annotation.NonNull;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.Registry;
@@ -34,6 +35,7 @@ public class ProgressAppGlideModule extends AppGlideModule {
                     @Override
                     public Response intercept(Chain chain) throws IOException {
                         Request request = chain.request();
+                        Log.v("glide", request.toString());
                         Response response = chain.proceed(request);
                         ResponseProgressListener listener = new DispatchingProgressListener();
                         return response.newBuilder()

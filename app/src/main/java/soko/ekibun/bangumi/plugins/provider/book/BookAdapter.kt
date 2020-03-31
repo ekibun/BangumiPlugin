@@ -6,6 +6,7 @@ import android.text.StaticLayout
 import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.load.HttpException
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.BaseViewHolder
 import kotlinx.android.synthetic.main.item_page.view.*
@@ -189,17 +190,17 @@ class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
         GlideUtil.loadWithProgress(imageRequest, App.app.host, helper.itemView.item_image, {
             helper.itemView.loading_progress.isIndeterminate = false
             if (helper.itemView.tag == item) helper.itemView.loading_progress.progress = (it * 100).toInt()
-        }, { type, _ ->
+        }, {
             if (helper.itemView.tag == item) {
-                when (type) {
-                    GlideUtil.TYPE_ERROR -> {
-                        showError(helper, "加载出错")
-                    }
-                    GlideUtil.TYPE_RESOURCE -> {
-                        helper.itemView.item_loading.visibility = View.GONE
-                    }
-                }
+                helper.itemView.item_loading.visibility = View.GONE
             }
+        }, { e ->
+            val httpException = e.rootCauses.find { it is HttpException } as? HttpException
+            showError(
+                helper, "加载出错\n${
+                httpException?.let { "${it.statusCode} ${it.message}".trim() } ?: e.message
+                }"
+            )
         })
     }
 

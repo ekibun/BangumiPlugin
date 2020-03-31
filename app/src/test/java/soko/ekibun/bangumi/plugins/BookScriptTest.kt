@@ -20,7 +20,7 @@ class BookScriptTest {
         open val page: BookProvider.PageInfo? = null
     }
 
-    val testData: BookTestData = soko.ekibun.bangumi.plugins.scripts.dmzj.TestData()
+    val testData: BookTestData = soko.ekibun.bangumi.plugins.scripts.manhua123.TestData()
     val provider = ScriptTest.getProvider<BookProvider>(testData.info.site)
 
     @Test
@@ -49,6 +49,13 @@ class BookScriptTest {
 
     @Test
     fun printProvider() {
+        println(JsonUtil.toJson(testData.info.also {
+            it.code = JsonUtil.toJson(ScriptTest.getProvider<BookProvider>(it.site))
+        }))
+    }
+
+    @Test
+    fun writeProvider() {
         val file = File("${ScriptTest.SCRIPT_PATH}/books.json")
         file.writeText(JsonUtil.toJson(scriptList.map {
             it.info.code = JsonUtil.toJson(ScriptTest.getProvider<BookProvider>(it.info.site))
@@ -59,6 +66,8 @@ class BookScriptTest {
     val scriptList = arrayOf(
         soko.ekibun.bangumi.plugins.scripts.dmzj.TestData(),
         soko.ekibun.bangumi.plugins.scripts.hanhan.TestData(),
+        soko.ekibun.bangumi.plugins.scripts.mangabz.TestData(),
+        soko.ekibun.bangumi.plugins.scripts.manhua123.TestData(),
         soko.ekibun.bangumi.plugins.scripts.manhuadui.TestData(),
         soko.ekibun.bangumi.plugins.scripts.manhuagui.TestData(),
         soko.ekibun.bangumi.plugins.scripts.mh177.TestData(),

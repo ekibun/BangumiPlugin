@@ -1,4 +1,4 @@
-package soko.ekibun.bangumi.plugins.scripts.manhuadui
+package soko.ekibun.bangumi.plugins.scripts.manhua123
 
 import soko.ekibun.bangumi.plugins.BookScriptTest
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
@@ -8,23 +8,23 @@ import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 
 class TestData : BookScriptTest.BookTestData() {
     override val info = LineProvider.ProviderInfo(
-        site = "manhuadui",
-        color = 0x31a4fd,
-        title = "漫画堆",
+        site = "manhua123",
+        color = 0xff6880,
+        title = "漫画123",
         type = Provider.TYPE_BOOK
     )
     override val searchKey = "摇曳百合"
     override val lineInfo = LineInfoModel.LineInfo(
-        "manhuadui",
-        id = "yaoyebaihe",
-        title = "摇曳百合",
+        "manhua123",
+        id = "10848",
+        title = "大室家摇曳百合外传",
         extra = ""
     )
     override val episode = BookProvider.BookEpisode(
-        site = "manhuadui",
-        id = "279908",
-        sort = 1f,
-        title = "01话",
-        url = "https://m.manhuadui.com/manhua/cikeshouze/279908.html"
+        site = "manhua123",
+        id = "/comic/28093/1451941.html",
+        sort = 52f,
+        title = "第52话",
+        url = "https://m.manhua123.net/comic/28093/1451941.html"
     )
 }

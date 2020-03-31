@@ -11,7 +11,10 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestManager
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.load.model.GlideUrl
+import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.ImageViewTarget
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
@@ -20,15 +23,17 @@ import com.bumptech.glide.request.transition.Transition
  * 防止Glide崩溃
  */
 object GlideUtil {
-
-    const val TYPE_RESOURCE = 0
-    const val TYPE_PLACEHOLDER = 1
-    const val TYPE_ERROR = 2
-
     /**
      * Glide进度
      */
-    fun loadWithProgress(req: HttpUtil.HttpRequest, context: Context, view: ImageView, onProgress: (Float)->Unit, callback: (Int, Drawable?) -> Unit): Target<Drawable>? {
+    fun loadWithProgress(
+        req: HttpUtil.HttpRequest,
+        context: Context,
+        view: ImageView,
+        onProgress: (Float) -> Unit,
+        callback: (Drawable) -> Unit,
+        onError: (GlideException) -> Unit
+    ): Target<Drawable>? {
         val request = with(context) ?: return null
         val header = req.header ?: HashMap()
         header["User-Agent"] = header["User-Agent"] ?: HttpUtil.ua
@@ -42,44 +47,57 @@ object GlideUtil {
             }
         })
         return request.asDrawable()
-            .load(GlideUrl(req.url) { if (!header.containsKey("referer")) header.plus("referer" to req.url) else header })
+            .load(GlideUrl(req.url) {
+                when {
+                    !header.containsKey("referer") -> header.plus("referer" to req.url)
+                    header["referer"].isNullOrEmpty() -> header.minus("referer")
+                    else -> header
+                }
+            })
+            .listener(object : RequestListener<Drawable> {
+                override fun onLoadFailed(
+                    e: GlideException?,
+                    model: Any?,
+                    target: Target<Drawable>?,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    e?.let { onError(it) }
+                    return false
+                }
+
+                override fun onResourceReady(
+                    resource: Drawable?,
+                    model: Any?,
+                    target: Target<Drawable>?,
+                    dataSource: DataSource?,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    return false
+                }
+
+            })
             .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
             .into(object : ImageViewTarget<Drawable>(view) {
-                override fun onLoadStarted(placeholder: Drawable?) {
-                    super.onLoadStarted(placeholder)
-                    callback(TYPE_PLACEHOLDER, placeholder)
+                override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
+                    callback(resource)
+                    super.onResourceReady(resource, transition)
                 }
 
-                override fun onLoadFailed(errorDrawable: Drawable?) {
-                    callback(TYPE_ERROR, errorDrawable)
-                    super.onLoadFailed(errorDrawable)
+                override fun onDestroy() {
+                    ProgressAppGlideModule.forget(req.url)
                 }
 
-            override fun onLoadCleared(placeholder: Drawable?) {
-                callback(TYPE_PLACEHOLDER, placeholder)
-                super.onLoadCleared(placeholder)
-            }
-
-            override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-                callback(TYPE_RESOURCE, resource)
-                super.onResourceReady(resource, transition)
-            }
-
-            override fun onDestroy() {
-                ProgressAppGlideModule.forget(req.url)
-            }
-
-            override fun setResource(resource: Drawable?) {
-                view.setImageDrawable(resource)
-            }
-        })
+                override fun setResource(resource: Drawable?) {
+                    view.setImageDrawable(resource)
+                }
+            })
 
     }
 
     fun with(context: Context): RequestManager? {
         return try {
             Glide.with(context)
-        } catch (e: IllegalArgumentException) {
+        } catch (e: IllegalStateException) {
             null
         }
     }
@@ -87,7 +105,7 @@ object GlideUtil {
     fun with(activity: Activity): RequestManager? {
         return try {
             Glide.with(activity)
-        } catch (e: IllegalArgumentException) {
+        } catch (e: IllegalStateException) {
             null
         }
     }
@@ -95,7 +113,7 @@ object GlideUtil {
     fun with(activity: FragmentActivity): RequestManager? {
         return try {
             Glide.with(activity)
-        } catch (e: IllegalArgumentException) {
+        } catch (e: IllegalStateException) {
             null
         }
     }
