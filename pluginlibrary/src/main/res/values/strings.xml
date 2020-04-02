@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">BangumiPluginLibrary</string>
+    <string name="settings">设置</string>
 </resources>

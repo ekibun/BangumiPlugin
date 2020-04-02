@@ -19,13 +19,15 @@
             tools:ignore="AllowBackup,GoogleAppIndexingWarning,UnusedAttribute">
         <service
                 android:name=".Plugin"
-                android:exported="true">
+                android:exported="true"
+                tools:ignore="ExportedService">
             <intent-filter>
                 <action android:name="soko.ekibun.bangumi.plugins"/>
             </intent-filter>
         </service>
         <activity
-                android:name=".PluginActivity"
+                android:name=".ui.setting.SettingsActivity"
+                android:label="@string/settings"
                 android:exported="true">
             <intent-filter>
                 <action android:name="soko.ekibun.bangumi.plugins.setting"/>
