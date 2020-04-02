@@ -8,7 +8,6 @@
         <item name="colorPrimaryBackground">@color/colorPrimary</item>
         <item name="colorPrimaryForeground">@color/colorAccent</item>
 
-        <item name="coordinatorLayoutStyle">@style/Widget.Support.CoordinatorLayout</item>
         <item name="android:windowTranslucentStatus">true</item>
     </style>
 

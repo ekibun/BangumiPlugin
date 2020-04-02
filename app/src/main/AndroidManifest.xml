@@ -16,13 +16,20 @@
             android:roundIcon="@mipmap/ic_launcher_round"
             android:supportsRtl="true"
             android:theme="@style/AppTheme"
-            tools:ignore="AllowBackup,GoogleAppIndexingWarning"
-            tools:targetApi="n">
+            tools:ignore="AllowBackup,GoogleAppIndexingWarning,UnusedAttribute">
+        <service
+                android:name=".Plugin"
+                android:exported="true">
+            <intent-filter>
+                <action android:name="soko.ekibun.bangumi.plugins"/>
+            </intent-filter>
+        </service>
         <activity
                 android:name=".PluginActivity"
                 android:exported="true">
             <intent-filter>
-                <action android:name="soko.ekibun.bangumi.plugins"/>
+                <action android:name="soko.ekibun.bangumi.plugins.setting"/>
+                <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
         <activity

@@ -32,9 +32,9 @@ object JsonUtil {
     }
 
     fun <T> toEntity(json: String, clazz: Class<T>): T? {
-        return try{
+        return try {
             GSON.fromJson(json, clazz)
-        }catch (e: Exception){
+        } catch (e: Exception) {
             e.printStackTrace()
             null
         }

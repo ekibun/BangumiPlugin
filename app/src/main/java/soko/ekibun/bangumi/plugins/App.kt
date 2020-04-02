@@ -11,13 +11,12 @@ import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.util.AppUtil
-import soko.ekibun.bangumi.plugins.util.ReflectUtil
 import java.io.File
 import java.lang.ref.WeakReference
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class App(val host: Context, val plugin: Context) {
+class App(host: Context, plugin: Context) : BaseApp(host, plugin) {
     val handler = android.os.Handler { true }
     private val databaseProvider by lazy { ExoDatabaseProvider(host) }
     private val downloadCachePath = AppUtil.getDiskFileDir(host, "download").absolutePath
@@ -38,8 +37,9 @@ class App(val host: Context, val plugin: Context) {
 
     init {
         File(downloadCachePath).mkdirs()
-        ReflectUtil.proxyObject(host, Plugin.IApplication::class.java)!!.remoteAction =
-            { intent, flags, startId -> downloadService.onStartCommand(intent, flags, startId) }
+        appHost!!.remoteAction = { intent, flags, startId ->
+            downloadService.onStartCommand(intent, flags, startId)
+        }
     }
 
     companion object {

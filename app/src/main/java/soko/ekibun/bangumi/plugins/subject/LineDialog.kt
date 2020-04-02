@@ -10,7 +10,6 @@ import android.view.View
 import android.widget.ListPopupWindow
 import android.widget.Toast
 import com.google.gson.JsonObject
-import kotlinx.android.synthetic.main.base_dialog.view.*
 import kotlinx.android.synthetic.main.dialog_add_line.view.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
@@ -39,7 +38,7 @@ class LineDialog(private val linePresenter: LinePresenter) :
     var info: LineInfoModel.LineInfo? = null
     lateinit var callback: (LineInfoModel.LineInfo?, LineInfoModel.LineInfo?) -> Unit
     override fun onViewCreated(view: View) {
-        LayoutInflater.from(pluginContext).inflate(R.layout.dialog_add_line, view.layout_content)
+        LayoutInflater.from(pluginContext).inflate(R.layout.dialog_add_line, view.findViewById(R.id.layout_content))
 
         val paddingBottom = view.item_buttons.paddingBottom
         view.setOnApplyWindowInsetsListener { _, insets ->
