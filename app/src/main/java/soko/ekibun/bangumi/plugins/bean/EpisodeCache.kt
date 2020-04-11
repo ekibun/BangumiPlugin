@@ -116,7 +116,7 @@ data class EpisodeCache(
                     Provider.TYPE_BOOK,
                     page.site ?: ""
                 )?.provider as? BookProvider)
-                    ?.getImage("download_${page.site}_${page.index}", App.app.jsEngine, page)?.excute()
+                    ?.getImage("download_${page.site}_${page.index}", App.app.jsEngine, page)?.execute()
                 ?: return@forEachIndexed
                 request[index] = req
                 val header = req.header ?: HashMap()

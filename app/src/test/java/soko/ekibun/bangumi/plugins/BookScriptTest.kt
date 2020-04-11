@@ -20,13 +20,19 @@ class BookScriptTest {
         open val page: BookProvider.PageInfo? = null
     }
 
-    val testData: BookTestData = soko.ekibun.bangumi.plugins.scripts.manhua123.TestData()
+    val testData: BookTestData = soko.ekibun.bangumi.plugins.scripts.dmzj.TestData()
     val provider = ScriptTest.getProvider<BookProvider>(testData.info.site)
 
     @Test
     fun search() {
         if (provider.search.isNullOrEmpty()) println("no search script!")
         else println(JsonUtil.toJson(provider.search("test", ScriptTest.jsEngine, testData.searchKey!!).runScript()))
+    }
+
+    @Test
+    fun getUpdate() {
+        if (provider.getUpdate.isNullOrEmpty()) println("no getUpdate script!")
+        else println(JsonUtil.toJson(provider.getUpdate("test", ScriptTest.jsEngine).runScript()))
     }
 
     @Test

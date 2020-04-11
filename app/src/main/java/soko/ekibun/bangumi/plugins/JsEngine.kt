@@ -10,6 +10,7 @@ import soko.ekibun.bangumi.plugins.ui.view.BackgroundWebView
 import soko.ekibun.bangumi.plugins.util.HttpUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import java.util.*
+import java.util.concurrent.Callable
 import kotlin.collections.HashMap
 
 class JsEngine {
@@ -64,10 +65,14 @@ class JsEngine {
         return ret
     }
 
+    @Keep
+    fun print(data: String) {
+        if (App.inited) Log.v("jsEngine", data) else println(data)
+    }
+
     fun runScript(script: String, header: String?, key: String): String {
         val globalMethods = """
             |var _http = Packages.${HttpUtil.javaClass.name}.INSTANCE;
-            |var _json = Packages.${JsonUtil.javaClass.name}.INSTANCE;
             |var AsyncTask = Packages.${JsAsyncTask::class.java.name};
             |var _cachedThreadPool = Packages.${App::class.java.name}.Companion.getCachedThreadPool();
             |var Jsoup = Packages.org.jsoup.Jsoup;
@@ -105,8 +110,8 @@ class JsEngine {
             |}
             |function async(fun){
             |   return (param)=>{
-            |       var task = new AsyncTask(function(params){ try { return JSON.stringify(fun(params[0])) } catch(e){ return new Error(e) } })
-            |       return task.executeOnExecutor(_cachedThreadPool, param)
+            |       var task = new AsyncTask(function(params){ try { return JSON.stringify(fun(params)) } catch(e){ return new Error(e) } }, param)
+            |       return _cachedThreadPool.submit(task)
             |   }
             |}
             |function await(task){
@@ -115,7 +120,30 @@ class JsEngine {
             |   return JSON.parse(data)
             |}
             |function print(obj){
-            |   _jsEngine.print(${JsonUtil.toJson(key)} + ":\n" + obj);
+            |   _jsEngine.print(${JsonUtil.toJson(key)} + ": " + obj);
+            |}
+            |
+            |function handleCircular() {
+            |   var cache = []
+            |   var keyCache = []
+            |   return (key, value) => {
+            |       if(value instanceof Packages.java.lang.Object) {
+            |           return JSON.parse(Packages.${JsonUtil.javaClass.name}.INSTANCE.toJson(value));
+            |       }
+            |       if (typeof value === 'object' && value !== null) {
+            |           var index = cache.indexOf(value);
+            |           if (index !== -1) return '[Circular ' + keyCache[index] + ']'
+            |           cache.push(value)
+            |           keyCache.push(key || 'root')
+            |       }
+            |       return value
+            |   }
+            |}
+            |
+            |var tmp = JSON.stringify;
+            |JSON.stringify = function(value, replacer, space) {  
+            |   replacer = replacer || handleCircular();
+            |   return tmp(value, replacer, space);
             |}
         """.trimMargin()
 
@@ -130,8 +158,7 @@ class JsEngine {
             rhino.evaluateString(
                 scope, """(function(){var _ret = (function(){$script
                 |   }());
-                |   if(_ret instanceof Packages.java.lang.Object) return _json.toJson(_ret);
-                |   else return JSON.stringify(_ret);
+                |   return JSON.stringify(_ret);
                 |}())""".trimMargin(), "script", 0, null
             ).toString()
         } finally {
@@ -183,13 +210,13 @@ class JsEngine {
             this.executeOnExecutor(App.cachedThreadPool)
         }
 
-        fun excute(): T? {
+        fun execute(): T? {
             return this.executeOnExecutor(App.cachedThreadPool)?.get()
         }
     }
 
-    class JsAsyncTask(val js: (Any) -> Any) : AsyncTask<Any, Unit, Any>() {
-        override fun doInBackground(vararg params: Any?): Any {
+    class JsAsyncTask(val js: (Any?) -> Any?, private val params: Any?) : Callable<Any?> {
+        override fun call(): Any? {
             return js(params)
         }
     }

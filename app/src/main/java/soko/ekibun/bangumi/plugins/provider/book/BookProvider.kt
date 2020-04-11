@@ -9,9 +9,10 @@ import soko.ekibun.bangumi.plugins.util.JsonUtil
 
 class BookProvider(
     search: String? = null,
-    @Code("获取剧集列表", 1) val getEpisode: String? = "", // (line: LineInfo) -> List<BookEpisode>
-    @Code("获取页面信息", 2) val getPages: String? = "",   // (episode: BookEpisode) -> List<PageInfo>
-    @Code("获取图片", 3) val getImage: String? = ""        // (image: ImageInfo) -> HttpRequest
+    @Code("获取更新列表", 1) val getUpdate: String? = "",  // () -> List<AirInfo>
+    @Code("获取剧集列表", 2) val getEpisode: String? = "", // (line: LineInfo) -> List<BookEpisode>
+    @Code("获取页面信息", 3) val getPages: String? = "",   // (episode: BookEpisode) -> List<PageInfo>
+    @Code("获取图片", 4) val getImage: String? = ""        // (image: ImageInfo) -> HttpRequest
 ) : Provider(search) {
     fun getEpisode(
         scriptKey: String,
@@ -20,6 +21,17 @@ class BookProvider(
     ): JsEngine.ScriptTask<List<BookEpisode>> {
         return JsEngine.ScriptTask(jsEngine, "var line = ${JsonUtil.toJson(line)};\n$getEpisode", header, scriptKey) {
             JsonUtil.toEntity<List<BookEpisode>>(it)!!
+        }
+    }
+
+    fun getUpdate(scriptKey: String, jsEngine: JsEngine): JsEngine.ScriptTask<List<AirInfo>> {
+        return JsEngine.ScriptTask(
+            jsEngine,
+            getUpdate ?: "",
+            header,
+            scriptKey
+        ) {
+            JsonUtil.toEntity<List<AirInfo>>(it)!!
         }
     }
 
@@ -65,6 +77,12 @@ class BookProvider(
         var index: Int = 0,
         @Transient var rawInfo: PageInfo? = null,
         @Transient var rawRange: Pair<Int, Int>? = null
+    )
+
+    data class AirInfo(
+        val site: String? = null,
+        val id: String? = null,
+        val air: String? = null
     )
 
     override fun createPluginView(linePresenter: LinePresenter): PluginView {

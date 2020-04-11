@@ -24,7 +24,7 @@ class VideoScriptTest {
         open val danmakuKey: String = JsonUtil.toJson("")
     }
 
-    val testData: VideoTestData = soko.ekibun.bangumi.plugins.scripts.agefans.TestData()
+    val testData: VideoTestData = soko.ekibun.bangumi.plugins.scripts.tencent.TestData()
     val provider = ScriptTest.getProvider<VideoProvider>(testData.info.site)
 
     @Test
