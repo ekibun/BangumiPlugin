@@ -93,7 +93,9 @@ class MainPresenter(activityRef: WeakReference<Activity>) {
                 }
             }
         }
-        proxy.mainPresenter.collectionRefreshListener = { list ->
+        val superMergeAirInfo = proxy.mainPresenter.mergeAirInfo
+        proxy.mainPresenter.mergeAirInfo = { list ->
+            superMergeAirInfo(list)
             val searchProvider =
                 list.map { ReflectUtil.proxyObject(it, IMainActivity.IMainPresenter.ISubject::class.java)!! }.filter {
                     it.type == Subject.TYPE_BOOK

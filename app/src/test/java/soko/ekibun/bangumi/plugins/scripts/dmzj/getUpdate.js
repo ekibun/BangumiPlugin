@@ -4,7 +4,7 @@ var getUpdate = async((page)=>{
     return json.map(it => ({
         site: "dmzj",
         id: it.id,
-        air: "更新到" + it.last_update_chapter_name
+        air: it.last_update_chapter_name
     }));
 });
 var tasks = [];

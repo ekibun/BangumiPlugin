@@ -6,7 +6,7 @@ var getUpdate = async((page)=>{
         return {
             site: "manhuadui",
             id: id,
-            air: "更新到" + String(it.text())
+            air: it.text()
         }
     });
 });

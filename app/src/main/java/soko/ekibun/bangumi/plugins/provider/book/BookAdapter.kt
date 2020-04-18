@@ -18,7 +18,6 @@ import soko.ekibun.bangumi.plugins.util.GlideUtil
 import soko.ekibun.bangumi.plugins.util.HttpUtil
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
-@Suppress("DEPRECATION")
 class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
     BaseQuickAdapter<BookProvider.PageInfo, BaseViewHolder>(R.layout.item_page, data),
     BookLayoutManager.ScalableAdapter {
@@ -70,29 +69,31 @@ class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
                 val pageWidth =
                     recyclerView.width - referHolder.itemView.content_container.let { it.paddingLeft + it.paddingRight }
                 val titleHeight = if (page.index <= 1) referHolder.itemView.item_title.let {
-                    StaticLayout(
-                        getEpTitle(page),
-                        it.paint,
-                        pageWidth,
-                        Layout.Alignment.ALIGN_NORMAL,
-                        it.lineSpacingMultiplier,
-                        it.lineSpacingExtra,
-                        it.includeFontPadding
-                    ).height + it.paddingBottom
+                    getEpTitle(page).let { content ->
+                        StaticLayout.Builder.obtain(content, 0, content.length, it.paint, pageWidth)
+                            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                            .setLineSpacing(it.lineSpacingExtra, it.lineSpacingMultiplier)
+                            .setIncludePad(it.includeFontPadding)
+                            .setUseLineSpacingFromFallbacks(it.isFallbackLineSpacing)
+                            .setBreakStrategy(it.breakStrategy)
+                            .setHyphenationFrequency(it.hyphenationFrequency)
+                            .setJustificationMode(it.justificationMode)
+                            .build()
+                    }.height + it.paddingBottom
                 } else 0
                 val layout = referHolder.itemView.item_content.let {
-                    StaticLayout(
-                        page.content,
-                        it.paint,
-                        pageWidth,
-                        Layout.Alignment.ALIGN_NORMAL,
-                        it.lineSpacingMultiplier,
-                        it.lineSpacingExtra,
-                        it.includeFontPadding
-                    )
+                    StaticLayout.Builder.obtain(page.content, 0, page.content.length, it.paint, pageWidth)
+                        .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                        .setLineSpacing(it.lineSpacingExtra, it.lineSpacingMultiplier)
+                        .setIncludePad(it.includeFontPadding)
+                        .setUseLineSpacingFromFallbacks(it.isFallbackLineSpacing)
+                        .setBreakStrategy(it.breakStrategy)
+                        .setHyphenationFrequency(it.hyphenationFrequency)
+                        .setJustificationMode(it.justificationMode)
+                        .build()
                 }
                 val pageHeight =
-                    recyclerView.height - referHolder.itemView.content_container.let { it.paddingTop + it.paddingBottom } - 1
+                    recyclerView.height - referHolder.itemView.content_container.let { it.paddingTop + it.paddingBottom }
                 var lastTextIndex = 0
                 var lastLineBottom = 0
                 for (i in 0 until layout.lineCount) {
@@ -100,7 +101,7 @@ class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
                     if (curLineBottom - lastLineBottom < pageHeight) continue
                     val prevLineEndIndex = layout.getLineStart(i)
                     ret += BookProvider.PageInfo(
-                        content = page.content.substring(lastTextIndex, prevLineEndIndex).trim('\n'),
+                        content = page.content.substring(lastTextIndex, prevLineEndIndex),
                         ep = page.ep,
                         rawInfo = page,
                         rawRange = Pair(lastTextIndex, prevLineEndIndex)
