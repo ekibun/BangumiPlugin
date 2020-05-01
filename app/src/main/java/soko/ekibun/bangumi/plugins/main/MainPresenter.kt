@@ -32,14 +32,14 @@ class MainPresenter(activityRef: WeakReference<Activity>) {
 
     private fun updateData() {
         view.isRefreshing = false
-        adapter.setNewData(App.app.episodeCacheModel.getCacheList())
+        adapter.setNewInstance(App.app.episodeCacheModel.getCacheList().toMutableList())
     }
 
     init {
         val emptyView =
             LayoutInflater.from(activityRef.get()!!)
                 .inflate(ResourceUtil.getResId(App.app.host, "layout", "view_empty"), null)
-        adapter.emptyView = emptyView
+        adapter.setEmptyView(emptyView)
         adapter.setOnItemClickListener { _, _, position ->
             activityRef.get()?.startActivity(AppUtil.parseSubjectActivityIntent(adapter.data[position].subject))
         }
@@ -93,27 +93,23 @@ class MainPresenter(activityRef: WeakReference<Activity>) {
                 }
             }
         }
-        val superMergeAirInfo = proxy.mainPresenter.mergeAirInfo
-        proxy.mainPresenter.mergeAirInfo = { list ->
-            superMergeAirInfo(list)
-            val searchProvider =
-                list.map { ReflectUtil.proxyObject(it, IMainActivity.IMainPresenter.ISubject::class.java)!! }.filter {
-                    it.type == Subject.TYPE_BOOK
-                }.mapNotNull { subject ->
-                    App.app.lineInfoModel.getInfos(Subject(id = subject.id))?.getDefaultProvider()?.site
-                }.distinct()
-            searchProvider.forEach { site ->
-                val provider = App.app.lineProvider.getProvider(Provider.TYPE_BOOK, site)?.provider as? BookProvider
-                if (provider == null || provider.getUpdate.isNullOrEmpty()) return@forEach
-                provider.getUpdate("update_${site}", App.app.jsEngine).enqueue({
-                    airInfo[site] = it
-                    Log.v("air", it.toString())
-                    updateSubjectAitInfo()
-                    proxy.mainPresenter.notifyCollectionChange()
-                }, {
-                    Toast.makeText(App.app.host, "$site: ${it.message}", Toast.LENGTH_SHORT).show()
-                })
-            }
+
+        App.app.lineProvider.providerList.values.filter {
+            it.type == Provider.TYPE_BOOK
+        }.forEach { line ->
+            val provider = line.provider as? BookProvider
+            if (provider == null || provider.getUpdate.isNullOrEmpty()) return@forEach
+            provider.getUpdate("update_${line.site}", App.app.jsEngine).enqueue({
+                airInfo[line.site] = it
+                Log.v("air", it.toString())
+                updateSubjectAitInfo()
+                proxy.mainPresenter.notifyCollectionChange()
+            }, {
+                Toast.makeText(App.app.host, "${line.site}: ${it.message}", Toast.LENGTH_SHORT).show()
+            })
+        }
+
+        proxy.mainPresenter.mergeAirInfo = {
             updateSubjectAitInfo()
         }
     }

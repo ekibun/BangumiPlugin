@@ -8,7 +8,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.load.HttpException
 import com.chad.library.adapter.base.BaseQuickAdapter
-import com.chad.library.adapter.base.BaseViewHolder
+import com.chad.library.adapter.base.viewholder.BaseViewHolder
 import kotlinx.android.synthetic.main.item_page.view.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
@@ -18,7 +18,7 @@ import soko.ekibun.bangumi.plugins.util.GlideUtil
 import soko.ekibun.bangumi.plugins.util.HttpUtil
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
-class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
+class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider.PageInfo>? = null) :
     BaseQuickAdapter<BookProvider.PageInfo, BaseViewHolder>(R.layout.item_page, data),
     BookLayoutManager.ScalableAdapter {
     val requests = HashMap<BookProvider.PageInfo, HttpUtil.HttpRequest>()
@@ -27,11 +27,11 @@ class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
 
     val padding = ResourceUtil.dip2px(App.app.plugin, 24f)
 
-    override fun addData(newData: MutableCollection<out BookProvider.PageInfo>) {
+    override fun addData(newData: Collection<BookProvider.PageInfo>) {
         super.addData(wrapData(newData.toList()))
     }
 
-    override fun addData(position: Int, newData: MutableCollection<out BookProvider.PageInfo>) {
+    override fun addData(position: Int, newData: Collection<BookProvider.PageInfo>) {
         super.addData(position, wrapData(newData.toList()))
     }
 
@@ -51,7 +51,7 @@ class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
         val currentPageInfo = data.getOrNull(currentIndex)
         val currentInfo = currentPageInfo?.rawInfo ?: currentPageInfo
         val currentInfoPos = currentPageInfo?.rawRange?.first ?: 0
-        setNewData(wrapData(data.map { it.rawInfo ?: it }.distinct()))
+        setNewInstance(wrapData(data.map { it.rawInfo ?: it }.distinct()).toMutableList())
         currentInfo?.let { current ->
             (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(
                 data.indexOfFirst {
@@ -128,22 +128,22 @@ class BookAdapter(data: MutableList<BookProvider.PageInfo>? = null) :
         return ret
     }
 
-    override fun convert(helper: BaseViewHolder, item: BookProvider.PageInfo) {
-        helper.itemView.image_sort.text = item.index.toString()
-        helper.itemView.item_content.textSize = textSize
-        helper.itemView.tag = item
-        helper.itemView.loading_text.setOnClickListener {
-            if (helper.itemView.tag == item) loadData(helper, item)
+    override fun convert(holder: BaseViewHolder, item: BookProvider.PageInfo) {
+        holder.itemView.image_sort.text = item.index.toString()
+        holder.itemView.item_content.textSize = textSize
+        holder.itemView.tag = item
+        holder.itemView.loading_text.setOnClickListener {
+            if (holder.itemView.tag == item) loadData(holder, item)
         }
         val isHorizontal = (recyclerView.layoutManager as? LinearLayoutManager)?.orientation == RecyclerView.HORIZONTAL
-        helper.itemView.content_container.setPadding(
-            helper.itemView.content_container.paddingLeft,
-            if (isHorizontal || item.index <= 1) helper.itemView.content_container.paddingLeft else 0,
-            helper.itemView.content_container.paddingRight,
-            if (isHorizontal || data.getOrNull(helper.adapterPosition + 1)?.index ?: 0 <= 1) helper.itemView.content_container.paddingLeft else 0
+        holder.itemView.content_container.setPadding(
+            holder.itemView.content_container.paddingLeft,
+            if (isHorizontal || item.index <= 1) holder.itemView.content_container.paddingLeft else 0,
+            holder.itemView.content_container.paddingRight,
+            if (isHorizontal || data.getOrNull(holder.adapterPosition + 1)?.index ?: 0 <= 1) holder.itemView.content_container.paddingLeft else 0
         )
-        helper.itemView.content_container.layoutParams.width = recyclerView.width
-        loadData(helper, item)
+        holder.itemView.content_container.layoutParams.width = recyclerView.width
+        loadData(holder, item)
     }
 
     @SuppressLint("SetTextI18n")

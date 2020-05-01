@@ -55,11 +55,11 @@ class EpisodeListDialog(private val linePresenter: LinePresenter, val adapter: E
 
         adapter.setOnItemChildLongClickListener { _, _, position ->
             val item = adapter.data[position]
-            val videoCache = App.app.episodeCacheModel.getEpisodeCache(item.t, linePresenter.subject)
+            val videoCache = App.app.episodeCacheModel.getEpisodeCache(item.t!!, linePresenter.subject)
             if (videoCache != null)
                 DownloadService.remove(
                     linePresenter.pluginContext,
-                    item.t,
+                    item.t!!,
                     linePresenter.subject
                 )
             true
@@ -67,7 +67,7 @@ class EpisodeListDialog(private val linePresenter: LinePresenter, val adapter: E
 
         adapter.setOnItemChildClickListener { _, _, position ->
             val item = adapter.data[position]
-            linePresenter.pluginView.downloadEp(item.t) { infoString ->
+            linePresenter.pluginView.downloadEp(item.t!!) { infoString ->
                 linePresenter.activityRef.get()?.runOnUiThread {
                     if (infoString.isEmpty()) adapter.notifyItemChanged(position)
                     else adapter.getViewByPosition(position, R.id.item_layout)?.let {

@@ -9,6 +9,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.brotli.BrotliInterceptor
 import okhttp3.internal.http.BridgeInterceptor
+import okhttp3.logging.HttpLoggingInterceptor
 import soko.ekibun.bangumi.plugins.App
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -21,6 +22,7 @@ object HttpUtil {
     val httpCookieClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .readTimeout(30L, TimeUnit.SECONDS)
+            .addNetworkInterceptor(HttpLoggingInterceptor().apply { this.level = HttpLoggingInterceptor.Level.BASIC })
             .addInterceptor(BrotliInterceptor).also {
                 if (App.inited) it.addInterceptor(BridgeInterceptor(WebViewCookieHandler()))
             }.build()

@@ -79,10 +79,11 @@
                 android:textAppearance="?android:textAppearanceLarge"
                 android:paddingBottom="16dp"
                 app:layout_constraintTop_toTopOf="parent"/>
-        <TextView
+        <soko.ekibun.bangumi.plugins.ui.view.SelectableTextView
                 android:id="@+id/item_content"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:lineSpacingMultiplier="1.2"/>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

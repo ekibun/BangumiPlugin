@@ -37,7 +37,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
         }
         child.item_loading?.translationX = lm.offsetX + lm.width * (1 - lm.scale) / 2
     }
-    val bookAdapter = BookAdapter()
+    val bookAdapter = BookAdapter(view.item_manga)
 
     companion object {
         const val tapScrollRange = 1 / 4f
@@ -169,17 +169,17 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
                     }
                 }
 
-            }, { view, index ->
-                val systemUiVisibility = view.systemUiVisibility
+            }, { v, index ->
+                val systemUiVisibility = v.systemUiVisibility
                 val url = bookAdapter.data[index].image?.url ?: return@setupWithRecyclerView
                 val dialog = AlertDialog.Builder(linePresenter.pluginContext)
                     .setTitle(url)
                     .setItems(arrayOf("分享"))
                     { _, _ ->
                         linePresenter.activityRef.get()
-                            ?.let { AppUtil.shareDrawable(it, view.item_image.drawable ?: return@setItems) }
+                            ?.let { AppUtil.shareDrawable(it, v.item_image.drawable ?: return@setItems) }
                     }.setOnDismissListener {
-                        view.systemUiVisibility = systemUiVisibility
+                        v.systemUiVisibility = systemUiVisibility
                     }.create()
                 dialog.window?.decorView?.systemUiVisibility = (View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                         or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
@@ -196,7 +196,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             it.behavior.state = BottomSheetBehavior.STATE_COLLAPSED
             it.peakRatio = 1 / 3f
         }
-        bookAdapter.bindToRecyclerView(view.item_manga)
+        view.item_manga.adapter = bookAdapter
         updateConfigAndProgress()
 
         view.item_manga.addOnScrollListener(

@@ -218,7 +218,7 @@ class DanmakuPresenter(
         videoInfoCalls.forEach { it.cancel(true) }
         videoInfoCalls.clear()
 
-        adapter.setNewData(lines.map { DanmakuListAdapter.DanmakuInfo(it) })
+        adapter.setNewInstance(lines.map { DanmakuListAdapter.DanmakuInfo(it) }.toMutableList())
         adapter.data.forEach {
             loadDanmaku(it, episode)
         }

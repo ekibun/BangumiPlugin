@@ -20,7 +20,7 @@ interface IMainActivity {
 
     interface IMainPresenter {
         val drawerView: IDrawerView
-        var mergeAirInfo: (List<*>) -> Unit
+        var mergeAirInfo: () -> Unit
         var collectionList: List<*>
         fun notifyCollectionChange()
 

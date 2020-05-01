@@ -114,10 +114,10 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
             onDestroyListener()
         }
 
-        episodeAdapter.emptyView = emptyView
-        episodeAdapter.bindToRecyclerView(epView.episode_list)
+        episodeAdapter.setEmptyView(emptyView)
+//        epView.episode_list.adapter = episodeAdapter
         // 添加自己的view
-        subjectView.episodeAdapter.bindToRecyclerView(epView.episode_list)
+        epView.episode_list.adapter = subjectView.episodeAdapter
         epView.episode_list.layoutManager = LinearLayoutManager(pluginContext, LinearLayoutManager.HORIZONTAL, false)
         epLayout.addView(
             epView, 2,
@@ -327,12 +327,12 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                     val eps = App.app.episodeCacheModel.getSubjectCacheList(subject)?.episodeList?.map {
                         it.episode
                     }
-                    episodeAdapter.setNewData(eps)
+                    episodeAdapter.setNewInstance(eps?.toMutableList())
                     val list = eps?.map {
                         EpisodeAdapter.EpisodeSection(it)
                     }?.toMutableList() ?: ArrayList()
                     list.add(0, EpisodeAdapter.EpisodeSection(true, "已缓存"))
-                    episodeDetailAdapter.setNewData(list)
+                    episodeDetailAdapter.setNewInstance(list)
                     epView.btn_detail.text = pluginContext.getString(R.string.parse_cache_eps, eps?.size ?: 0)
                 } else if (epCall?.first != provider) (provider?.provider as? BookProvider)?.let {
                     emptyView.text = "加载中..."
@@ -350,7 +350,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                                     book = bookEpisode
                                 )
                             }
-                            episodeAdapter.setNewData(subject.eps)
+                            episodeAdapter.setNewInstance(subject.eps?.toMutableList())
                             subjectView.updateEpisode(subject)
                             updateProgress()
                         }
@@ -371,7 +371,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                     editLines(null)
                 }
                 emptyView.text = "点击线路加载剧集"
-                episodeAdapter.setNewData(null)
+                episodeAdapter.setNewInstance(null)
             }
 
             (if (type == Provider.TYPE_BOOK || selectCache) episodeAdapter else subjectView.episodeAdapter).also { adapter ->

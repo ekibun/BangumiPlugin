@@ -77,7 +77,7 @@ class ProviderActivity : AppCompatActivity(), ColorPickerDialogListener {
     val adapter: CodeAdapter by lazy {
         CodeAdapter(typeClass.newInstance(), ReflectUtil.getAllFields(typeClass).filter {
             it.isAnnotationPresent(Provider.Code::class.java)
-        }.sortedBy { it.getAnnotation(Provider.Code::class.java)!!.index })
+        }.sortedBy { it.getAnnotation(Provider.Code::class.java)!!.index }.toMutableList())
     }
     val type by lazy { intent.getStringExtra(EXTRA_PROVIDER_TYPE)!! }
     val typeClass by lazy { Provider.providers[type]!! }
