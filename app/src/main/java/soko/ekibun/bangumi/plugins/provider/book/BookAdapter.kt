@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.load.HttpException
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.viewholder.BaseViewHolder
+import io.reactivex.android.schedulers.AndroidSchedulers
 import kotlinx.android.synthetic.main.item_page.view.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
@@ -167,7 +168,8 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider
             setImage(helper, item, imageRequest)
         } else {
             (App.app.lineProvider.getProvider(Provider.TYPE_BOOK, item.site ?: "")?.provider as? BookProvider)
-                ?.getImage("${item.site}_${item.index}", App.app.jsEngine, item)?.enqueue({
+                ?.getImage("${item.site}_${item.index}", App.app.jsEngine, item)
+                ?.observeOn(AndroidSchedulers.mainThread())?.subscribe({
                     requests[item] = it
                     setImage(helper, item, it)
                 }, {

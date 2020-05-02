@@ -6,10 +6,11 @@ import android.util.Log
 import androidx.annotation.Keep
 import soko.ekibun.bangumi.plugins.main.MainActivityPlugin
 import soko.ekibun.bangumi.plugins.subject.SubjectActivityPlugin
+import java.lang.ref.WeakReference
 
 @Keep
 class Plugin : BasePlugin() {
-    override val pluginList: Map<String, ActivityPlugin> = mapOf(
+    val pluginList: Map<String, PluginPresenter.Builder> = mapOf(
         "soko.ekibun.bangumi.ui.subject.SubjectActivity" to SubjectActivityPlugin(),
         "soko.ekibun.bangumi.ui.main.MainActivity" to MainActivityPlugin()
     )
@@ -18,6 +19,10 @@ class Plugin : BasePlugin() {
     override fun setUpPlugins(activity: Activity, context: Context) {
         Log.v("plugin", activity.javaClass.name)
         App.init(activity.application, context)
-        super.setUpPlugins(activity, context)
+        try {
+            pluginList[activity.javaClass.name]?.setUpPlugins(WeakReference(activity))
+        } catch (e: Exception) {
+            Log.e("plugin", Log.getStackTraceString(e))
+        }
     }
 }

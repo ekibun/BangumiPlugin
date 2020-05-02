@@ -1,5 +1,6 @@
 package soko.ekibun.bangumi.plugins.provider.video
 
+import io.reactivex.Observable
 import soko.ekibun.bangumi.plugins.JsEngine
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
@@ -14,9 +15,14 @@ class VideoProvider(
     @Code("获取视频信息", 2) val getVideo: String? = "",      // (video: VideoInfo) -> HttpRequest
     @Code("获取弹幕信息", 3) val getDanmakuKey: String? = "", // (video: VideoInfo) -> Object
     @Code("获取弹幕", 4) val getDanmaku: String? = ""     // (video: VideoInfo, key: Object, pos: Int) -> List<DanmakuInfo>
-): Provider(search){
-    fun getVideoInfo(scriptKey: String, jsEngine: JsEngine, line: LineInfoModel.LineInfo, episode: Episode): JsEngine.ScriptTask<VideoInfo>{
-        return JsEngine.ScriptTask(
+): Provider(search) {
+    fun getVideoInfo(
+        scriptKey: String,
+        jsEngine: JsEngine,
+        line: LineInfoModel.LineInfo,
+        episode: Episode
+    ): Observable<VideoInfo> {
+        return JsEngine.makeScript(
             jsEngine,
             "var line = ${JsonUtil.toJson(line)};var episode = ${JsonUtil.toJson(episode)};\n$getVideoInfo",
             header,
@@ -26,8 +32,8 @@ class VideoProvider(
         }
     }
 
-    fun getVideo(scriptKey: String, jsEngine: JsEngine, video: VideoInfo): JsEngine.ScriptTask<HttpUtil.HttpRequest>{
-        return JsEngine.ScriptTask(
+    fun getVideo(scriptKey: String, jsEngine: JsEngine, video: VideoInfo): Observable<HttpUtil.HttpRequest> {
+        return JsEngine.makeScript(
             jsEngine,
             "var video = ${JsonUtil.toJson(video)};\n${if (!getVideo.isNullOrEmpty()) getVideo else "return webview.load(video.url);"}",
             header,
@@ -37,8 +43,8 @@ class VideoProvider(
         }
     }
 
-    fun getDanmakuKey(scriptKey: String, jsEngine: JsEngine, video: VideoInfo): JsEngine.ScriptTask<String>{
-        return JsEngine.ScriptTask(
+    fun getDanmakuKey(scriptKey: String, jsEngine: JsEngine, video: VideoInfo): Observable<String> {
+        return JsEngine.makeScript(
             jsEngine,
             "var video = ${JsonUtil.toJson(video)};\n${if (!getDanmakuKey.isNullOrEmpty()) getDanmakuKey else "return \"\";"}",
             header,
@@ -46,8 +52,14 @@ class VideoProvider(
         ) { it }
     }
 
-    fun getDanmaku(scriptKey: String, jsEngine: JsEngine, video: VideoInfo, key: String, pos: Int): JsEngine.ScriptTask<List<DanmakuInfo>>{
-        return JsEngine.ScriptTask(
+    fun getDanmaku(
+        scriptKey: String,
+        jsEngine: JsEngine,
+        video: VideoInfo,
+        key: String,
+        pos: Int
+    ): Observable<List<DanmakuInfo>> {
+        return JsEngine.makeScript(
             jsEngine,
             "var video = ${JsonUtil.toJson(video)};var key = $key;var pos = $pos;\n$getDanmaku",
             header,

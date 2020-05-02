@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import kotlinx.android.synthetic.main.download_list.view.*
 import soko.ekibun.bangumi.plugins.App
+import soko.ekibun.bangumi.plugins.PluginPresenter
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Subject
 import soko.ekibun.bangumi.plugins.provider.Provider
@@ -19,7 +20,7 @@ import soko.ekibun.bangumi.plugins.util.ReflectUtil
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 import java.lang.ref.WeakReference
 
-class MainPresenter(activityRef: WeakReference<Activity>) {
+class MainPresenter(activityRef: WeakReference<Activity>) : PluginPresenter(activityRef) {
     val proxy = ReflectUtil.proxyObjectWeak(activityRef, IMainActivity::class.java)!!
     private val nav_view = ReflectUtil.proxyObject(proxy.nav_view, IMainActivity.INavigationView::class.java)!!
     private val contentFrame = proxy.content_frame
@@ -79,6 +80,7 @@ class MainPresenter(activityRef: WeakReference<Activity>) {
         }
         val airInfo = HashMap<String, List<BookProvider.AirInfo>>()
         val updateSubjectAitInfo = {
+            var hitChange = false
             proxy.mainPresenter.collectionList.map {
                 ReflectUtil.proxyObject(
                     it,
@@ -88,10 +90,12 @@ class MainPresenter(activityRef: WeakReference<Activity>) {
                 App.app.lineInfoModel.getInfos(Subject(id = subject.id))?.getDefaultProvider()?.let { line ->
                     airInfo[line.site]?.find { line.id == it.id }
                 }?.let {
+                    hitChange = true
                     Log.v("air", it.toString())
                     subject.airInfo = it.air
                 }
             }
+            hitChange
         }
 
         App.app.lineProvider.providerList.values.filter {
@@ -99,14 +103,17 @@ class MainPresenter(activityRef: WeakReference<Activity>) {
         }.forEach { line ->
             val provider = line.provider as? BookProvider
             if (provider == null || provider.getUpdate.isNullOrEmpty()) return@forEach
-            provider.getUpdate("update_${line.site}", App.app.jsEngine).enqueue({
-                airInfo[line.site] = it
-                Log.v("air", it.toString())
-                updateSubjectAitInfo()
-                proxy.mainPresenter.notifyCollectionChange()
-            }, {
-                Toast.makeText(App.app.host, "${line.site}: ${it.message}", Toast.LENGTH_SHORT).show()
-            })
+            subscribeOnUiThread(
+                provider.getUpdate("update_${line.site}", App.app.jsEngine),
+                {
+                    airInfo[line.site] = it
+                    Log.v("air", it.toString())
+                    if (updateSubjectAitInfo()) proxy.mainPresenter.notifyCollectionChange()
+                }, {
+                    Toast.makeText(App.app.host, "${line.site}: ${it.message}", Toast.LENGTH_SHORT).show()
+                },
+                key = "update_${line.site}"
+            )
         }
 
         proxy.mainPresenter.mergeAirInfo = {

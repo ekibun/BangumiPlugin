@@ -13,6 +13,7 @@ import android.content.res.Configuration
 import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.Toast
@@ -21,7 +22,10 @@ import androidx.preference.PreferenceManager
 import com.google.android.exoplayer2.ExoPlaybackException
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.offline.DownloadHelper
+import com.google.android.exoplayer2.offline.StreamKey
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import io.reactivex.Observable
+import io.reactivex.android.schedulers.AndroidSchedulers
 import kotlinx.android.synthetic.main.danmaku_setting.view.*
 import kotlinx.android.synthetic.main.error_frame.view.*
 import kotlinx.android.synthetic.main.plugin_video.view.*
@@ -35,6 +39,7 @@ import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.ui.view.VideoController
+import soko.ekibun.bangumi.plugins.util.HttpUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import soko.ekibun.bangumi.plugins.util.NetworkUtil
 import java.io.IOException
@@ -168,7 +173,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
             field = v
             parseLogcat()
         }
-    var exception: Exception? = null
+    var exception: Throwable? = null
         set(v) {
             field = v
             parseLogcat()
@@ -436,33 +441,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
         view.danmaku_flame.pause()
         view.item_logcat.setOnClickListener {}
 
-        VideoModel.getVideo("play", linePresenter.subject, episode, info, { videoInfo, error ->
-            exception = error ?: exception
-            loadVideoInfo = videoInfo != null
-            if (videoInfo != null) linePresenter.activityRef.get()?.runOnUiThread {
-                view.item_logcat.setOnClickListener {
-                    try {
-                        linePresenter.activityRef.get()?.startActivity(
-                            Intent.createChooser(
-                                Intent(
-                                    Intent.ACTION_VIEW,
-                                    Uri.parse(videoInfo.url)
-                                ), videoInfo.url
-                            )
-                        )
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-                danmakuPresenter.loadDanmaku(infos, episode)
-            }
-        }, { request, streamKeys, error ->
-            exception = error ?: exception
-            if (linePresenter.activityRef.get()?.isDestroyed != false) return@getVideo
-            loadVideo = request != null
-            ignoreNetwork = streamKeys != null
-            if (request != null) videoModel.play(request, view.video_surface, streamKeys)
-        }, {
+        VideoModel.getVideo("play", linePresenter.subject, episode, info, Observable.create { emitter ->
             controller.updateLoading(false)
             view.item_logcat.visibility = View.INVISIBLE
             controller.doShowHide(false)
@@ -471,8 +450,41 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
                 controller.updateLoading(true)
                 controller.doShowHide(true)
                 view.item_logcat.visibility = View.VISIBLE
-                it()
+                emitter.onNext(true)
             }
+        }).observeOn(AndroidSchedulers.mainThread()).subscribe({
+            if (linePresenter.activityRef.get()?.isDestroyed != false) return@subscribe
+            Log.v("video", "Sub: $it")
+            when (it) {
+                is VideoProvider.VideoInfo -> {
+                    val videoInfo = it
+                    loadVideoInfo = true
+                    view.item_logcat.setOnClickListener {
+                        try {
+                            linePresenter.activityRef.get()?.startActivity(
+                                Intent.createChooser(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse(videoInfo.url)
+                                    ), videoInfo.url
+                                )
+                            )
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                    danmakuPresenter.loadDanmaku(infos, episode)
+                }
+                is Pair<*, *> -> {
+                    val (request: HttpUtil.HttpRequest?, streamKeys: List<StreamKey>?) = it as Pair<HttpUtil.HttpRequest?, List<StreamKey>?>
+                    loadVideo = request != null
+                    ignoreNetwork = ignoreNetwork || streamKeys != null
+                    if (request != null) videoModel.play(request, view.video_surface, streamKeys)
+                }
+            }
+        }, {
+            if (loadVideoInfo != true) loadVideoInfo = false
+            exception = it
         })
     }
 
@@ -663,31 +675,39 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
         val subject = linePresenter.proxy.subjectPresenter.subject
         val info = App.app.lineInfoModel.getInfos(subject)?.getDefaultProvider() ?: return
         updateInfo("获取视频信息")
-        VideoModel.getVideo(episode.parseSort(App.app.plugin), subject, episode, info, { videoInfo, error ->
-            updateInfo(if (videoInfo != null) "解析视频地址" else "获取视频信息出错：${error?.message}")
-        }, { request, _, error ->
-            updateInfo("解析视频地址出错：${error?.message}")
-            if (request == null || request.url.startsWith("/")) return@getVideo
-            updateInfo("创建视频请求")
-            VideoModel.createDownloadRequest(request, object : DownloadHelper.Callback {
-                override fun onPrepared(helper: DownloadHelper) {
-                    val downloadRequest = helper.getDownloadRequest(request.url, null)
-                    DownloadService.download(
-                        App.app.plugin, episode, subject, EpisodeCache(
-                            episode, Provider.TYPE_VIDEO, JsonUtil.toJson(
-                                EpisodeCache.VideoCache(
-                                    downloadRequest.type, downloadRequest.streamKeys, request
+        VideoModel.getVideo(episode.parseSort(App.app.plugin), subject, episode, info, Observable.just(true))
+            .observeOn(AndroidSchedulers.mainThread()).subscribe({
+                when (it) {
+                    is VideoProvider.VideoInfo -> {
+                        updateInfo("解析视频地址")
+                    }
+                    is Pair<*, *> -> {
+                        val (request: HttpUtil.HttpRequest?, streamKeys: List<StreamKey>?) = it as Pair<HttpUtil.HttpRequest?, List<StreamKey>?>
+                        if (request == null || request.url.startsWith("/")) return@subscribe
+                        updateInfo("创建视频请求")
+                        VideoModel.createDownloadRequest(request, object : DownloadHelper.Callback {
+                            override fun onPrepared(helper: DownloadHelper) {
+                                val downloadRequest = helper.getDownloadRequest(request.url, null)
+                                DownloadService.download(
+                                    App.app.plugin, episode, subject, EpisodeCache(
+                                        episode, Provider.TYPE_VIDEO, JsonUtil.toJson(
+                                            EpisodeCache.VideoCache(
+                                                downloadRequest.type, downloadRequest.streamKeys, request
+                                            )
+                                        )
+                                    )
                                 )
-                            )
-                        )
-                    )
-                }
+                            }
 
-                override fun onPrepareError(helper: DownloadHelper, e: IOException) {
-                    updateInfo(e.toString())
+                            override fun onPrepareError(helper: DownloadHelper, e: IOException) {
+                                updateInfo(e.toString())
+                            }
+                        })
+                    }
                 }
+            }, {
+                updateInfo("解析视频出错：${it?.message}")
             })
-        }, { it() })
     }
 
     companion object {

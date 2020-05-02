@@ -283,7 +283,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             return
         }
         layoutManager.reset()
-        provider.getPages("getManga", App.app.jsEngine, ep).enqueue({
+        linePresenter.subscribeOnUiThread(provider.getPages("getManga", App.app.jsEngine, ep), {
             updatePage(it, isPrev)
             updateProgress()
             callback(true)
@@ -310,7 +310,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             App.app.lineProvider.getProvider(Provider.TYPE_BOOK, ep?.site ?: "")?.provider as? BookProvider
         if (ep == null || provider == null) return
         updateInfo("获取图片列表")
-        provider.getPages("getManga", App.app.jsEngine, ep).enqueue({
+        linePresenter.subscribeOnUiThread(provider.getPages("getManga", App.app.jsEngine, ep), {
             updateInfo("创建下载请求")
             DownloadService.download(
                 linePresenter.pluginContext, episode, linePresenter.proxy.subjectPresenter.subject, EpisodeCache(

@@ -26,15 +26,6 @@
             </intent-filter>
         </service>
         <activity
-                android:name=".ui.setting.SettingsActivity"
-                android:label="@string/settings"
-                android:exported="true">
-            <intent-filter>
-                <action android:name="soko.ekibun.bangumi.plugins.setting"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-            </intent-filter>
-        </activity>
-        <activity
                 android:name=".ui.provider.ProviderActivity"
                 android:label="@string/provide_activity_label"/>
     </application>

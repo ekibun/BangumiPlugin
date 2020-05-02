@@ -17,8 +17,8 @@ import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory
 import com.google.android.exoplayer2.upstream.cache.CacheDataSourceFactory
 import com.google.android.exoplayer2.util.Util
+import io.reactivex.Observable
 import soko.ekibun.bangumi.plugins.App
-import soko.ekibun.bangumi.plugins.JsEngine
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.bean.Subject
@@ -51,6 +51,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
             override fun onPositionDiscontinuity(reason: Int) {}
             override fun onRepeatModeChanged(repeatMode: Int) {}
             override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {}
+
             @SuppressLint("SwitchIntDef")
             override fun onPlayerStateChanged(playWhenReady: Boolean, playbackState: Int) {
                 when (playbackState) {
@@ -126,28 +127,28 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
             )
         }
 
-        private var videoInfoCall: HashMap<String, JsEngine.ScriptTask<VideoProvider.VideoInfo>> = HashMap()
-        private var videoCall: HashMap<String, JsEngine.ScriptTask<HttpUtil.HttpRequest>> = HashMap()
         //private val videoCacheModel by lazy{ App.getVideoCacheModel(content)}
         fun getVideo(
             key: String, subject: Subject, episode: Episode, info: LineInfoModel.LineInfo?,
-            onGetVideoInfo: (VideoProvider.VideoInfo?, error: Exception?) -> Unit,
-            onGetVideo: (HttpUtil.HttpRequest?, List<StreamKey>?, error: Exception?) -> Unit,
-            onCheckNetwork: (() -> Unit) -> Unit
-        ) {
+//            onGetVideoInfo: (VideoProvider.VideoInfo?, error: Exception?) -> Unit,
+//            onGetVideo: (HttpUtil.HttpRequest?, List<StreamKey>?, error: Exception?) -> Unit,
+            networkChecker: Observable<Boolean>
+        ): Observable<Any> {
             //val videoCache = videoCacheModel.getCache(episode, subject)
             val videoCache =
                 App.app.episodeCacheModel.getEpisodeCache(episode, subject)?.cache() as? EpisodeCache.VideoCache
             if (videoCache != null) {
-                onGetVideoInfo(VideoProvider.VideoInfo("", videoCache.video.url, videoCache.video.url), null)
-                onGetVideo(videoCache.video, videoCache.streamKeys, null)
+                return Observable.just(
+                    VideoProvider.VideoInfo("", videoCache.video.url, videoCache.video.url),
+                    videoCache.video to videoCache.streamKeys
+                )
             } else {
                 val provider = App.app.lineProvider.getProvider(
                     Provider.TYPE_VIDEO,
                     info?.site ?: ""
                 )?.provider as? VideoProvider
                 if (info == null || provider == null) {
-                    if (info?.site == "") {
+                    return if (info?.site == "") {
                         val format =
                             (Regex("""\{\{(.*)\}\}""").find(info.id)?.groupValues ?: listOf(
                                 "{{ep}}",
@@ -159,33 +160,29 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
                         } catch (e: Exception) {
                             info.id
                         }
-                        onGetVideoInfo(VideoProvider.VideoInfo("", url, url), null)
-                        onGetVideo(HttpUtil.HttpRequest(url), null, null)
-                    } else onGetVideoInfo(null, null)
-                    return
+                        Observable.just(
+                            VideoProvider.VideoInfo("", url, url),
+                            HttpUtil.HttpRequest(url) to null
+                        )
+                    } else Observable.empty()
                 }
-                val loadFromNetwork: () -> Unit = {
-                    val jsEngine = App.app.jsEngine
-                    videoInfoCall[key]?.cancel(true)
-                    videoCall[key]?.cancel(true)
-                    videoInfoCall[key] = provider.getVideoInfo(key, jsEngine, info, episode)
-                    videoInfoCall[key]?.enqueue({ video ->
-                        onGetVideoInfo(video, null)
-                        if (video.site == "") {
-                            onGetVideo(HttpUtil.HttpRequest(video.url), null, null)
-                            return@enqueue
+                val jsEngine = App.app.jsEngine
+
+                return provider.getVideoInfo(key, jsEngine, info, episode).flatMap { video ->
+                    Observable.merge(
+                        Observable.just(video),
+                        if (video.site == "") Observable.just(HttpUtil.HttpRequest(video.url) to null)
+                        else (if (!NetworkUtil.isWifiConnected(App.app.host)) networkChecker else Observable.just(0)).flatMap {
+                            val videoProvider = App.app.lineProvider.getProvider(
+                                Provider.TYPE_VIDEO,
+                                video.site
+                            )?.provider as VideoProvider
+                            videoProvider.getVideo(key, jsEngine, video)
+                        }.map {
+                            it to null
                         }
-                        val videoProvider = App.app.lineProvider.getProvider(
-                            Provider.TYPE_VIDEO,
-                            video.site
-                        )?.provider as VideoProvider
-                        videoCall[key] = videoProvider.getVideo(key, jsEngine, video)
-                        videoCall[key]?.enqueue({
-                            onGetVideo(it, null, null)
-                        }, { onGetVideo(null, null, it) })
-                    }, { onGetVideoInfo(null, it) })
+                    )
                 }
-                if (!NetworkUtil.isWifiConnected(App.app.host)) onCheckNetwork(loadFromNetwork) else loadFromNetwork()
             }
         }
 

@@ -1,5 +1,6 @@
 package soko.ekibun.bangumi.plugins.provider.book
 
+import io.reactivex.Observable
 import soko.ekibun.bangumi.plugins.JsEngine
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.provider.Provider
@@ -18,14 +19,14 @@ class BookProvider(
         scriptKey: String,
         jsEngine: JsEngine,
         line: LineInfoModel.LineInfo
-    ): JsEngine.ScriptTask<List<BookEpisode>> {
-        return JsEngine.ScriptTask(jsEngine, "var line = ${JsonUtil.toJson(line)};\n$getEpisode", header, scriptKey) {
+    ): Observable<List<BookEpisode>> {
+        return JsEngine.makeScript(jsEngine, "var line = ${JsonUtil.toJson(line)};\n$getEpisode", header, scriptKey) {
             JsonUtil.toEntity<List<BookEpisode>>(it)!!
         }
     }
 
-    fun getUpdate(scriptKey: String, jsEngine: JsEngine): JsEngine.ScriptTask<List<AirInfo>> {
-        return JsEngine.ScriptTask(
+    fun getUpdate(scriptKey: String, jsEngine: JsEngine): Observable<List<AirInfo>> {
+        return JsEngine.makeScript(
             jsEngine,
             getUpdate ?: "",
             header,
@@ -35,8 +36,8 @@ class BookProvider(
         }
     }
 
-    fun getPages(scriptKey: String, jsEngine: JsEngine, episode: BookEpisode): JsEngine.ScriptTask<List<PageInfo>> {
-        return JsEngine.ScriptTask(
+    fun getPages(scriptKey: String, jsEngine: JsEngine, episode: BookEpisode): Observable<List<PageInfo>> {
+        return JsEngine.makeScript(
             jsEngine,
             "var episode = ${JsonUtil.toJson(episode)};\n$getPages",
             header,
@@ -51,8 +52,8 @@ class BookProvider(
         }
     }
 
-    fun getImage(scriptKey: String, jsEngine: JsEngine, page: PageInfo): JsEngine.ScriptTask<HttpUtil.HttpRequest> {
-        return JsEngine.ScriptTask(
+    fun getImage(scriptKey: String, jsEngine: JsEngine, page: PageInfo): Observable<HttpUtil.HttpRequest> {
+        return JsEngine.makeScript(
             jsEngine, "var page = ${JsonUtil.toJson(page)};\n${
             if (!getImage.isNullOrEmpty()) getImage else "return page.image;"}", header, scriptKey
         ) {

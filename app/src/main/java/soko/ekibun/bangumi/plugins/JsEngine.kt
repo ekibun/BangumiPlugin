@@ -1,9 +1,10 @@
 package soko.ekibun.bangumi.plugins
 
-import android.os.AsyncTask
 import android.util.Log
 import android.webkit.WebResourceRequest
 import androidx.annotation.Keep
+import io.reactivex.Observable
+import io.reactivex.schedulers.Schedulers
 import org.mozilla.javascript.Context
 import org.mozilla.javascript.ScriptableObject
 import soko.ekibun.bangumi.plugins.ui.view.BackgroundWebView
@@ -167,57 +168,23 @@ class JsEngine {
         }
     }
 
-    class ScriptTask<T>(
-        private val jsEngine: JsEngine,
-        private val script: String,
-        private val header: String?,
-        private val key: String,
-        val converter: (String) -> T
-    ) : AsyncTask<String, Unit, T>() {
-        var onFinish: (T) -> Unit = {}
-        var onReject: (Exception) -> Unit = {}
-        var exception: Exception? = null
-
-        fun runScript(): T? {
-            return converter(jsEngine.runScript(script, header, key))
-        }
-
-        override fun doInBackground(vararg params: String?): T? {
-            return try {
-                runScript()
-            } catch (e: InterruptedException) {
-                null
-            } catch (e: Exception) {
-                exception = e; null
-            }
-        }
-
-        override fun onPostExecute(result: T?) {
-            result?.let {
-                try {
-                    onFinish(it)
-                } catch (e: Exception) {
-                    exception = e
-                }
-            }
-            exception?.let { Log.e("JsEngine", Log.getStackTraceString(it)); onReject(it) }
-            super.onPostExecute(result)
-        }
-
-        fun enqueue(onFinish: (T) -> Unit, onReject: (Exception) -> Unit) {
-            this.onFinish = onFinish
-            this.onReject = onReject
-            this.executeOnExecutor(App.cachedThreadPool)
-        }
-
-        fun execute(): T? {
-            return this.executeOnExecutor(App.cachedThreadPool)?.get()
-        }
-    }
-
     class JsAsyncTask(val js: (Any?) -> Any?, private val params: Any?) : Callable<Any?> {
         override fun call(): Any? {
             return js(params)
+        }
+    }
+
+    companion object {
+        fun <T> makeScript(
+            jsEngine: JsEngine,
+            script: String,
+            header: String?,
+            key: String,
+            converter: (String) -> T
+        ): Observable<T> {
+            return Observable.just(0).observeOn(Schedulers.io()).map {
+                converter(jsEngine.runScript(script, header, key))
+            }
         }
     }
 }

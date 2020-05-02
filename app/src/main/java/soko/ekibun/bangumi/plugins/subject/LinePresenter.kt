@@ -15,7 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.android.synthetic.main.subject_episode.view.*
 import soko.ekibun.bangumi.plugins.App
-import soko.ekibun.bangumi.plugins.JsEngine
+import soko.ekibun.bangumi.plugins.PluginPresenter
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.EpisodeCache
@@ -31,7 +31,7 @@ import soko.ekibun.bangumi.plugins.util.ReflectUtil
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 import java.lang.ref.WeakReference
 
-class LinePresenter(val activityRef: WeakReference<Activity>) {
+class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(activityRef) {
     val proxy = ReflectUtil.proxyObjectWeak(activityRef, ISubjectActivity::class.java)!!
     val pluginContext = App.createThemeContext(activityRef)
 
@@ -193,7 +193,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
     }
 
     var selectCache = false
-    var epCall: Pair<LineProvider.ProviderInfo, JsEngine.ScriptTask<List<BookProvider.BookEpisode>>>? = null
+    var epInfo: LineProvider.ProviderInfo? = null
     fun refreshLines() {
         val infos = App.app.lineInfoModel.getInfos(subject)
 
@@ -281,9 +281,10 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                 epView.episodes_line_site.text = provider?.title ?: { if (defaultLine.site == "") "线路" else "错误接口" }()
                 epView.episodes_line.setOnLongClickListener { _ ->
                     App.app.lineProvider.getProvider(type, defaultLine.site)?.provider?.let { p ->
-                        if (!p.open.isNullOrEmpty()) p.open("open", App.app.jsEngine, defaultLine).enqueue({ url ->
-                            activityRef.get()?.let { AppUtil.openBrowser(it, url) }
-                        }, {})
+                        if (!p.open.isNullOrEmpty())
+                            subscribeOnUiThread(p.open("open", App.app.jsEngine, defaultLine), { url ->
+                                activityRef.get()?.let { AppUtil.openBrowser(it, url) }
+                            }, key = "open")
                     }
                     true
                 }
@@ -307,7 +308,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                             else -> {
                                 infos.defaultProvider = position
                                 App.app.lineInfoModel.saveInfos(subject, infos)
-                                epCall = null
+                                epInfo = null
                                 refreshLines()
                             }
                         }
@@ -334,34 +335,36 @@ class LinePresenter(val activityRef: WeakReference<Activity>) {
                     list.add(0, EpisodeAdapter.EpisodeSection(true, "已缓存"))
                     episodeDetailAdapter.setNewInstance(list)
                     epView.btn_detail.text = pluginContext.getString(R.string.parse_cache_eps, eps?.size ?: 0)
-                } else if (epCall?.first != provider) (provider?.provider as? BookProvider)?.let {
+                } else if (epInfo != provider) (provider?.provider as? BookProvider)?.let {
                     emptyView.text = "加载中..."
-                    episodeAdapter.setNewData(null)
-                    epCall = provider to it.getEpisode("loadEps", App.app.jsEngine, defaultLine)
-                    epCall?.second?.enqueue({ eps ->
-                        val cats = eps.map { it.category }.distinct()
-                        if (epCall?.first == provider) {
-                            emptyView.text = "什么都没有哦"
-                            subject.eps = eps.map { bookEpisode ->
-                                Episode(
-                                    type = if (bookEpisode.category.isNullOrEmpty()) Episode.TYPE_MAIN else Episode.TYPE_MUSIC,
-                                    sort = bookEpisode.sort,
-                                    category = bookEpisode.category,
-                                    book = bookEpisode
-                                )
+                    episodeAdapter.setNewInstance(null)
+                    epInfo = provider
+                    subscribeOnUiThread(
+                        it.getEpisode("loadEps", App.app.jsEngine, defaultLine),
+                        { eps ->
+                            if (epInfo == provider) {
+                                emptyView.text = "什么都没有哦"
+                                subject.eps = eps.map { bookEpisode ->
+                                    Episode(
+                                        type = if (bookEpisode.category.isNullOrEmpty()) Episode.TYPE_MAIN else Episode.TYPE_MUSIC,
+                                        sort = bookEpisode.sort,
+                                        category = bookEpisode.category,
+                                        book = bookEpisode
+                                    )
+                                }
+                                episodeAdapter.setNewInstance(subject.eps?.toMutableList())
+                                subjectView.updateEpisode(subject)
+                                updateProgress()
                             }
-                            episodeAdapter.setNewInstance(subject.eps?.toMutableList())
-                            subjectView.updateEpisode(subject)
-                            updateProgress()
+                            (epView.episode_list.layoutManager as LinearLayoutManager)
+                                .scrollToPositionWithOffset(
+                                    episodeAdapter.data.indexOfLast { it.progress == Episode.PROGRESS_WATCH },
+                                    0
+                                )
+                        }, {
+                            emptyView.text = it.message
                         }
-                        (epView.episode_list.layoutManager as LinearLayoutManager)
-                            .scrollToPositionWithOffset(
-                                episodeAdapter.data.indexOfLast { it.progress == Episode.PROGRESS_WATCH },
-                                0
-                            )
-                    }, { e ->
-                        emptyView.text = e.message
-                    })
+                    )
                 }
                 updateProgress()
             } else {

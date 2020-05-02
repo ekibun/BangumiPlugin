@@ -6,9 +6,9 @@ import android.widget.ListPopupWindow
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import io.reactivex.disposables.Disposable
 import kotlinx.android.synthetic.main.dialog_search.view.*
 import soko.ekibun.bangumi.plugins.App
-import soko.ekibun.bangumi.plugins.JsEngine
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
@@ -94,30 +94,34 @@ class SearchDialog(private val linePresenter: LinePresenter) :
         }
 
         val searchCall =
-            ArrayList<Pair<LineProvider.ProviderInfo, JsEngine.ScriptTask<List<LineInfoModel.LineInfo>>>>()
+            ArrayList<Pair<LineProvider.ProviderInfo, Disposable>>()
         view.item_search.setOnClickListener {
-            adapter.setNewData(null)
+            adapter.setNewInstance(null)
             val key = view.item_search_key.text.toString()
-            searchCall.forEach { it.second.cancel(true) }
+            searchCall.forEach { it.second.dispose() }
             searchCall.clear()
 
             val jsEngine = App.app.jsEngine
             val provider = view.item_line.tag as? LineProvider.ProviderInfo ?: emptyProvider
-            searchCall.addAll(if (provider == emptyProvider) {
-                ArrayList(App.app.lineProvider.providerList.values.filter { it.type == linePresenter.type && !it.provider?.search.isNullOrEmpty() })
-                    .map {
-                        Pair(it, it.provider!!.search("search_${it.site}", jsEngine, key))
-                    }
-            } else listOf(provider.let { Pair(it, it.provider!!.search("search_${it.site}", jsEngine, key)) })
+            searchCall.addAll(
+                (if (provider == emptyProvider) {
+                    ArrayList(App.app.lineProvider.providerList.values.filter { it.type == linePresenter.type && !it.provider?.search.isNullOrEmpty() })
+                        .map {
+                            Pair(it, it.provider!!.search("search_${it.site}", jsEngine, key))
+                        }
+                } else listOf(provider.let {
+                    Pair(
+                        it,
+                        it.provider!!.search("search_${it.site}", jsEngine, key)
+                    )
+                })).map {
+                    it.first to linePresenter.subscribeOnUiThread(it.second, { lines ->
+                        adapter.addData(lines)
+                    }, { e ->
+                        Toast.makeText(context, "${it.first.title}: ${e.message}", Toast.LENGTH_LONG).show()
+                    })
+                }
             )
-
-            searchCall.forEach {
-                it.second.enqueue({ lines ->
-                    adapter.addData(lines)
-                }, { e ->
-                    Toast.makeText(context, "${it.first.title}: ${e.message}", Toast.LENGTH_LONG).show()
-                })
-            }
         }
     }
 

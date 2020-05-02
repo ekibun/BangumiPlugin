@@ -30,7 +30,11 @@ class VideoScriptTest {
     @Test
     fun search() {
         if (provider.search.isNullOrEmpty()) println("no search script!")
-        else println(JsonUtil.toJson(provider.search("test", ScriptTest.jsEngine, testData.searchKey!!).runScript()))
+        else println(
+            JsonUtil.toJson(
+                provider.search("test", ScriptTest.jsEngine, testData.searchKey!!).blockingSingle()
+            )
+        )
     }
 
     @Test
@@ -43,7 +47,7 @@ class VideoScriptTest {
                     ScriptTest.jsEngine,
                     testData.lineInfo!!,
                     testData.episode
-                ).runScript()
+                ).blockingSingle()
             )
         )
     }
@@ -51,13 +55,13 @@ class VideoScriptTest {
     @Test
     fun getVideo() {
         if (provider.getVideo.isNullOrEmpty()) println("no getVideo script!")
-        else println(JsonUtil.toJson(provider.getVideo("test", ScriptTest.jsEngine, testData.video!!).runScript()))
+        else println(JsonUtil.toJson(provider.getVideo("test", ScriptTest.jsEngine, testData.video!!).blockingSingle()))
     }
 
     @Test
     fun getDanmakuKey() {
         if (provider.getDanmakuKey.isNullOrEmpty()) println("no getDanmakuKey script!")
-        else println(provider.getDanmakuKey("test", ScriptTest.jsEngine, testData.video!!).runScript())
+        else println(provider.getDanmakuKey("test", ScriptTest.jsEngine, testData.video!!).blockingSingle())
     }
 
     @Test
@@ -71,7 +75,7 @@ class VideoScriptTest {
                     testData.video!!,
                     testData.danmakuKey,
                     0
-                ).runScript()
+                ).blockingSingle()
             )
         )
     }

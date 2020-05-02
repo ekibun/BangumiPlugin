@@ -6,6 +6,7 @@ import android.view.View
 import android.widget.SeekBar
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import io.reactivex.disposables.Disposable
 import kotlinx.android.synthetic.main.danmaku_setting.view.*
 import kotlinx.android.synthetic.main.plugin_video.view.*
 import master.flame.danmaku.danmaku.model.BaseDanmaku
@@ -14,7 +15,6 @@ import master.flame.danmaku.danmaku.model.android.DanmakuContext
 import master.flame.danmaku.danmaku.model.android.Danmakus
 import master.flame.danmaku.danmaku.parser.BaseDanmakuParser
 import soko.ekibun.bangumi.plugins.App
-import soko.ekibun.bangumi.plugins.JsEngine
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
@@ -25,7 +25,7 @@ import soko.ekibun.bangumi.plugins.util.ResourceUtil
 @SuppressLint("UseSparseArrays")
 class DanmakuPresenter(
     val linePresenter: LinePresenter,
-    private val onFinish: (Exception?) -> Unit
+    private val onFinish: (Throwable?) -> Unit
 ) {
     private val sp by lazy { PreferenceManager.getDefaultSharedPreferences(linePresenter.pluginContext) }
     private val danmakuContext by lazy { DanmakuContext.create() }
@@ -206,16 +206,16 @@ class DanmakuPresenter(
         const val VIDEO_FRAME_4_3 = 4
     }
 
-    private val videoInfoCalls = ArrayList<JsEngine.ScriptTask<VideoProvider.VideoInfo>>()
-    private val danmakuCalls: ArrayList<JsEngine.ScriptTask<String>> = ArrayList()
+    private val videoInfoCalls = ArrayList<Disposable>()
+    private val danmakuCalls: ArrayList<Disposable> = ArrayList()
     private val danmakuKeys: HashMap<DanmakuListAdapter.DanmakuInfo, String> = HashMap()
     fun loadDanmaku(lines: List<LineInfoModel.LineInfo>, episode: Episode) {
         linePresenter.pluginView.view.danmaku_flame.removeAllDanmakus(true)
-        danmakuCalls.forEach { it.cancel(true) }
+        danmakuCalls.forEach { it.dispose() }
         danmakuCalls.clear()
         danmakuKeys.clear()
 
-        videoInfoCalls.forEach { it.cancel(true) }
+        videoInfoCalls.forEach { it.dispose() }
         videoInfoCalls.clear()
 
         adapter.setNewInstance(lines.map { DanmakuListAdapter.DanmakuInfo(it) }.toMutableList())
@@ -242,8 +242,7 @@ class DanmakuPresenter(
                     danmakuInfo.line,
                     episode
                 )
-                videoInfoCalls.add(videoCall)
-                videoCall.enqueue({ videoInfo ->
+                videoInfoCalls.add(linePresenter.subscribeOnUiThread(videoCall, { videoInfo ->
                     danmakuInfo.videoInfo = videoInfo
                     loadDanmaku(danmakuInfo, episode)
                 }, {
@@ -251,7 +250,7 @@ class DanmakuPresenter(
                     linePresenter.activityRef.get()
                         ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
                     onFinish(it)
-                })
+                }))
             }
             danmakuInfo.key == null -> {
                 danmakuInfo.info = " 获取弹幕信息..."
@@ -262,8 +261,7 @@ class DanmakuPresenter(
                     App.app.jsEngine,
                     danmakuInfo.videoInfo ?: return
                 )
-                danmakuCalls.add(call)
-                call.enqueue({
+                danmakuCalls.add(linePresenter.subscribeOnUiThread(call, {
                     danmakuInfo.key = it
                     doAdd(Math.max(lastPos, 0) * 1000L * 300L, danmakuInfo)
                 }, {
@@ -271,7 +269,7 @@ class DanmakuPresenter(
                     linePresenter.activityRef.get()
                         ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
                     onFinish(it)
-                })
+                }))
             }
             else -> doAdd(Math.max(lastPos, 0) * 1000L * 300L, danmakuInfo)
         }
@@ -290,7 +288,7 @@ class DanmakuPresenter(
         )
         danmakuInfo.info = " 加载弹幕..."
         linePresenter.activityRef.get()?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
-        call.enqueue({
+        danmakuCalls.add(linePresenter.subscribeOnUiThread(call, {
             it.minus(ArrayList(danmakuInfo.danmakus)).forEach {
                 danmakuInfo.danmakus.add(it)
 
@@ -311,7 +309,7 @@ class DanmakuPresenter(
             linePresenter.activityRef.get()
                 ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
             onFinish(it)
-        })
+        }))
     }
 
     private var lastPos = -1
