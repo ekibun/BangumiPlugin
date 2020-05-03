@@ -32,9 +32,9 @@ import kotlinx.android.synthetic.main.plugin_video.view.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
-import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.VideoModel
+import soko.ekibun.bangumi.plugins.model.cache.EpisodeCache
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.service.DownloadService
@@ -690,7 +690,8 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
                             override fun onPrepared(helper: DownloadHelper) {
                                 val downloadRequest = helper.getDownloadRequest(request.url, null)
                                 DownloadService.download(
-                                    App.app.plugin, episode, subject, EpisodeCache(
+                                    App.app.plugin, episode, subject,
+                                    EpisodeCache(
                                         episode, Provider.TYPE_VIDEO, JsonUtil.toJson(
                                             EpisodeCache.VideoCache(
                                                 downloadRequest.type, downloadRequest.streamKeys, request

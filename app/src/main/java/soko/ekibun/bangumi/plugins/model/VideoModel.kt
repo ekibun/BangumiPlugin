@@ -20,8 +20,8 @@ import com.google.android.exoplayer2.util.Util
 import io.reactivex.Observable
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.bean.Episode
-import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.bean.Subject
+import soko.ekibun.bangumi.plugins.model.cache.EpisodeCache
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.video.VideoProvider
@@ -137,7 +137,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
         ): Observable<Any> {
             //val videoCache = videoCacheModel.getCache(episode, subject)
             val videoCache =
-                App.app.episodeCacheModel.getEpisodeCache(episode, subject)?.cache() as? EpisodeCache.VideoCache
+                EpisodeCacheModel.getEpisodeCache(episode, subject)?.cache() as? EpisodeCache.VideoCache
             if (videoCache != null) {
                 return Observable.just(
                     VideoProvider.VideoInfo("", videoCache.video.url, videoCache.video.url),

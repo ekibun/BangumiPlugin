@@ -13,6 +13,7 @@ import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.PluginPresenter
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Subject
+import soko.ekibun.bangumi.plugins.model.EpisodeCacheModel
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
@@ -35,7 +36,7 @@ class MainPresenter(activityRef: WeakReference<Activity>) : PluginPresenter(acti
 
     private fun updateData() {
         view.isRefreshing = false
-        adapter.setNewInstance(App.app.episodeCacheModel.getCacheList().toMutableList())
+        adapter.setNewInstance(EpisodeCacheModel.getCacheList().toMutableList())
     }
 
     init {

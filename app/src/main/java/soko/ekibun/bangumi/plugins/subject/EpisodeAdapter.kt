@@ -8,10 +8,10 @@ import com.chad.library.adapter.base.viewholder.BaseViewHolder
 import com.oushangfeng.pinnedsectionitemdecoration.PinnedHeaderItemDecoration
 import com.oushangfeng.pinnedsectionitemdecoration.utils.FullSpanUtil
 import kotlinx.android.synthetic.main.item_episode.view.*
-import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
-import soko.ekibun.bangumi.plugins.bean.EpisodeCache
+import soko.ekibun.bangumi.plugins.model.EpisodeCacheModel
+import soko.ekibun.bangumi.plugins.model.cache.EpisodeCache
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
 class EpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<EpisodeSection>? = null) :
@@ -65,7 +65,7 @@ class EpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<Episode
             setOnItemChildLongClick(it, holder.layoutPosition)
         }
 
-        val videoCache = App.app.episodeCacheModel.getEpisodeCache(item.t!!, linePresenter.subject)?.cache()
+        val videoCache = EpisodeCacheModel.getEpisodeCache(item.t!!, linePresenter.subject)?.cache()
         updateDownload(holder.itemView, videoCache)
     }
 

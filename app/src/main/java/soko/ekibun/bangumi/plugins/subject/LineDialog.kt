@@ -77,8 +77,7 @@ class LineDialog(private val linePresenter: LinePresenter) :
                     site = provider.site,
                     id = view.item_video_id.text.toString(),
                     title = view.item_video_title.text.toString(),
-                    extra = view.item_video_extra.text.toString(),
-                    subjectId = linePresenter.subject.id
+                    extra = view.item_video_extra.text.toString()
                 )
             )
             dismiss()

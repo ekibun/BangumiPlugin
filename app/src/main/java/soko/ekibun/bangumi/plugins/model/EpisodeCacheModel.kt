@@ -1,30 +1,25 @@
 package soko.ekibun.bangumi.plugins.model
 
-import android.content.Context
-import androidx.preference.PreferenceManager
+import androidx.room.Room
+import io.reactivex.schedulers.Schedulers
+import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.bean.Episode
-import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.bean.Subject
-import soko.ekibun.bangumi.plugins.bean.SubjectCache
-import soko.ekibun.bangumi.plugins.util.JsonUtil
+import soko.ekibun.bangumi.plugins.model.cache.CacheDatabase
+import soko.ekibun.bangumi.plugins.model.cache.EpisodeCache
+import soko.ekibun.bangumi.plugins.model.cache.SubjectCache
 
-class EpisodeCacheModel(context: Context) {
-    private val sp by lazy { PreferenceManager.getDefaultSharedPreferences(context)!! }
-    private val cacheList by lazy {
-        JsonUtil.toEntity<HashMap<String, SubjectCache>>(
-            sp.getString(
-                PREF_EPISODE_CACHE,
-                JsonUtil.toJson(HashMap<String, SubjectCache>())
-            )!!
-        ) ?: HashMap()
+object EpisodeCacheModel {
+    private val cacheDao by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        Room.databaseBuilder(App.app.plugin, CacheDatabase::class.java, "cache.sqlite").build().cacheDao()
     }
 
     fun getCacheList(): List<SubjectCache> {
-        return cacheList.values.toList()
+        return cacheDao.get().subscribeOn(Schedulers.io()).blockingGet()
     }
 
     fun getSubjectCacheList(subject: Subject): SubjectCache? {
-        return cacheList[subject.prefKey]
+        return cacheDao.get(subject.id).subscribeOn(Schedulers.io()).blockingGet()
     }
 
     fun getEpisodeCache(episode: Episode, subject: Subject): EpisodeCache? {
@@ -32,40 +27,30 @@ class EpisodeCacheModel(context: Context) {
     }
 
     fun addEpisodeCache(subject: Subject, cache: EpisodeCache) {
-        val editor = sp.edit()
-        cacheList[subject.prefKey] = SubjectCache(
-            subject,
-            (cacheList[subject.prefKey]?.episodeList ?: ArrayList()).filterNot {
-                Episode.compareEpisode(
-                    it.episode,
-                    cache.episode
+        cacheDao.inset(
+            SubjectCache(
+                subject,
+                (getSubjectCacheList(subject)?.episodeList ?: ArrayList()).filterNot {
+                    Episode.compareEpisode(
+                        it.episode,
+                        cache.episode
+                    )
+                }.plus(
+                    cache
                 )
-            }.plus(
-                cache
             )
-        )
-        editor.putString(PREF_EPISODE_CACHE, JsonUtil.toJson(cacheList))
-        editor.apply()
+        ).subscribeOn(Schedulers.io()).subscribe()
     }
 
     fun removeEpisodeCache(episode: Episode, subject: Subject) {
-        val editor = sp.edit()
-        cacheList[subject.prefKey] = SubjectCache(
+        cacheDao.inset(SubjectCache(
             subject,
-            (cacheList[subject.prefKey]?.episodeList ?: ArrayList()).filterNot {
+            (getSubjectCacheList(subject)?.episodeList ?: ArrayList()).filterNot {
                 Episode.compareEpisode(
                     it.episode,
                     episode
                 )
-            })
-        cacheList[subject.prefKey]?.let {
-            if (it.episodeList.isEmpty()) cacheList.remove(subject.prefKey)
-        }
-        editor.putString(PREF_EPISODE_CACHE, JsonUtil.toJson(cacheList))
-        editor.apply()
-    }
-
-    companion object {
-        const val PREF_EPISODE_CACHE = "episodeCache"
+            }
+        )).subscribeOn(Schedulers.io()).subscribe()
     }
 }

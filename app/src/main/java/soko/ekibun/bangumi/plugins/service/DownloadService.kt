@@ -9,8 +9,9 @@ import android.os.AsyncTask
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
-import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.bean.Subject
+import soko.ekibun.bangumi.plugins.model.EpisodeCacheModel
+import soko.ekibun.bangumi.plugins.model.cache.EpisodeCache
 import soko.ekibun.bangumi.plugins.util.AppUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import soko.ekibun.bangumi.plugins.util.NotificationUtil
@@ -72,7 +73,7 @@ class DownloadService(val app: Context, val pluginContext: Context) {
                 } else {
                     val cache = JsonUtil.toEntity<EpisodeCache>(request.getStringExtra(EXTRA_CACHE) ?: "") ?: return
                     val newTask = DownloadTask(cache) { mTask: DownloadTask ->
-                        App.app.episodeCacheModel.addEpisodeCache(subject, cache)
+                        EpisodeCacheModel.addEpisodeCache(subject, cache)
                         val status = taskCollection.filter { mTask.cache.cache()?.isFinished() != true }.size
                         val isFinished = mTask.cache.cache()?.isFinished() == true
                         if (isFinished) taskCollection.remove(taskKey)
@@ -115,10 +116,10 @@ class DownloadService(val app: Context, val pluginContext: Context) {
                 if (taskCollection.isEmpty())
                     manager.cancel(0)
 
-                val videoCache = App.app.episodeCacheModel.getEpisodeCache(episode, subject) ?: return
+                val videoCache = EpisodeCacheModel.getEpisodeCache(episode, subject) ?: return
                 sendBroadcast(episode, subject, null, false)
                 videoCache.remove()
-                App.app.episodeCacheModel.removeEpisodeCache(episode, subject)
+                EpisodeCacheModel.removeEpisodeCache(episode, subject)
             }
         }
     }

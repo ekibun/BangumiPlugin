@@ -1,17 +1,17 @@
 package soko.ekibun.bangumi.plugins.model.line
 
-import androidx.room.Embedded
-import androidx.room.Relation
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import androidx.room.TypeConverters
 
+@Entity
+@TypeConverters(LineInfo.EntityConverter::class)
 data class SubjectLine(
-    @Embedded var subject: SubjectLineInfo,
-    @Relation(
-        parentColumn = "subjectId",
-        entityColumn = "subjectId"
-    )
-    var providers: MutableList<LineInfo>
+    @PrimaryKey var subjectId: Int,
+    var defaultLine: Int = 0,
+    var providers: ArrayList<LineInfo>
 ) {
     fun getDefaultProvider(): LineInfo? {
-        return providers.getOrNull(subject.defaultLine)
+        return providers.getOrNull(defaultLine)
     }
 }

@@ -1,10 +1,12 @@
-package soko.ekibun.bangumi.plugins.bean
+package soko.ekibun.bangumi.plugins.model.cache
 
 import android.net.Uri
 import android.text.format.Formatter
+import androidx.room.TypeConverter
 import com.bumptech.glide.load.model.GlideUrl
 import com.google.android.exoplayer2.offline.*
 import soko.ekibun.bangumi.plugins.App
+import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.model.VideoModel
 import soko.ekibun.bangumi.plugins.provider.Provider
@@ -139,6 +141,18 @@ data class EpisodeCache(
                     e.printStackTrace()
                 }
             }
+        }
+    }
+
+    class EntityConverter {
+        @TypeConverter
+        fun getFromString(value: String): List<EpisodeCache>? {
+            return JsonUtil.toEntity(value)
+        }
+
+        @TypeConverter
+        fun storeToString(list: List<EpisodeCache>): String {
+            return JsonUtil.toJson(list)
         }
     }
 }

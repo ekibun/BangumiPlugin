@@ -6,8 +6,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.android.synthetic.main.dialog_episode_list.view.*
 import kotlinx.android.synthetic.main.item_episode.view.*
-import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
+import soko.ekibun.bangumi.plugins.model.EpisodeCacheModel
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.ui.view.BasePluginDialog
 
@@ -55,7 +55,7 @@ class EpisodeListDialog(private val linePresenter: LinePresenter, val adapter: E
 
         adapter.setOnItemChildLongClickListener { _, _, position ->
             val item = adapter.data[position]
-            val videoCache = App.app.episodeCacheModel.getEpisodeCache(item.t!!, linePresenter.subject)
+            val videoCache = EpisodeCacheModel.getEpisodeCache(item.t!!, linePresenter.subject)
             if (videoCache != null)
                 DownloadService.remove(
                     linePresenter.pluginContext,

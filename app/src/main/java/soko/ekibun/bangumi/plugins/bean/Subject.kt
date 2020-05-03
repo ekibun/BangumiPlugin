@@ -1,13 +1,17 @@
 package soko.ekibun.bangumi.plugins.bean
 
 import androidx.annotation.StringDef
+import androidx.room.Entity
+import androidx.room.Ignore
 
+@Entity
 data class Subject(
     var id: Int = 0,
     @SubjectType var type: String = TYPE_ANY,
     var name: String? = null,
     var name_cn: String? = null,
     var image: String? = null,
+    @Ignore
     var eps: List<Episode>? = null,
     var eps_count: Int = 0,
     var vol_count: Int = 0,

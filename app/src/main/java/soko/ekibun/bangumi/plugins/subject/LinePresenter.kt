@@ -19,9 +19,10 @@ import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.PluginPresenter
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
-import soko.ekibun.bangumi.plugins.bean.EpisodeCache
+import soko.ekibun.bangumi.plugins.model.EpisodeCacheModel
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.cache.EpisodeCache
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
@@ -248,9 +249,9 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
             when {
                 newInfo == null -> if (position >= 0) {
                     infos.providers.removeAt(position)
-                    infos.subject.defaultLine -= if (infos.subject.defaultLine > position) 1 else 0
-                    infos.subject.defaultLine =
-                        Math.max(0, Math.min(infos.providers.size - 1, infos.subject.defaultLine))
+                    infos.defaultLine -= if (infos.defaultLine > position) 1 else 0
+                    infos.defaultLine =
+                        Math.max(0, Math.min(infos.providers.size - 1, infos.defaultLine))
                 }
                 position >= 0 -> infos.providers[position] = newInfo
                 else -> infos.providers.add(newInfo)
@@ -268,7 +269,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
             }
         }
 
-        val defaultLine = infos?.getDefaultProvider()
+        val defaultLine = infos.getDefaultProvider()
         activityRef.get()?.runOnUiThread {
             val showPlugin = type.isNotEmpty()
             epLayout.getChildAt(0).visibility = if (showPlugin) View.GONE else View.VISIBLE
@@ -296,10 +297,10 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
                     val popList = ListPopupWindow(pluginContext)
                     popList.anchorView = epView.episodes_line
                     val lines = ArrayList(infos.providers)
-                    lines.add(LineInfo("", "已缓存", subjectId = 0))
-                    lines.add(LineInfo("", "添加线路", subjectId = 0))
+                    lines.add(LineInfo("", "已缓存"))
+                    lines.add(LineInfo("", "添加线路"))
                     val adapter = LineAdapter(type, pluginContext, lines)
-                    adapter.selectIndex = if (selectCache) lines.size - 2 else infos.subject.defaultLine
+                    adapter.selectIndex = if (selectCache) lines.size - 2 else infos.defaultLine
                     popList.setAdapter(adapter)
                     popList.isModal = true
                     popList.show()
@@ -310,7 +311,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
                             lines.size - 2 -> refreshLines()
                             lines.size - 1 -> editLines(null)
                             else -> {
-                                infos.subject.defaultLine = position
+                                infos.defaultLine = position
                                 LineInfoModel.saveInfo(infos)
                                 epInfo = null
                                 refreshLines()
@@ -329,7 +330,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
                     epView.episodes_line_site.visibility = View.GONE
                     epView.episodes_line_id.text = "已缓存"
                     emptyView.text = "什么都没有哦"
-                    val eps = App.app.episodeCacheModel.getSubjectCacheList(subject)?.episodeList?.map {
+                    val eps = EpisodeCacheModel.getSubjectCacheList(subject)?.episodeList?.map {
                         it.episode
                     }
                     episodeAdapter.setNewInstance(eps?.toMutableList())

@@ -18,8 +18,9 @@ import kotlinx.android.synthetic.main.plugin_book.view.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
-import soko.ekibun.bangumi.plugins.bean.EpisodeCache
+import soko.ekibun.bangumi.plugins.model.EpisodeCacheModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.cache.EpisodeCache
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
@@ -263,7 +264,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
 
     fun loadEp(episode: Episode, isPrev: Boolean, callback: (Boolean) -> Unit) {
         val ep = episode.book
-        val cache = App.app.episodeCacheModel.getEpisodeCache(
+        val cache = EpisodeCacheModel.getEpisodeCache(
             episode,
             linePresenter.subject
         )?.cache() as? EpisodeCache.BookCache
@@ -297,7 +298,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
 
     override fun downloadEp(episode: Episode, updateInfo: (String) -> Unit) {
         val ep = episode.book
-        val cache = App.app.episodeCacheModel.getEpisodeCache(episode, linePresenter.subject)
+        val cache = EpisodeCacheModel.getEpisodeCache(episode, linePresenter.subject)
         if (cache != null) {
             DownloadService.download(
                 linePresenter.pluginContext,
@@ -314,7 +315,8 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
         linePresenter.subscribeOnUiThread(provider.getPages("getManga", App.app.jsEngine, ep), {
             updateInfo("创建下载请求")
             DownloadService.download(
-                linePresenter.pluginContext, episode, linePresenter.proxy.subjectPresenter.subject, EpisodeCache(
+                linePresenter.pluginContext, episode, linePresenter.proxy.subjectPresenter.subject,
+                EpisodeCache(
                     episode, Provider.TYPE_BOOK,
                     JsonUtil.toJson(
                         EpisodeCache.BookCache(
