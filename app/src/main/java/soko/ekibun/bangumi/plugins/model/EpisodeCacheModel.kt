@@ -43,7 +43,7 @@ object EpisodeCacheModel {
     }
 
     fun removeEpisodeCache(episode: Episode, subject: Subject) {
-        cacheDao.inset(SubjectCache(
+        val cache = SubjectCache(
             subject,
             (getSubjectCacheList(subject)?.episodeList ?: ArrayList()).filterNot {
                 Episode.compareEpisode(
@@ -51,6 +51,8 @@ object EpisodeCacheModel {
                     episode
                 )
             }
-        )).subscribeOn(Schedulers.io()).subscribe()
+        )
+        (if (cache.episodeList.isEmpty()) cacheDao.delete(cache) else cacheDao.inset(cache))
+            .subscribeOn(Schedulers.io()).subscribe()
     }
 }
