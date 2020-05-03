@@ -6,24 +6,24 @@ import android.view.View
 import com.zhy.adapter.abslistview.CommonAdapter
 import com.zhy.adapter.abslistview.ViewHolder
 import kotlinx.android.synthetic.main.item_provider.view.*
-import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
+import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
-class LineAdapter(val type: String, context: Context?, data: List<LineInfoModel.LineInfo>?) :
-    CommonAdapter<LineInfoModel.LineInfo>(context, R.layout.item_provider, data) {
+class LineAdapter(val type: String, context: Context?, data: List<LineInfo>?) :
+    CommonAdapter<LineInfo>(context, R.layout.item_provider, data) {
     var selectIndex = 0
 
 
-    override fun convert(viewHolder: ViewHolder, item: LineInfoModel.LineInfo, position: Int) {
+    override fun convert(viewHolder: ViewHolder, item: LineInfo, position: Int) {
         val color = ResourceUtil.resolveColorAttr(
             viewHolder.convertView.context,
             if (position == selectIndex) R.attr.colorPrimary else android.R.attr.textColorSecondary
         )
         viewHolder.convertView.item_title.setTextColor(color)
         viewHolder.convertView.item_title.text = if (item.title.isEmpty()) item.id else item.title
-        val provider = App.app.lineProvider.getProvider(type, item.site)
+        val provider = LineProvider.getProvider(type, item.site)
         viewHolder.convertView.item_switch.visibility = View.GONE
         if (position < count - 2) {
             viewHolder.convertView.item_site.visibility = View.VISIBLE

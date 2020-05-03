@@ -1,24 +1,25 @@
 package soko.ekibun.bangumi.plugins.scripts.manhua123
 
 import soko.ekibun.bangumi.plugins.BookScriptTest
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
-import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
+import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 
 class TestData : BookScriptTest.BookTestData() {
-    override val info = LineProvider.ProviderInfo(
+    override val info = ProviderInfo(
         site = "manhua123",
         color = 0xff6880,
         title = "漫画123",
         type = Provider.TYPE_BOOK
     )
     override val searchKey = "摇曳百合"
-    override val lineInfo = LineInfoModel.LineInfo(
+    override val lineInfo = LineInfo(
         "manhua123",
         id = "10848",
         title = "大室家摇曳百合外传",
-        extra = ""
+        extra = "",
+        subjectId = 0
     )
     override val episode = BookProvider.BookEpisode(
         site = "manhua123",

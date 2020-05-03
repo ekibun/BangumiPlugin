@@ -19,6 +19,7 @@ import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.EpisodeCache
+import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
@@ -277,7 +278,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
         }
 
         val provider =
-            App.app.lineProvider.getProvider(Provider.TYPE_BOOK, ep?.site ?: "")?.provider as? BookProvider
+            LineProvider.getProvider(Provider.TYPE_BOOK, ep?.site ?: "")?.provider as? BookProvider
         if (ep == null || provider == null) {
             callback(false)
             return
@@ -307,7 +308,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             return
         }
         val provider =
-            App.app.lineProvider.getProvider(Provider.TYPE_BOOK, ep?.site ?: "")?.provider as? BookProvider
+            LineProvider.getProvider(Provider.TYPE_BOOK, ep?.site ?: "")?.provider as? BookProvider
         if (ep == null || provider == null) return
         updateInfo("获取图片列表")
         linePresenter.subscribeOnUiThread(provider.getPages("getManga", App.app.jsEngine, ep), {

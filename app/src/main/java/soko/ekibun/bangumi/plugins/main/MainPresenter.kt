@@ -13,6 +13,8 @@ import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.PluginPresenter
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Subject
+import soko.ekibun.bangumi.plugins.model.LineInfoModel
+import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 import soko.ekibun.bangumi.plugins.util.AppUtil
@@ -87,7 +89,7 @@ class MainPresenter(activityRef: WeakReference<Activity>) : PluginPresenter(acti
                     IMainActivity.IMainPresenter.ISubject::class.java
                 )!!
             }.forEach { subject ->
-                App.app.lineInfoModel.getInfos(Subject(id = subject.id))?.getDefaultProvider()?.let { line ->
+                LineInfoModel.getInfo(Subject(id = subject.id)).getDefaultProvider()?.let { line ->
                     airInfo[line.site]?.find { line.id == it.id }
                 }?.let {
                     hitChange = true
@@ -98,9 +100,7 @@ class MainPresenter(activityRef: WeakReference<Activity>) : PluginPresenter(acti
             hitChange
         }
 
-        App.app.lineProvider.providerList.values.filter {
-            it.type == Provider.TYPE_BOOK
-        }.forEach { line ->
+        LineProvider.getProviderList(Provider.TYPE_BOOK).forEach { line ->
             val provider = line.provider as? BookProvider
             if (provider == null || provider.getUpdate.isNullOrEmpty()) return@forEach
             subscribeOnUiThread(

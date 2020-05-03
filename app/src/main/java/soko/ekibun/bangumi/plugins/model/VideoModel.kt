@@ -22,6 +22,7 @@ import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.bean.Subject
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.video.VideoProvider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
@@ -129,7 +130,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
 
         //private val videoCacheModel by lazy{ App.getVideoCacheModel(content)}
         fun getVideo(
-            key: String, subject: Subject, episode: Episode, info: LineInfoModel.LineInfo?,
+            key: String, subject: Subject, episode: Episode, info: LineInfo?,
 //            onGetVideoInfo: (VideoProvider.VideoInfo?, error: Exception?) -> Unit,
 //            onGetVideo: (HttpUtil.HttpRequest?, List<StreamKey>?, error: Exception?) -> Unit,
             networkChecker: Observable<Boolean>
@@ -143,7 +144,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
                     videoCache.video to videoCache.streamKeys
                 )
             } else {
-                val provider = App.app.lineProvider.getProvider(
+                val provider = LineProvider.getProvider(
                     Provider.TYPE_VIDEO,
                     info?.site ?: ""
                 )?.provider as? VideoProvider
@@ -173,7 +174,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
                         Observable.just(video),
                         if (video.site == "") Observable.just(HttpUtil.HttpRequest(video.url) to null)
                         else (if (!NetworkUtil.isWifiConnected(App.app.host)) networkChecker else Observable.just(0)).flatMap {
-                            val videoProvider = App.app.lineProvider.getProvider(
+                            val videoProvider = LineProvider.getProvider(
                                 Provider.TYPE_VIDEO,
                                 video.site
                             )?.provider as VideoProvider

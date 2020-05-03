@@ -1,8 +1,8 @@
 package soko.ekibun.bangumi.plugins
 
 import org.junit.Test
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
-import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
+import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import java.io.File
@@ -13,9 +13,9 @@ import java.io.File
 class BookScriptTest {
 
     abstract class BookTestData {
-        abstract val info: LineProvider.ProviderInfo
+        abstract val info: ProviderInfo
         open val searchKey: String? = null
-        open val lineInfo: LineInfoModel.LineInfo? = null
+        open val lineInfo: LineInfo? = null
         open val episode: BookProvider.BookEpisode? = null
         open val page: BookProvider.PageInfo? = null
     }
@@ -26,31 +26,43 @@ class BookScriptTest {
     @Test
     fun search() {
         if (provider.search.isNullOrEmpty()) println("no search script!")
-        else println(JsonUtil.toJson(provider.search("test", ScriptTest.jsEngine, testData.searchKey!!).runScript()))
+        else println(
+            JsonUtil.toJson(
+                provider.search("test", ScriptTest.jsEngine, testData.searchKey!!).blockingSingle()
+            )
+        )
     }
 
     @Test
     fun getUpdate() {
         if (provider.getUpdate.isNullOrEmpty()) println("no getUpdate script!")
-        else println(JsonUtil.toJson(provider.getUpdate("test", ScriptTest.jsEngine).runScript()))
+        else println(JsonUtil.toJson(provider.getUpdate("test", ScriptTest.jsEngine).blockingSingle()))
     }
 
     @Test
     fun getEpisode() {
         if (provider.getEpisode.isNullOrEmpty()) println("no getEpisode script!")
-        else println(JsonUtil.toJson(provider.getEpisode("test", ScriptTest.jsEngine, testData.lineInfo!!).runScript()))
+        else println(
+            JsonUtil.toJson(
+                provider.getEpisode("test", ScriptTest.jsEngine, testData.lineInfo!!).blockingSingle()
+            )
+        )
     }
 
     @Test
     fun getPages() {
         if (provider.getPages.isNullOrEmpty()) println("no getPages script!")
-        else println(JsonUtil.toJson(provider.getPages("test", ScriptTest.jsEngine, testData.episode!!).runScript()))
+        else println(
+            JsonUtil.toJson(
+                provider.getPages("test", ScriptTest.jsEngine, testData.episode!!).blockingSingle()
+            )
+        )
     }
 
     @Test
     fun getImage() {
         if (provider.getImage.isNullOrEmpty()) println("no getImage script!")
-        else println(JsonUtil.toJson(provider.getImage("test", ScriptTest.jsEngine, testData.page!!).runScript()))
+        else println(JsonUtil.toJson(provider.getImage("test", ScriptTest.jsEngine, testData.page!!).blockingSingle()))
     }
 
     @Test

@@ -1,24 +1,25 @@
 package soko.ekibun.bangumi.plugins.scripts.mh177
 
 import soko.ekibun.bangumi.plugins.BookScriptTest
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
-import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
+import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 
 class TestData : BookScriptTest.BookTestData() {
-    override val info = LineProvider.ProviderInfo(
+    override val info = ProviderInfo(
         site = "mh177",
         color = 0xff8207,
         title = "新新漫画",
         type = Provider.TYPE_BOOK
     )
     override val searchKey = "刺客守则"
-    override val lineInfo = LineInfoModel.LineInfo(
+    override val lineInfo = LineInfo(
         "mh177",
         id = "240282",
         title = "刺客守则",
-        extra = ""
+        extra = "",
+        subjectId = 0
     )
     override val episode = BookProvider.BookEpisode(
         site = "mh177",

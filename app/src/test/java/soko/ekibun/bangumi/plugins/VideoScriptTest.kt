@@ -2,8 +2,8 @@ package soko.ekibun.bangumi.plugins
 
 import org.junit.Test
 import soko.ekibun.bangumi.plugins.bean.Episode
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
-import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
+import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.video.VideoProvider
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import java.io.File
@@ -14,9 +14,9 @@ import java.io.File
 class VideoScriptTest {
 
     abstract class VideoTestData {
-        abstract val info: LineProvider.ProviderInfo
+        abstract val info: ProviderInfo
         open val searchKey: String? = null
-        open val lineInfo: LineInfoModel.LineInfo? = null
+        open val lineInfo: LineInfo? = null
         open val episode: Episode = Episode(
             sort = 1f
         )

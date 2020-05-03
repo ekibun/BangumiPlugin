@@ -1,57 +1,29 @@
 package soko.ekibun.bangumi.plugins.model
 
-import android.content.Context
-import android.content.SharedPreferences
-import androidx.preference.PreferenceManager
-import soko.ekibun.bangumi.plugins.provider.Provider
-import soko.ekibun.bangumi.plugins.util.JsonUtil
+import androidx.room.Room
+import io.reactivex.schedulers.Schedulers
+import soko.ekibun.bangumi.plugins.App
+import soko.ekibun.bangumi.plugins.model.provider.ProviderDatabase
+import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 
-class LineProvider(context: Context) {
-
-    class ProviderInfo(
-        var site: String,
-        var color: Int,
-        var title: String,
-        var type: String = "",
-        var code: String = ""
-    ){
-        val prefKey get() = "${type}_${site}"
-
-        val provider get() = Provider.providers[type]?.let { JsonUtil.toEntity(code, it) }
-
-        override fun hashCode(): Int {
-            return site.hashCode()
-        }
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-            if (site != (other as ProviderInfo).site) return false
-            return true
-        }
+object LineProvider {
+    private val providerDao by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        Room.databaseBuilder(App.app.plugin, ProviderDatabase::class.java, "provider.sqlite").build().providerDao()
     }
 
-    val sp: SharedPreferences by lazy{ PreferenceManager.getDefaultSharedPreferences(context) }
-    val providerList by lazy { JsonUtil.toEntity<HashMap<String, ProviderInfo>>(sp.getString(
-        PREF_PROVIDER, JsonUtil.toJson(HashMap<String, ProviderInfo>()))!!)?: HashMap() }
+    fun getProviderList(type: String): List<ProviderInfo> {
+        return providerDao.get(type).subscribeOn(Schedulers.io()).blockingGet()
+    }
 
     fun getProvider(type: String, site: String): ProviderInfo? {
-        return providerList["${type}_${site}"]
-    }
-    fun addProvider(provider: ProviderInfo){
-        val editor = sp.edit()
-        providerList[provider.prefKey] = provider
-        editor.putString(PREF_PROVIDER, JsonUtil.toJson(providerList))
-        editor.apply()
-    }
-    fun removeProvider(provider: ProviderInfo){
-        val editor = sp.edit()
-        providerList.remove(provider.prefKey)
-        editor.putString(PREF_PROVIDER, JsonUtil.toJson(providerList))
-        editor.apply()
+        return providerDao.get(type, site).subscribeOn(Schedulers.io()).blockingGet()
     }
 
-    companion object{
-        const val PREF_PROVIDER="mangaProvider"
+    fun addProvider(provider: ProviderInfo) {
+        providerDao.insert(provider).subscribeOn(Schedulers.io()).blockingAwait()
+    }
+
+    fun removeProvider(provider: ProviderInfo) {
+        providerDao.delete(provider).subscribeOn(Schedulers.io()).blockingAwait()
     }
 }

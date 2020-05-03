@@ -1,25 +1,26 @@
 package soko.ekibun.bangumi.plugins.scripts.hanhan
 
 import soko.ekibun.bangumi.plugins.BookScriptTest
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
-import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
+import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 import soko.ekibun.bangumi.plugins.util.HttpUtil
 
 class TestData : BookScriptTest.BookTestData() {
-    override val info = LineProvider.ProviderInfo(
+    override val info = ProviderInfo(
         site = "hanhan",
         color = 0x003333,
         title = "汗汗酷漫",
         type = Provider.TYPE_BOOK
     )
     override val searchKey = "日常"
-    override val lineInfo = LineInfoModel.LineInfo(
+    override val lineInfo = LineInfo(
         "hanhan",
         id = "36056",
         title = "机械依存系少女的麻烦日常",
-        extra = ""
+        extra = "",
+        subjectId = 0
     )
     override val episode = BookProvider.BookEpisode(
         site = "hanhan",

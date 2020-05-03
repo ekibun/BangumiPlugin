@@ -13,6 +13,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import kotlinx.android.synthetic.main.item_page.view.*
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
+import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.ui.view.BookLayoutManager
 import soko.ekibun.bangumi.plugins.util.GlideUtil
@@ -167,7 +168,7 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider
         if (imageRequest != null) {
             setImage(helper, item, imageRequest)
         } else {
-            (App.app.lineProvider.getProvider(Provider.TYPE_BOOK, item.site ?: "")?.provider as? BookProvider)
+            (LineProvider.getProvider(Provider.TYPE_BOOK, item.site ?: "")?.provider as? BookProvider)
                 ?.getImage("${item.site}_${item.index}", App.app.jsEngine, item)
                 ?.observeOn(AndroidSchedulers.mainThread())?.subscribe({
                     requests[item] = it

@@ -5,6 +5,7 @@ import android.text.format.Formatter
 import com.bumptech.glide.load.model.GlideUrl
 import com.google.android.exoplayer2.offline.*
 import soko.ekibun.bangumi.plugins.App
+import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.model.VideoModel
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
@@ -112,7 +113,7 @@ data class EpisodeCache(
                     return@forEachIndexed
                 }
                 val req = request[index] ?: (if (page.site.isNullOrEmpty()) page.image else null)
-                ?: (App.app.lineProvider.getProvider(
+                ?: (LineProvider.getProvider(
                     Provider.TYPE_BOOK,
                     page.site ?: ""
                 )?.provider as? BookProvider)

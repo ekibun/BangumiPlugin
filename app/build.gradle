@@ -20,6 +20,12 @@ android {
         versionCode 1
         versionName getAlphaVersionName()
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments = ["room.schemaLocation": "$projectDir/schemas".toString()]
+            }
+        }
     }
     compileOptions {
         targetCompatibility JavaVersion.VERSION_1_8

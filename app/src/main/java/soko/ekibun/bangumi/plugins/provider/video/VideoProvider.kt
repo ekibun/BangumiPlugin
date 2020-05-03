@@ -3,7 +3,7 @@ package soko.ekibun.bangumi.plugins.provider.video
 import io.reactivex.Observable
 import soko.ekibun.bangumi.plugins.JsEngine
 import soko.ekibun.bangumi.plugins.bean.Episode
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.util.HttpUtil
@@ -19,7 +19,7 @@ class VideoProvider(
     fun getVideoInfo(
         scriptKey: String,
         jsEngine: JsEngine,
-        line: LineInfoModel.LineInfo,
+        line: LineInfo,
         episode: Episode
     ): Observable<VideoInfo> {
         return JsEngine.makeScript(

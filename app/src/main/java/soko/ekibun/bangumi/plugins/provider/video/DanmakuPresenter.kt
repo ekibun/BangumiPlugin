@@ -17,7 +17,8 @@ import master.flame.danmaku.danmaku.parser.BaseDanmakuParser
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
+import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
@@ -209,7 +210,7 @@ class DanmakuPresenter(
     private val videoInfoCalls = ArrayList<Disposable>()
     private val danmakuCalls: ArrayList<Disposable> = ArrayList()
     private val danmakuKeys: HashMap<DanmakuListAdapter.DanmakuInfo, String> = HashMap()
-    fun loadDanmaku(lines: List<LineInfoModel.LineInfo>, episode: Episode) {
+    fun loadDanmaku(lines: List<LineInfo>, episode: Episode) {
         linePresenter.pluginView.view.danmaku_flame.removeAllDanmakus(true)
         danmakuCalls.forEach { it.dispose() }
         danmakuCalls.clear()
@@ -229,8 +230,7 @@ class DanmakuPresenter(
 
     private fun loadDanmaku(danmakuInfo: DanmakuListAdapter.DanmakuInfo, episode: Episode) {
         val provider =
-            App.app.lineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider
-                ?: return
+            LineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider ?: return
         when {
             danmakuInfo.videoInfo == null -> {
                 danmakuInfo.info = " 获取视频信息..."
@@ -277,7 +277,7 @@ class DanmakuPresenter(
 
     private fun doAdd(pos: Long, danmakuInfo: DanmakuListAdapter.DanmakuInfo) {
         val provider =
-            App.app.lineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider
+            LineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider
                 ?: return
         val call = provider.getDanmaku(
             "getDanmakuKey(${danmakuInfo.videoInfo}, ${danmakuInfo.key}, ${pos / 1000})",

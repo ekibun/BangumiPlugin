@@ -18,7 +18,7 @@ import com.jaredrummler.android.colorpicker.ColorPickerDialogListener
 import kotlinx.android.synthetic.main.activity_provider.*
 import kotlinx.android.synthetic.main.activity_provider.view.*
 import soko.ekibun.bangumi.plugins.R
-import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import soko.ekibun.bangumi.plugins.util.ReflectUtil
@@ -82,8 +82,8 @@ class ProviderActivity : AppCompatActivity(), ColorPickerDialogListener {
     val type by lazy { intent.getStringExtra(EXTRA_PROVIDER_TYPE)!! }
     val typeClass by lazy { Provider.providers[type]!! }
     private fun setProvider(info: String?) {
-        val provider = JsonUtil.toEntity<LineProvider.ProviderInfo>(info ?: "")
-            ?: LineProvider.ProviderInfo("", 0 ,"", type)
+        val provider = JsonUtil.toEntity<ProviderInfo>(info ?: "")
+            ?: ProviderInfo("", 0, "", type)
         adapter.provider = JsonUtil.toEntity(provider.code, typeClass) ?: typeClass.newInstance()
         adapter.notifyDataSetChanged()
 
@@ -110,8 +110,8 @@ class ProviderActivity : AppCompatActivity(), ColorPickerDialogListener {
         return super.onKeyDown(keyCode, event)
     }
 
-    private fun getProvider(): LineProvider.ProviderInfo {
-        return LineProvider.ProviderInfo(
+    private fun getProvider(): ProviderInfo {
+        return ProviderInfo(
             site = header.item_provider_site.text.toString(),
             title = header.item_provider_title.text.toString(),
             color = color,
@@ -120,7 +120,7 @@ class ProviderActivity : AppCompatActivity(), ColorPickerDialogListener {
         )
     }
 
-    private fun setResult(info: LineProvider.ProviderInfo?) {
+    private fun setResult(info: ProviderInfo?) {
         val intent = Intent()
         if (info != null) intent.putExtra(EXTRA_PROVIDER_INFO, JsonUtil.toJson(info))
         setResult(Activity.RESULT_OK, intent)

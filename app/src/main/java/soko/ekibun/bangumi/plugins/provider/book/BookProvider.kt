@@ -2,7 +2,7 @@ package soko.ekibun.bangumi.plugins.provider.book
 
 import io.reactivex.Observable
 import soko.ekibun.bangumi.plugins.JsEngine
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.util.HttpUtil
@@ -18,7 +18,7 @@ class BookProvider(
     fun getEpisode(
         scriptKey: String,
         jsEngine: JsEngine,
-        line: LineInfoModel.LineInfo
+        line: LineInfo
     ): Observable<List<BookEpisode>> {
         return JsEngine.makeScript(jsEngine, "var line = ${JsonUtil.toJson(line)};\n$getEpisode", header, scriptKey) {
             JsonUtil.toEntity<List<BookEpisode>>(it)!!

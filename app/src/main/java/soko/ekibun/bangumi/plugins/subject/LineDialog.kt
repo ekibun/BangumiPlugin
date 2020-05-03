@@ -11,10 +11,10 @@ import android.widget.ListPopupWindow
 import android.widget.Toast
 import com.google.gson.JsonObject
 import kotlinx.android.synthetic.main.dialog_add_line.view.*
-import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
+import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.ui.view.BasePluginDialog
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 
@@ -25,8 +25,8 @@ class LineDialog(private val linePresenter: LinePresenter) :
     companion object {
         fun showDialog(
             linePresenter: LinePresenter,
-            info: LineInfoModel.LineInfo?,
-            callback: (LineInfoModel.LineInfo?, LineInfoModel.LineInfo?) -> Unit
+            info: LineInfo?,
+            callback: (LineInfo?, LineInfo?) -> Unit
         ) {
             val dialog = LineDialog(linePresenter)
             dialog.info = info
@@ -35,8 +35,8 @@ class LineDialog(private val linePresenter: LinePresenter) :
         }
     }
 
-    var info: LineInfoModel.LineInfo? = null
-    lateinit var callback: (LineInfoModel.LineInfo?, LineInfoModel.LineInfo?) -> Unit
+    var info: LineInfo? = null
+    lateinit var callback: (LineInfo?, LineInfo?) -> Unit
     override fun onViewCreated(view: View) {
         LayoutInflater.from(pluginContext).inflate(R.layout.dialog_add_line, view.findViewById(R.id.layout_content))
 
@@ -70,14 +70,15 @@ class LineDialog(private val linePresenter: LinePresenter) :
         }
 
         view.item_ok.setOnClickListener {
-            val provider = view.item_line.tag as? LineProvider.ProviderInfo ?: return@setOnClickListener
+            val provider = view.item_line.tag as? ProviderInfo ?: return@setOnClickListener
             callback(
                 info,
-                LineInfoModel.LineInfo(
+                LineInfo(
                     site = provider.site,
                     id = view.item_video_id.text.toString(),
                     title = view.item_video_title.text.toString(),
-                    extra = view.item_video_extra.text.toString()
+                    extra = view.item_video_extra.text.toString(),
+                    subjectId = linePresenter.subject.id
                 )
             )
             dismiss()
@@ -85,19 +86,19 @@ class LineDialog(private val linePresenter: LinePresenter) :
     }
 
     val clipboardManager by lazy { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
-    val emptyProvider = LineProvider.ProviderInfo("", 0, "链接")
+    val emptyProvider = ProviderInfo("", 0, "链接")
 
     private fun updateProvider(view: View) {
         view.item_line.setOnClickListener {
             val popList = ListPopupWindow(context)
             popList.anchorView = view.item_line
-            val providerList: ArrayList<LineProvider.ProviderInfo> =
-                ArrayList(App.app.lineProvider.providerList.values.filter { it.type == linePresenter.type })
+            val providers = LineProvider.getProviderList(linePresenter.type)
+            val providerList: ArrayList<ProviderInfo> = ArrayList(providers)
 
             providerList.add(0, emptyProvider)
-            providerList.add(LineProvider.ProviderInfo("", 0, "添加..."))
-            providerList.add(LineProvider.ProviderInfo("", 0, "导出..."))
-            providerList.add(LineProvider.ProviderInfo("", 0, "导入..."))
+            providerList.add(ProviderInfo("", 0, "添加..."))
+            providerList.add(ProviderInfo("", 0, "导出..."))
+            providerList.add(ProviderInfo("", 0, "导入..."))
             popList.setAdapter(ProviderAdapter(context, providerList))
             popList.isModal = true
             popList.show()
@@ -108,7 +109,7 @@ class LineDialog(private val linePresenter: LinePresenter) :
                         //doAdd
                         linePresenter.loadProvider(linePresenter.type, null) {
                             if (it == null) return@loadProvider
-                            App.app.lineProvider.addProvider(it)
+                            LineProvider.addProvider(it)
                             view.item_line.text = it.title
                             view.item_line.tag = it
                             updateProvider(view)
@@ -119,7 +120,7 @@ class LineDialog(private val linePresenter: LinePresenter) :
                         clipboardManager.setPrimaryClip(
                             ClipData.newPlainText(
                                 "videoplayer.providerInfo",
-                                JsonUtil.toJson(App.app.lineProvider.providerList.values)
+                                JsonUtil.toJson(providers)
                             )
                         )
                         Toast.makeText(view.context, "数据已导出至剪贴板", Toast.LENGTH_SHORT).show()
@@ -127,19 +128,20 @@ class LineDialog(private val linePresenter: LinePresenter) :
                     providerList.size - 1 -> {
                         val addProvider = { obj: JsonObject ->
                             val providerInfo =
-                                JsonUtil.toEntity<LineProvider.ProviderInfo>(JsonUtil.toJson(obj))!!.also { info ->
+                                JsonUtil.toEntity<ProviderInfo>(JsonUtil.toJson(obj))!!.also { info ->
                                     if (!obj.has("type")) {
                                         info.code = JsonUtil.toJson(obj)
                                         info.type = linePresenter.type
                                     }
                                 }
-                            val oldProvider = App.app.lineProvider.getProvider(linePresenter.type, providerInfo.site)
+                            val oldProvider = LineProvider.getProvider(linePresenter.type, providerInfo.site)
                             if (oldProvider != null)
-                                AlertDialog.Builder(context).setMessage("接口 ${providerInfo.title}(${providerInfo.site}) 与现有接口 ${oldProvider.title}(${oldProvider.site}) 重复")
+                                AlertDialog.Builder(context)
+                                    .setMessage("接口 ${providerInfo.title}(${providerInfo.site}) 与现有接口 ${oldProvider.title}(${oldProvider.site}) 重复")
                                     .setPositiveButton("替换") { _: DialogInterface, _: Int ->
-                                        App.app.lineProvider.addProvider(providerInfo)
+                                        LineProvider.addProvider(providerInfo)
                                     }.setNegativeButton("取消") { _: DialogInterface, _: Int -> }.show()
-                            else App.app.lineProvider.addProvider(providerInfo)
+                            else LineProvider.addProvider(providerInfo)
                         }
                         //inport
                         JsonUtil.toEntity<List<JsonObject>>(
@@ -169,18 +171,18 @@ class LineDialog(private val linePresenter: LinePresenter) :
                 //edit
                 val info = providerList[position]
                 linePresenter.loadProvider(linePresenter.type, info) {
-                    App.app.lineProvider.removeProvider(info)
-                    if (it != null) App.app.lineProvider.addProvider(it)
+                    LineProvider.removeProvider(info)
+                    if (it != null) LineProvider.addProvider(it)
                     updateProvider(view)
                 }
                 true
             }
         }
-        (view.item_line?.tag as? LineInfoModel.LineInfo)?.let { updateInfo(view, it) }
+        (view.item_line?.tag as? LineInfo)?.let { updateInfo(view, it) }
     }
 
-    private fun updateInfo(view: View, info: LineInfoModel.LineInfo) {
-        val provider = App.app.lineProvider.getProvider(linePresenter.type, info.site) ?: emptyProvider
+    private fun updateInfo(view: View, info: LineInfo) {
+        val provider = LineProvider.getProvider(linePresenter.type, info.site) ?: emptyProvider
         view.item_line.text = provider.title
         view.item_line.tag = provider
         view.item_video_id.setText(info.id)

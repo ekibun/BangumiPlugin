@@ -1,8 +1,8 @@
 package soko.ekibun.bangumi.plugins.scripts.acfun
 
 import soko.ekibun.bangumi.plugins.VideoScriptTest
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
-import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
+import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.video.VideoProvider
 
@@ -10,7 +10,7 @@ class TestData : VideoScriptTest.VideoTestData() {
     /**
      * 线路配置
      */
-    override val info = LineProvider.ProviderInfo(
+    override val info = ProviderInfo(
         site = "acfun",
         color = 0xfd4c5b,
         title = "Acfun",
@@ -21,10 +21,11 @@ class TestData : VideoScriptTest.VideoTestData() {
      * 测试用的数据
      */
     override val searchKey = "房间露营"
-    override val lineInfo = LineInfoModel.LineInfo(
+    override val lineInfo = LineInfo(
         "acfun",
         id = "6000901",
-        title = "房间露营"
+        title = "房间露营",
+        subjectId = 0
     )
     override val video = VideoProvider.VideoInfo(
         site = "acfun",

@@ -12,6 +12,8 @@ import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
+import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.ui.view.BasePluginDialog
 
 class SearchDialog(private val linePresenter: LinePresenter) :
@@ -21,7 +23,7 @@ class SearchDialog(private val linePresenter: LinePresenter) :
     companion object {
         fun showDialog(
             linePresenter: LinePresenter,
-            callback: (LineInfoModel.LineInfo?, LineInfoModel.LineInfo?) -> Unit
+            callback: (LineInfo?, LineInfo?) -> Unit
         ) {
             val dialog = SearchDialog(linePresenter)
             dialog.callback = callback
@@ -29,14 +31,14 @@ class SearchDialog(private val linePresenter: LinePresenter) :
         }
     }
 
-    lateinit var callback: (LineInfoModel.LineInfo?, LineInfoModel.LineInfo?) -> Unit
+    lateinit var callback: (LineInfo?, LineInfo?) -> Unit
     override fun onViewCreated(view: View) {
         val subject = linePresenter.proxy.subjectPresenter.subject
         view.item_search_key.setText(subject.displayName)
         view.list_search.layoutManager = LinearLayoutManager(context)
 
         val adapter = SearchLineAdapter(linePresenter)
-        adapter.lines = App.app.lineInfoModel.getInfos(subject)
+        adapter.lines = LineInfoModel.getInfo(subject)
         adapter.setOnItemClickListener { _, _, position ->
             val item = adapter.data[position]
             val exist =
@@ -46,7 +48,7 @@ class SearchDialog(private val linePresenter: LinePresenter) :
                 return@setOnItemClickListener
             }
             callback(null, adapter.data[position])
-            adapter.lines = App.app.lineInfoModel.getInfos(subject)
+            adapter.lines = LineInfoModel.getInfo(subject)
             adapter.notifyItemChanged(position)
         }
         adapter.setOnItemLongClickListener { _, _, position ->
@@ -94,7 +96,7 @@ class SearchDialog(private val linePresenter: LinePresenter) :
         }
 
         val searchCall =
-            ArrayList<Pair<LineProvider.ProviderInfo, Disposable>>()
+            ArrayList<Pair<ProviderInfo, Disposable>>()
         view.item_search.setOnClickListener {
             adapter.setNewInstance(null)
             val key = view.item_search_key.text.toString()
@@ -102,10 +104,12 @@ class SearchDialog(private val linePresenter: LinePresenter) :
             searchCall.clear()
 
             val jsEngine = App.app.jsEngine
-            val provider = view.item_line.tag as? LineProvider.ProviderInfo ?: emptyProvider
+            val provider = view.item_line.tag as? ProviderInfo ?: emptyProvider
             searchCall.addAll(
                 (if (provider == emptyProvider) {
-                    ArrayList(App.app.lineProvider.providerList.values.filter { it.type == linePresenter.type && !it.provider?.search.isNullOrEmpty() })
+                    ArrayList(
+                        LineProvider.getProviderList(linePresenter.type)
+                            .filter { !it.provider?.search.isNullOrEmpty() })
                         .map {
                             Pair(it, it.provider!!.search("search_${it.site}", jsEngine, key))
                         }
@@ -128,8 +132,8 @@ class SearchDialog(private val linePresenter: LinePresenter) :
     private fun updateProvider(view: View) {
         val popList = ListPopupWindow(view.context)
         popList.anchorView = view.item_line
-        val providers: ArrayList<LineProvider.ProviderInfo> =
-            ArrayList(App.app.lineProvider.providerList.values.filter { it.type == linePresenter.type && !it.provider?.search.isNullOrEmpty() })
+        val providers: ArrayList<ProviderInfo> =
+            ArrayList(LineProvider.getProviderList(linePresenter.type).filter { !it.provider?.search.isNullOrEmpty() })
         providers.add(0, emptyProvider)
         popList.setAdapter(ProviderAdapter(view.context, providers))
         popList.isModal = true
@@ -147,21 +151,21 @@ class SearchDialog(private val linePresenter: LinePresenter) :
                 //edit
                 val info = providers[position]
                 linePresenter.loadProvider(linePresenter.type, info) {
-                    App.app.lineProvider.removeProvider(info)
-                    if (it != null) App.app.lineProvider.addProvider(it)
+                    LineProvider.removeProvider(info)
+                    if (it != null) LineProvider.addProvider(it)
                     updateProvider(view)
                 }
                 true
             }
         }
-        (view.item_line?.tag as? LineInfoModel.LineInfo)?.let { updateInfo(view, it) }
+        (view.item_line?.tag as? LineInfo)?.let { updateInfo(view, it) }
     }
 
-    private fun updateInfo(view: View, info: LineInfoModel.LineInfo) {
-        val provider = App.app.lineProvider.getProvider(linePresenter.type, info.site) ?: emptyProvider
+    private fun updateInfo(view: View, info: LineInfo) {
+        val provider = LineProvider.getProvider(linePresenter.type, info.site) ?: emptyProvider
         view.item_line.text = provider.title
         view.item_line.tag = provider
     }
 
-    private val emptyProvider = LineProvider.ProviderInfo("", 0, "所有线路")
+    private val emptyProvider = ProviderInfo("", 0, "所有线路")
 }

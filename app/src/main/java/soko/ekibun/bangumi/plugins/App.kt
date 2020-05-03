@@ -7,8 +7,6 @@ import com.google.android.exoplayer2.database.ExoDatabaseProvider
 import com.google.android.exoplayer2.upstream.cache.NoOpCacheEvictor
 import com.google.android.exoplayer2.upstream.cache.SimpleCache
 import soko.ekibun.bangumi.plugins.model.EpisodeCacheModel
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
-import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.util.AppUtil
 import java.io.File
@@ -30,8 +28,6 @@ class App(host: Context, plugin: Context) : BaseApp(host, plugin) {
     }
     val jsEngine by lazy { JsEngine() }
     val episodeCacheModel by lazy { EpisodeCacheModel(plugin) }
-    val lineProvider by lazy { LineProvider(plugin) }
-    val lineInfoModel by lazy { LineInfoModel(plugin) }
 
     private val downloadService: DownloadService = DownloadService(host, plugin)
 

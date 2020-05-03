@@ -5,9 +5,9 @@ import android.view.View
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.viewholder.BaseViewHolder
 import kotlinx.android.synthetic.main.item_provider.view.*
-import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
+import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 
 class DanmakuListAdapter(data: MutableList<DanmakuInfo>? = null) :
@@ -15,7 +15,7 @@ class DanmakuListAdapter(data: MutableList<DanmakuInfo>? = null) :
 
     override fun convert(holder: BaseViewHolder, item: DanmakuInfo) {
         holder.itemView.item_title.text = item.line.id
-        val providerInfo = App.app.lineProvider.getProvider(Provider.TYPE_VIDEO, item.line.site) ?: return
+        val providerInfo = LineProvider.getProvider(Provider.TYPE_VIDEO, item.line.site) ?: return
         holder.itemView.item_switch.visibility = View.GONE
         holder.itemView.item_site.backgroundTintList = ColorStateList.valueOf((0xff000000 + providerInfo.color).toInt())
         holder.itemView.item_site.text = providerInfo.title
@@ -23,7 +23,7 @@ class DanmakuListAdapter(data: MutableList<DanmakuInfo>? = null) :
     }
 
     data class DanmakuInfo(
-        val line: LineInfoModel.LineInfo,
+        val line: LineInfo,
         var danmakus: HashSet<VideoProvider.DanmakuInfo> = HashSet(),
         var info: String = "",
         var videoInfo: VideoProvider.VideoInfo? = null,

@@ -1,23 +1,24 @@
 package soko.ekibun.bangumi.plugins.scripts.dmzj
 
 import soko.ekibun.bangumi.plugins.BookScriptTest
-import soko.ekibun.bangumi.plugins.model.LineInfoModel
-import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
+import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 
 class TestData : BookScriptTest.BookTestData() {
-    override val info = LineProvider.ProviderInfo(
+    override val info = ProviderInfo(
         site = "dmzj",
         color = 0x198be3,
         title = "动漫之家",
         type = Provider.TYPE_BOOK
     )
     override val searchKey = "摇曳百合"
-    override val lineInfo = LineInfoModel.LineInfo(
+    override val lineInfo = LineInfo(
         "dmzj",
         id = "7020",
-        extra = ""
+        extra = "",
+        subjectId = 0
     )
     override val episode = BookProvider.BookEpisode(
         site = "dmzj",

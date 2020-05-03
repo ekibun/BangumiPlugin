@@ -35,6 +35,7 @@ import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.VideoModel
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
@@ -384,8 +385,8 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
     var prevEpisode: () -> Episode? = { null }
     override fun loadEp(episode: Episode) {
         initPlayer()
-        val infos = App.app.lineInfoModel.getInfos(linePresenter.subject)
-        infos?.getDefaultProvider()?.let {
+        val infos = LineInfoModel.getInfo(linePresenter.subject)
+        infos.getDefaultProvider()?.let {
             prevEpisode = {
                 val position =
                     linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst {
@@ -414,7 +415,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
     }
 
     var ignoreNetwork = false
-    private fun play(episode: Episode, info: LineInfoModel.LineInfo, infos: List<LineInfoModel.LineInfo>) {
+    private fun play(episode: Episode, info: LineInfo, infos: List<LineInfo>) {
         ignoreNetwork = false
         videoModel.player.playWhenReady = false
 //        context.systemUIPresenter.appbarCollapsible(false)
@@ -673,7 +674,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
 
     override fun downloadEp(episode: Episode, updateInfo: (String) -> Unit) {
         val subject = linePresenter.proxy.subjectPresenter.subject
-        val info = App.app.lineInfoModel.getInfos(subject)?.getDefaultProvider() ?: return
+        val info = LineInfoModel.getInfo(subject).getDefaultProvider() ?: return
         updateInfo("获取视频信息")
         VideoModel.getVideo(episode.parseSort(App.app.plugin), subject, episode, info, Observable.just(true))
             .observeOn(AndroidSchedulers.mainThread()).subscribe({

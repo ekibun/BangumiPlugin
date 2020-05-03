@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.ColorStateList
+import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -21,6 +22,8 @@ import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.EpisodeCache
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.line.LineInfo
+import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 import soko.ekibun.bangumi.plugins.service.DownloadService
@@ -141,7 +144,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
         proxy.onActivityResultListener = onActivityResultListener@{ requestCode: Int, resultCode: Int, data: Intent? ->
             if (requestCode == AppUtil.REQUEST_PROVIDER && resultCode == AppCompatActivity.RESULT_OK) {//Provider
                 loadProviderCallback?.invoke(
-                    JsonUtil.toEntity<LineProvider.ProviderInfo>(
+                    JsonUtil.toEntity<ProviderInfo>(
                         data?.getStringExtra(
                             ProviderActivity.EXTRA_PROVIDER_INFO
                         ) ?: ""
@@ -151,8 +154,8 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
         }
     }
 
-    private var loadProviderCallback: ((LineProvider.ProviderInfo?) -> Unit)? = null
-    fun loadProvider(type: String, info: LineProvider.ProviderInfo?, callback: (LineProvider.ProviderInfo?) -> Unit) {
+    private var loadProviderCallback: ((ProviderInfo?) -> Unit)? = null
+    fun loadProvider(type: String, info: ProviderInfo?, callback: (ProviderInfo?) -> Unit) {
         if (type.isEmpty()) return
         loadProviderCallback = callback
         val intent = Intent(pluginContext, ProviderActivity::class.java)
@@ -193,9 +196,9 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
     }
 
     var selectCache = false
-    var epInfo: LineProvider.ProviderInfo? = null
+    var epInfo: ProviderInfo? = null
     fun refreshLines() {
-        val infos = App.app.lineInfoModel.getInfos(subject)
+        val infos = LineInfoModel.getInfo(subject)
 
         episodeAdapter.setOnItemChildClickListener { _, _, position ->
             pluginView.loadEp(episodeAdapter.data[position])
@@ -205,7 +208,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
             true
         }
         subjectView.episodeAdapter.setOnItemChildClickListener { _, _, position ->
-            infos?.getDefaultProvider()?.let {
+            infos.getDefaultProvider()?.let {
                 pluginView.loadEp(subjectView.episodeAdapter.data[position])
             } ?: Toast.makeText(pluginContext, "请先添加播放源", Toast.LENGTH_SHORT).show()
         }
@@ -214,7 +217,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
             true
         }
         subjectView.episodeDetailAdapter.setOnItemClickListener { _, _, position ->
-            infos?.getDefaultProvider()?.let {
+            infos.getDefaultProvider()?.let {
                 subjectView.episodeDetailAdapter.data[position].t?.let { pluginView.loadEp(it) }
             } ?: Toast.makeText(pluginContext, "请先添加播放源", Toast.LENGTH_SHORT).show()
         }
@@ -225,7 +228,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
             true
         }
         episodeDetailAdapter.setOnItemClickListener { _, _, position ->
-            infos?.getDefaultProvider()?.let {
+            infos.getDefaultProvider()?.let {
                 episodeDetailAdapter.data[position].t?.let { pluginView.loadEp(it) }
             } ?: Toast.makeText(pluginContext, "请先添加播放源", Toast.LENGTH_SHORT).show()
         }
@@ -238,23 +241,24 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
 
         type = Provider.getProviderType(subject)
 
-        val setProvider = setProvider@{ info: LineInfoModel.LineInfo?, newInfo: LineInfoModel.LineInfo? ->
-            if (infos == null) return@setProvider
+        val setProvider = setProvider@{ info: LineInfo?, newInfo: LineInfo? ->
+            Log.v("info", "$info, $newInfo")
             val position =
                 infos.providers.indexOfFirst { it.id == info?.id && it.site == info.site }
             when {
                 newInfo == null -> if (position >= 0) {
                     infos.providers.removeAt(position)
-                    infos.defaultProvider -= if (infos.defaultProvider > position) 1 else 0
-                    infos.defaultProvider = Math.max(0, Math.min(infos.providers.size - 1, infos.defaultProvider))
+                    infos.subject.defaultLine -= if (infos.subject.defaultLine > position) 1 else 0
+                    infos.subject.defaultLine =
+                        Math.max(0, Math.min(infos.providers.size - 1, infos.subject.defaultLine))
                 }
                 position >= 0 -> infos.providers[position] = newInfo
                 else -> infos.providers.add(newInfo)
             }
-            App.app.lineInfoModel.saveInfos(subject, infos)
+            LineInfoModel.saveInfo(infos)
         }
 
-        val editLines = { info: LineInfoModel.LineInfo? ->
+        val editLines = { info: LineInfo? ->
             LineDialog.showDialog(
                 this,
                 info
@@ -273,14 +277,14 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
             epLayout.visibility = if (showPlugin || subject.eps?.size ?: 0 > 0) View.VISIBLE else View.GONE
 
             if (defaultLine != null) {
-                val provider = App.app.lineProvider.getProvider(type, defaultLine.site)
+                val provider = LineProvider.getProvider(type, defaultLine.site)
                 epView.episodes_line_id.text = if (defaultLine.title.isEmpty()) defaultLine.id else defaultLine.title
                 epView.episodes_line_site.backgroundTintList =
                     ColorStateList.valueOf(((provider?.color ?: 0) + 0xff000000).toInt())
                 epView.episodes_line_site.visibility = View.VISIBLE
                 epView.episodes_line_site.text = provider?.title ?: { if (defaultLine.site == "") "线路" else "错误接口" }()
                 epView.episodes_line.setOnLongClickListener { _ ->
-                    App.app.lineProvider.getProvider(type, defaultLine.site)?.provider?.let { p ->
+                    LineProvider.getProvider(type, defaultLine.site)?.provider?.let { p ->
                         if (!p.open.isNullOrEmpty())
                             subscribeOnUiThread(p.open("open", App.app.jsEngine, defaultLine), { url ->
                                 activityRef.get()?.let { AppUtil.openBrowser(it, url) }
@@ -292,10 +296,10 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
                     val popList = ListPopupWindow(pluginContext)
                     popList.anchorView = epView.episodes_line
                     val lines = ArrayList(infos.providers)
-                    lines.add(LineInfoModel.LineInfo("", "已缓存"))
-                    lines.add(LineInfoModel.LineInfo("", "添加线路"))
+                    lines.add(LineInfo("", "已缓存", subjectId = 0))
+                    lines.add(LineInfo("", "添加线路", subjectId = 0))
                     val adapter = LineAdapter(type, pluginContext, lines)
-                    adapter.selectIndex = if (selectCache) lines.size - 2 else infos.defaultProvider
+                    adapter.selectIndex = if (selectCache) lines.size - 2 else infos.subject.defaultLine
                     popList.setAdapter(adapter)
                     popList.isModal = true
                     popList.show()
@@ -306,8 +310,8 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
                             lines.size - 2 -> refreshLines()
                             lines.size - 1 -> editLines(null)
                             else -> {
-                                infos.defaultProvider = position
-                                App.app.lineInfoModel.saveInfos(subject, infos)
+                                infos.subject.defaultLine = position
+                                LineInfoModel.saveInfo(infos)
                                 epInfo = null
                                 refreshLines()
                             }
