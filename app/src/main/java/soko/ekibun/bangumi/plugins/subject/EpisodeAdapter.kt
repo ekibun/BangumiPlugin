@@ -16,7 +16,7 @@ import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
 class EpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<EpisodeSection>? = null) :
     BaseSectionQuickAdapter<EpisodeAdapter.EpisodeSection, BaseViewHolder>
-        (R.layout.item_episode, R.layout.item_episode_header, data) {
+        (R.layout.item_episode_header, R.layout.item_episode, data) {
 
     class EpisodeSection(override val isHeader: Boolean, val header: String) : SectionEntity {
         var t: Episode? = null
@@ -32,6 +32,7 @@ class EpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<Episode
     }
 
     lateinit var recyclerView: RecyclerView
+
     /**
      * 关联RecyclerView
      */
@@ -41,31 +42,31 @@ class EpisodeAdapter(val linePresenter: LinePresenter, data: MutableList<Episode
         recyclerView.addItemDecoration(PinnedHeaderItemDecoration.Builder(SectionEntity.HEADER_TYPE).create())
     }
 
-    override fun convert(helper: BaseViewHolder, item: EpisodeSection) {
-        helper.setText(R.id.item_title, item.t!!.parseSort(helper.itemView.context))
-        helper.setText(R.id.item_desc, item.t!!.displayName)
+    override fun convert(holder: BaseViewHolder, item: EpisodeSection) {
+        holder.setText(R.id.item_title, item.t!!.parseSort(holder.itemView.context))
+        holder.setText(R.id.item_desc, item.t!!.displayName)
         val color = ResourceUtil.resolveColorAttr(
-            helper.itemView.context,
+            holder.itemView.context,
             when (item.t!!.progress) {
                 Episode.PROGRESS_WATCH -> R.attr.colorPrimary
                 else -> android.R.attr.textColorSecondary
             }
         )
         val alpha = if (item.t!!.isAir) 1f else 0.6f
-        helper.itemView.item_title.setTextColor(color)
-        helper.itemView.item_title.alpha = alpha
-        helper.itemView.item_desc.setTextColor(color)
-        helper.itemView.item_desc.alpha = alpha
+        holder.itemView.item_title.setTextColor(color)
+        holder.itemView.item_title.alpha = alpha
+        holder.itemView.item_desc.setTextColor(color)
+        holder.itemView.item_desc.alpha = alpha
 
-        helper.itemView.item_download.setOnClickListener {
-            setOnItemChildClick(it, helper.layoutPosition)
+        holder.itemView.item_download.setOnClickListener {
+            setOnItemChildClick(it, holder.layoutPosition)
         }
-        helper.itemView.item_download.setOnLongClickListener {
-            setOnItemChildLongClick(it, helper.layoutPosition)
+        holder.itemView.item_download.setOnLongClickListener {
+            setOnItemChildLongClick(it, holder.layoutPosition)
         }
 
         val videoCache = App.app.episodeCacheModel.getEpisodeCache(item.t!!, linePresenter.subject)?.cache()
-        updateDownload(helper.itemView, videoCache)
+        updateDownload(holder.itemView, videoCache)
     }
 
     fun updateDownload(itemView: View, cache: EpisodeCache.Cache?, download: Boolean = false) {
