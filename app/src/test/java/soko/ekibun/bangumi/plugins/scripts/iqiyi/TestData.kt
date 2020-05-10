@@ -20,8 +20,7 @@ class TestData : VideoScriptTest.VideoTestData() {
     override val lineInfo = LineInfo(
         "iqiyi",
         id = "202134201",
-        title = "名侦探柯南",
-        subjectId = 0
+        title = "名侦探柯南"
     )
     override val video = VideoProvider.VideoInfo(
         site = "iqiyi",

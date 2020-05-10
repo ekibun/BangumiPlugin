@@ -19,7 +19,6 @@ class TestData : VideoScriptTest.VideoTestData() {
     override val lineInfo = LineInfo(
         "fodm",
         id = "/xianwangderichangshenghuo/",
-        title = "仙王的日常生活",
-        subjectId = 0
+        title = "仙王的日常生活"
     )
 }

@@ -20,7 +20,7 @@ class BookScriptTest {
         open val page: BookProvider.PageInfo? = null
     }
 
-    val testData: BookTestData = soko.ekibun.bangumi.plugins.scripts.dmzj.TestData()
+    val testData: BookTestData = soko.ekibun.bangumi.plugins.scripts.wenku8.TestData()
     val provider = ScriptTest.getProvider<BookProvider>(testData.info.site)
 
     @Test

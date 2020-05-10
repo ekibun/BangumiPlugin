@@ -236,8 +236,9 @@ class DanmakuPresenter(
                 danmakuInfo.info = " 获取视频信息..."
                 linePresenter.activityRef.get()
                     ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+                val key = "getVideoInfo(${danmakuInfo.line}, ${episode.id})"
                 val videoCall = provider.getVideoInfo(
-                    "getVideoInfo(${danmakuInfo.line}, ${episode.id})",
+                    key,
                     App.app.jsEngine,
                     danmakuInfo.line,
                     episode
@@ -250,14 +251,15 @@ class DanmakuPresenter(
                     linePresenter.activityRef.get()
                         ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
                     onFinish(it)
-                }))
+                }, key = key))
             }
             danmakuInfo.key == null -> {
                 danmakuInfo.info = " 获取弹幕信息..."
                 linePresenter.activityRef.get()
                     ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+                val key = "getDanmakuKey(${danmakuInfo.videoInfo})"
                 val call = provider.getDanmakuKey(
-                    "getDanmakuKey(${danmakuInfo.videoInfo})",
+                    key,
                     App.app.jsEngine,
                     danmakuInfo.videoInfo ?: return
                 )
@@ -269,7 +271,7 @@ class DanmakuPresenter(
                     linePresenter.activityRef.get()
                         ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
                     onFinish(it)
-                }))
+                }, key = key))
             }
             else -> doAdd(Math.max(lastPos, 0) * 1000L * 300L, danmakuInfo)
         }
@@ -279,8 +281,9 @@ class DanmakuPresenter(
         val provider =
             LineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider
                 ?: return
+        val key = "getDanmakuKey(${danmakuInfo.videoInfo}, ${danmakuInfo.key}, ${pos / 1000})"
         val call = provider.getDanmaku(
-            "getDanmakuKey(${danmakuInfo.videoInfo}, ${danmakuInfo.key}, ${pos / 1000})",
+            key,
             App.app.jsEngine,
             danmakuInfo.videoInfo ?: return,
             danmakuInfo.key ?: return,
@@ -309,7 +312,7 @@ class DanmakuPresenter(
             linePresenter.activityRef.get()
                 ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
             onFinish(it)
-        }))
+        }, key = key))
     }
 
     private var lastPos = -1

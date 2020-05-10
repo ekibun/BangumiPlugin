@@ -368,7 +368,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
                                 )
                         }, {
                             emptyView.text = it.message
-                        }
+                        }, key = "loadEps"
                     )
                 }
                 updateProgress()

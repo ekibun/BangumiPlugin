@@ -17,8 +17,7 @@ class TestData : BookScriptTest.BookTestData() {
     override val lineInfo = LineInfo(
         "test",
         id = "2159",
-        extra = "",
-        subjectId = 0
+        extra = ""
     )
     override val episode = BookProvider.BookEpisode(
         site = "wenku8",

@@ -123,7 +123,7 @@ class SearchDialog(private val linePresenter: LinePresenter) :
                         adapter.addData(lines)
                     }, { e ->
                         Toast.makeText(context, "${it.first.title}: ${e.message}", Toast.LENGTH_LONG).show()
-                    })
+                    }, key = "search_${it.first.site}")
                 }
             )
         }

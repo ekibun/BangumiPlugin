@@ -2,13 +2,14 @@ const PICA_BASE_HOST = "picaapi.picacomic.com";
 const PICA_HOST = "https://" + PICA_BASE_HOST;
 
 var url = PICA_HOST + "/auth/sign-in"
-const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI1ODkzNzBiMThkZTYwNTc0YThkMjViMmUiLCJlbWFpbCI6ImFjYW9haXJ5Iiwicm9sZSI6Im1lbWJlciIsIm5hbWUiOiJhY2FvYWlyeSIsInZlcnNpb24iOiIyLjIuMS4yLjMuMyIsImJ1aWxkVmVyc2lvbiI6IjQ0IiwicGxhdGZvcm0iOiJhbmRyb2lkIiwiaWF0IjoxNTgyNjMyOTc1LCJleHAiOjE1ODMyMzc3NzV9.2jVRJDH9coC7FnnSS1lPVXcMuS7gOYC4sc0MZUK-RYM"
-/*
-JSON.parse(http.post(url, headerBuild("post", url, {}), JSON.stringify({
-    email: "",
-    password: "",
-}), "application/json; charset=UTF-8").body().string()).data.token;
-/**/
+var token = App.load("pica_token")
+if(!token) {
+    token = JSON.parse(http.post(url, headerBuild("post", url, {}), JSON.stringify({
+        email: "",
+        password: "",
+    }), "application/json; charset=UTF-8").body().string()).data.token;
+    App.dump("pica_token", token)
+}
 
 
 function HMACSHA256(data, key) {

@@ -17,6 +17,7 @@ class App(host: Context, plugin: Context) : BaseApp(host, plugin) {
     val handler = android.os.Handler { true }
     private val databaseProvider by lazy { ExoDatabaseProvider(host) }
     private val downloadCachePath = AppUtil.getDiskFileDir(host, "download").absolutePath
+    val sp by lazy { plugin.getSharedPreferences("plugin", Context.MODE_PRIVATE) }
 
     val downloadCache by lazy {
         SimpleCache(

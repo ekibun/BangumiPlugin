@@ -19,7 +19,6 @@ interface ISubjectActivity {
 
     val item_plugin: FrameLayout
     val item_mask: View
-    val item_swipe: View
     val app_bar: View
 
     interface ISubjectPresenter {
@@ -52,7 +51,6 @@ interface ISubjectActivity {
 
             interface ICollapsibleAppBarHelper {
                 var onTitleClickListener: (Any) -> Unit
-                fun setTitle(title: String?, subTitle: String? = null, group: String? = null)
             }
         }
     }

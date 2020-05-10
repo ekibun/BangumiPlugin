@@ -19,8 +19,7 @@ class TestData : BookScriptTest.BookTestData() {
         "hanhan",
         id = "36056",
         title = "机械依存系少女的麻烦日常",
-        extra = "",
-        subjectId = 0
+        extra = ""
     )
     override val episode = BookProvider.BookEpisode(
         site = "hanhan",

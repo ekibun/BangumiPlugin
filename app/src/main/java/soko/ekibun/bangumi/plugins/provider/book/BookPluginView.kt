@@ -293,7 +293,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             Toast.makeText(App.app.plugin, it.message, Toast.LENGTH_LONG).show()
             updateProgress()
             callback(false)
-        })
+        }, key = "getManga")
     }
 
     override fun downloadEp(episode: Episode, updateInfo: (String) -> Unit) {
@@ -312,7 +312,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             LineProvider.getProvider(Provider.TYPE_BOOK, ep?.site ?: "")?.provider as? BookProvider
         if (ep == null || provider == null) return
         updateInfo("获取图片列表")
-        linePresenter.subscribeOnUiThread(provider.getPages("getManga", App.app.jsEngine, ep), {
+        linePresenter.subscribeOnUiThread(provider.getPages("getManga_${ep.id}", App.app.jsEngine, ep), {
             updateInfo("创建下载请求")
             DownloadService.download(
                 linePresenter.pluginContext, episode, linePresenter.proxy.subjectPresenter.subject,
@@ -327,6 +327,6 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             )
         }, {
             updateInfo("获取图片列表出错")
-        })
+        }, key = "getManga_${ep.id}")
     }
 }

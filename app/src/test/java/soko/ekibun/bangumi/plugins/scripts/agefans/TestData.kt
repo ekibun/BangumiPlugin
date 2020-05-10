@@ -19,7 +19,6 @@ class TestData : VideoScriptTest.VideoTestData() {
     override val lineInfo = LineInfo(
         "agefans",
         id = "55188-1",
-        title = "魔物娘的相伴日常（无修）",
-        subjectId = 0
+        title = "魔物娘的相伴日常（无修）"
     )
 }

@@ -71,6 +71,16 @@ class JsEngine {
         if (App.inited) Log.v("jsEngine", data) else println(data)
     }
 
+    @Keep
+    fun storePreference(key: String, data: String) {
+        if (App.inited) App.app.sp.edit().putString(key, data).apply()
+    }
+
+    @Keep
+    fun readPreference(key: String): String {
+        return if (App.inited) App.app.sp.getString(key, null) ?: "" else ""
+    }
+
     fun runScript(script: String, header: String?, key: String): String {
         val globalMethods = """
             |var _http = Packages.${HttpUtil.javaClass.name}.INSTANCE;
@@ -122,6 +132,15 @@ class JsEngine {
             |}
             |function print(obj){
             |   _jsEngine.print(${JsonUtil.toJson(key)} + ": " + obj);
+            |}
+            |var App = {
+            |   dump(key, data) {
+            |       _jsEngine.storePreference(key, JSON.stringify(data))
+            |   },
+            |   load(key) {
+            |       data = _jsEngine.readPreference(key)
+            |       return data && JSON.parse(data)
+            |   }
             |}
             |
             |function handleCircular() {
