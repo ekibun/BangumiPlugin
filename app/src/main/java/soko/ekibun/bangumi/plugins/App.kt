@@ -2,6 +2,7 @@ package soko.ekibun.bangumi.plugins
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import androidx.appcompat.view.ContextThemeWrapper
 import com.google.android.exoplayer2.database.ExoDatabaseProvider
 import com.google.android.exoplayer2.upstream.cache.NoOpCacheEvictor
@@ -58,6 +59,10 @@ class App(host: Context, plugin: Context) : BaseApp(host, plugin) {
                         Context.WINDOW_SERVICE -> activityRef.get()?.getSystemService(name)
                         else -> super.getSystemService(name)
                     }
+                }
+
+                override fun startActivity(intent: Intent?) {
+                    activityRef.get()?.startActivity(intent)
                 }
             }
             activityRef.get()?.let { themeContext.applyOverrideConfiguration(it.resources.configuration) }

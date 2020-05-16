@@ -306,7 +306,7 @@ class DanmakuPresenter(
             danmakuInfo.info = ""
             linePresenter.activityRef.get()
                 ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
-            onFinish(null)
+            if (!it.isNullOrEmpty()) onFinish(null)
         }, {
             danmakuInfo.info = " 加载弹幕出错: $it"
             linePresenter.activityRef.get()

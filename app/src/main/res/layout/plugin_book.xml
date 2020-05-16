@@ -12,7 +12,7 @@
             android:layout_height="match_parent"
             android:background="@android:color/black"
             android:theme="@style/ThemeOverlay.AppCompat.Dark">
-        <androidx.recyclerview.widget.RecyclerView
+        <soko.ekibun.bangumi.plugins.ui.view.SelectableRecyclerView
                 android:id="@+id/item_manga"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"/>

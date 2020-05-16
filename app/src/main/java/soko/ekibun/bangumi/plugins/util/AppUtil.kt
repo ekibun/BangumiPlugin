@@ -44,6 +44,18 @@ object AppUtil {
     }
 
     /**
+     * 分享字符串
+     * @param context Context
+     * @param str String
+     */
+    fun shareString(context: Context, str: String) {
+        val intent = Intent(Intent.ACTION_SEND)
+        intent.putExtra(Intent.EXTRA_TEXT, str)
+        intent.type = "text/plain"
+        context.startActivity(Intent.createChooser(intent, "分享"))
+    }
+
+    /**
      * 分享图片
      */
     fun shareDrawable(context: Context, drawable: Drawable) {

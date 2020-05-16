@@ -1,6 +1,7 @@
 package soko.ekibun.bangumi.plugins.provider.book
 
 import android.annotation.SuppressLint
+import android.graphics.*
 import android.text.Layout
 import android.text.StaticLayout
 import android.view.View
@@ -15,14 +16,15 @@ import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
-import soko.ekibun.bangumi.plugins.ui.view.BookLayoutManager
+import soko.ekibun.bangumi.plugins.ui.view.SelectableRecyclerView
+import soko.ekibun.bangumi.plugins.ui.view.book.BookLayoutManager
 import soko.ekibun.bangumi.plugins.util.GlideUtil
 import soko.ekibun.bangumi.plugins.util.HttpUtil
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
 class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider.PageInfo>? = null) :
     BaseQuickAdapter<BookProvider.PageInfo, BaseViewHolder>(R.layout.item_page, data),
-    BookLayoutManager.ScalableAdapter {
+    BookLayoutManager.ScalableAdapter, SelectableRecyclerView.TextSelectionAdapter {
     val requests = HashMap<BookProvider.PageInfo, HttpUtil.HttpRequest>()
 
     private val referHolder by lazy { createViewHolder(recyclerView, 0) }
@@ -98,17 +100,17 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider
                     recyclerView.height - referHolder.itemView.content_container.let { it.paddingTop + it.paddingBottom }
                 var lastTextIndex = 0
                 var lastLineBottom = 0
-                for (i in 0 until layout.lineCount) {
+                for (i in 1 until layout.lineCount) {
                     val curLineBottom = layout.getLineBottom(i) + titleHeight
                     if (curLineBottom - lastLineBottom < pageHeight) continue
-                    val prevLineEndIndex = layout.getLineStart(i)
+                    val prevLineEndIndex = layout.getLineVisibleEnd(i - 1)
                     ret += BookProvider.PageInfo(
                         content = page.content.substring(lastTextIndex, prevLineEndIndex),
                         ep = page.ep,
                         rawInfo = page,
                         rawRange = Pair(lastTextIndex, prevLineEndIndex)
                     )
-                    lastTextIndex = prevLineEndIndex
+                    lastTextIndex = layout.getLineStart(i)
                     lastLineBottom = layout.getLineTop(i) + titleHeight
                 }
                 ret += BookProvider.PageInfo(
@@ -210,5 +212,81 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider
 
     override fun isItemScalable(pos: Int, layoutManager: LinearLayoutManager): Boolean {
         return layoutManager.findViewByPosition(pos)?.content_container?.visibility != View.VISIBLE
+    }
+
+    val path = Path()
+    private val posContent = IntArray(2)
+    override fun drawSelection(c: Canvas, view: View, start: Int?, end: Int?, paint: Paint) {
+        if (view.content_container.visibility != View.VISIBLE) return
+        view.item_content.getLocationInWindow(posContent)
+        c.save()
+        c.translate(posContent[0] - recyclerView.x, posContent[1] - recyclerView.y)
+        drawSelectionImpl(c, view, start, end, paint)
+
+        c.restore()
+    }
+
+    private fun drawSelectionImpl(c: Canvas, view: View, start: Int?, end: Int?, paint: Paint) {
+        if (start == null && end == null) {
+            c.drawRect(Rect(0, 0, view.item_content.width, view.item_content.height), paint)
+            return
+        }
+        val layout = view.item_content.layout ?: return
+        layout.getSelectionPath(start ?: 0, end ?: view.item_content.text.length, path)
+        if (end == null) {
+            val startLine = layout.getLineForOffset(start ?: 0)
+            val endLine = layout.getLineForOffset(end ?: view.item_content.text.length)
+            path.addRect(
+                if (startLine == endLine) layout.getPrimaryHorizontal(start ?: 0) else layout.getLineLeft(endLine),
+                layout.getLineTop(endLine).toFloat(),
+                layout.getLineLeft(endLine) + layout.width,
+                view.item_content.height.toFloat(), Path.Direction.CW
+            )
+        }
+        c.drawPath(path, paint)
+    }
+
+    override fun getPosFromPosition(view: View, x: Float, y: Float): Int {
+        if (view.content_container.visibility != View.VISIBLE) return -1
+        view.item_content.getLocationInWindow(posContent)
+        return view.item_content.getOffsetForPosition(
+            x - posContent[0] + recyclerView.x,
+            y - posContent[1] + recyclerView.y
+        )
+    }
+
+    val point = Point()
+    override fun getHandlePosition(view: View, offset: Int): Point {
+        if (view.content_container.visibility != View.VISIBLE) return point.also { it.set(-1000, -1000) }
+        val layout = view.item_content.layout ?: return point.also { it.set(-1000, -1000) }
+        view.item_content.getLocationInWindow(posContent)
+        return point.also {
+            it.set(
+                (layout.getPrimaryHorizontal(offset) + posContent[0] - recyclerView.x).toInt(),
+                (layout.getLineBottom(layout.getLineForOffset(offset)) - view.item_content.lineSpacingExtra + posContent[1] - recyclerView.y).toInt()
+            )
+        }
+    }
+
+    override fun getTextHeight(): Int {
+        return referHolder.itemView.item_content.lineHeight
+    }
+
+    override fun getSelectionText(startIndex: Int, endIndex: Int, startPos: Int, endPos: Int): String {
+        val str = StringBuilder()
+        var lastRaw: BookProvider.PageInfo? = null
+        var lastStart = 0
+        var lastEnd = 0
+        for (i in startIndex..endIndex) {
+            val item = data.getOrNull(i) ?: break
+            if (lastRaw != item.rawInfo) {
+                if (lastRaw != null) str.append(lastRaw.content?.substring(lastStart, lastEnd) + '\n')
+                lastRaw = item.rawInfo
+                lastStart = (item.rawRange?.first ?: 0) + (if (i == startIndex) startPos else 0)
+            }
+            lastEnd = (item.rawRange?.first ?: 0) + (if (i == endIndex) endPos else 0)
+        }
+        str.append(lastRaw?.content?.substring(lastStart, lastEnd))
+        return str.toString()
     }
 }

@@ -79,7 +79,7 @@
                 android:textAppearance="?android:textAppearanceLarge"
                 android:paddingBottom="16dp"
                 app:layout_constraintTop_toTopOf="parent"/>
-        <soko.ekibun.bangumi.plugins.ui.view.SelectableTextView
+        <TextView
                 android:id="@+id/item_content"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

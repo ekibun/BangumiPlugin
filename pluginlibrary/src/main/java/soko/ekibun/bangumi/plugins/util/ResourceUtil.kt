@@ -25,6 +25,12 @@ object ResourceUtil {
         return ContextCompat.getColor(context, colorRes)
     }
 
+    fun resolveDrawableAttr(context: Context, @AttrRes drawableAttr: Int): Drawable? {
+        val resolvedAttr = resolveThemeAttr(context, drawableAttr)
+        val drawableRes = if (resolvedAttr.resourceId != 0) resolvedAttr.resourceId else resolvedAttr.data
+        return ContextCompat.getDrawable(context, drawableRes)
+    }
+
     private fun resolveThemeAttr(context: Context, @AttrRes attrRes: Int): TypedValue {
         val theme = context.theme
         val typedValue = TypedValue()

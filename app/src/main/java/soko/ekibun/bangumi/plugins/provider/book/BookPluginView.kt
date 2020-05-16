@@ -24,21 +24,23 @@ import soko.ekibun.bangumi.plugins.model.cache.EpisodeCache
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
-import soko.ekibun.bangumi.plugins.ui.view.BookLayoutManager
 import soko.ekibun.bangumi.plugins.ui.view.PullLoadLayout
+import soko.ekibun.bangumi.plugins.ui.view.book.BookLayoutManager
+import soko.ekibun.bangumi.plugins.ui.view.book.GestureTouchListener
 import soko.ekibun.bangumi.plugins.util.AppUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 
 class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_book) {
 
-    val layoutManager = BookLayoutManager(linePresenter.pluginContext) { child, lm ->
-        child.content_container?.let {
-            if (it.visibility != View.VISIBLE) return@let
-            it.layoutParams.width = lm.recyclerView.width
-            it.translationX = lm.offsetX.toFloat()
+    val layoutManager =
+        BookLayoutManager(linePresenter.pluginContext) { child, lm ->
+            child.content_container?.let {
+                if (it.visibility != View.VISIBLE) return@let
+                it.layoutParams.width = lm.recyclerView.width
+                it.translationX = lm.offsetX.toFloat()
+            }
+            child.item_loading?.translationX = lm.offsetX + lm.width * (1 - lm.scale) / 2
         }
-        child.item_loading?.translationX = lm.offsetX + lm.width * (1 - lm.scale) / 2
-    }
     val bookAdapter = BookAdapter(view.item_manga)
 
     companion object {
@@ -153,27 +155,45 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
                         or View.SYSTEM_UI_FLAG_FULLSCREEN // hide status bar
                         or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY)
         }
-        layoutManager.setupWithRecyclerView(view.item_manga,
-            { x, y ->
+        val touchListener = GestureTouchListener()
+        view.item_manga.setOnTouchListener(touchListener)
+        touchListener.listeners.add(object : GestureTouchListener.GestureCallback() {
+            override fun onTouch(e: MotionEvent) {
+                if (e.action == MotionEvent.ACTION_DOWN) {
+                    cancelOnDown = false
+                    showControl(false)
+                }
+            }
+
+            override fun onSingleTapConfirmed(e: MotionEvent) {
+                if (view.item_manga.clearSelect()) return
                 if (layoutManager.orientation == LinearLayoutManager.VERTICAL) {
                     val h = view.item_manga.height
                     when {
-                        y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, -(h * tapScrollRatio).toInt())
-                        h - y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, (h * tapScrollRatio).toInt())
+                        e.y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, -(h * tapScrollRatio).toInt())
+                        h - e.y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, (h * tapScrollRatio).toInt())
                         else -> showControl(true)
                     }
                 } else {
                     val w = view.item_manga.width
                     when {
-                        x < w * tapScrollRange -> layoutManager.snapToTarget(layoutManager.currentPos.toInt() - 1)
-                        w - x < w * tapScrollRange -> layoutManager.snapToTarget(layoutManager.currentPos.toInt() + 1)
+                        e.x < w * tapScrollRange -> layoutManager.snapToTarget(layoutManager.currentPos.toInt() - 1)
+                        w - e.x < w * tapScrollRange -> layoutManager.snapToTarget(layoutManager.currentPos.toInt() + 1)
                         else -> showControl(true)
                     }
                 }
+            }
 
-            }, { v, index ->
+            override fun onLongPress(e: MotionEvent) {
+                val v = view.item_manga.findChildViewUnder(e.x, e.y) ?: return
+                val index = view.item_manga.getChildAdapterPosition(v)
+                val url = bookAdapter.data[index].image?.url
+                if (url == null) {
+//                    val actionMode = view.item_manga.startActionMode(SelectableActionMode(), ActionMode.TYPE_FLOATING)
+                    if (!view.item_manga.isActive) view.item_manga.startSelect(e.x, e.y)
+                    return
+                }
                 val systemUiVisibility = v.systemUiVisibility
-                val url = bookAdapter.data[index].image?.url ?: return@setupWithRecyclerView
                 val dialog = AlertDialog.Builder(linePresenter.pluginContext)
                     .setTitle(url)
                     .setItems(arrayOf("分享"))
@@ -187,12 +207,9 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
                         or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                         or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
                 dialog.show()
-            }) {
-            if (it.action == MotionEvent.ACTION_DOWN) {
-                cancelOnDown = false
-                showControl(false)
             }
-        }
+        })
+        layoutManager.setupWithRecyclerView(view.item_manga, touchListener)
         linePresenter.proxy.subjectPresenter.subjectView.let {
             it.behavior.isHideable = true
             it.behavior.state = BottomSheetBehavior.STATE_COLLAPSED
@@ -230,7 +247,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
 
     override fun loadEp(episode: Episode) {
         init()
-        bookAdapter.setNewData(null)
+        bookAdapter.setNewInstance(null)
         view.book_loading.visibility = View.VISIBLE
         view.item_pull_layout.response(false)
         view.visibility = View.VISIBLE
