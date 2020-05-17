@@ -2,8 +2,7 @@ package soko.ekibun.bangumi.plugins.provider.book
 
 import android.annotation.SuppressLint
 import android.graphics.*
-import android.text.Layout
-import android.text.StaticLayout
+import android.text.*
 import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -18,12 +17,13 @@ import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.ui.view.SelectableRecyclerView
 import soko.ekibun.bangumi.plugins.ui.view.book.BookLayoutManager
+import soko.ekibun.bangumi.plugins.ui.view.book.LetterSpacingSpan
 import soko.ekibun.bangumi.plugins.util.GlideUtil
 import soko.ekibun.bangumi.plugins.util.HttpUtil
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
-class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider.PageInfo>? = null) :
-    BaseQuickAdapter<BookProvider.PageInfo, BaseViewHolder>(R.layout.item_page, data),
+class BookAdapter(val recyclerView: RecyclerView, data: MutableList<PageInfo>? = null) :
+    BaseQuickAdapter<BookAdapter.PageInfo, BaseViewHolder>(R.layout.item_page, data),
     BookLayoutManager.ScalableAdapter, SelectableRecyclerView.TextSelectionAdapter {
     val requests = HashMap<BookProvider.PageInfo, HttpUtil.HttpRequest>()
 
@@ -31,16 +31,16 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider
 
     val padding = ResourceUtil.dip2px(App.app.plugin, 24f)
 
-    override fun addData(newData: Collection<BookProvider.PageInfo>) {
+    fun addProviderData(newData: Collection<BookProvider.PageInfo>) {
         super.addData(wrapData(newData.toList()))
     }
 
-    override fun addData(position: Int, newData: Collection<BookProvider.PageInfo>) {
+    fun addProviderData(position: Int, newData: Collection<BookProvider.PageInfo>) {
         super.addData(position, wrapData(newData.toList()))
     }
 
-    private fun getEpTitle(page: BookProvider.PageInfo): String {
-        return "${page.ep?.category ?: ""} ${page.ep?.title}".trim()
+    private fun getEpTitle(ep: BookProvider.BookEpisode?): String {
+        return "${ep?.category ?: ""} ${ep?.title}".trim()
     }
 
     var textSize = 0f
@@ -53,27 +53,44 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider
         val currentOffset =
             layoutManager?.findViewByPosition(currentIndex)?.let { layoutManager.getDecoratedTop(it) } ?: 0
         val currentPageInfo = data.getOrNull(currentIndex)
-        val currentInfo = currentPageInfo?.rawInfo ?: currentPageInfo
+        val currentInfo = currentPageInfo?.rawInfo
         val currentInfoPos = currentPageInfo?.rawRange?.first ?: 0
-        setNewInstance(wrapData(data.map { it.rawInfo ?: it }.distinct()).toMutableList())
+        setNewInstance(wrapData(data.map { it.rawInfo }.distinct()).toMutableList())
         currentInfo?.let { current ->
             (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(
                 data.indexOfFirst {
-                    (it.rawInfo ?: it) == current && (it.rawInfo == null || it.rawRange?.second ?: 0 > currentInfoPos)
+                    it.rawInfo == current && (it.rawRange == null || it.rawRange?.last ?: 0 > currentInfoPos)
                 }, currentOffset
             )
         }
     }
 
-    private fun wrapData(data: List<BookProvider.PageInfo>): List<BookProvider.PageInfo> {
-        val ret = ArrayList<BookProvider.PageInfo>()
+    data class PageInfo(
+        val site: String? = null,
+        val image: HttpUtil.HttpRequest? = null,
+        val content: CharSequence? = null,
+        var ep: BookProvider.BookEpisode? = null,
+        var index: Int = 0,
+        var rawInfo: BookProvider.PageInfo,
+        var rawRange: IntRange? = null
+    )
+
+    val tempPaint = TextPaint()
+    var widthArray = FloatArray(1)
+    private fun wrapData(data: List<BookProvider.PageInfo>): List<PageInfo> {
+        val ret = ArrayList<PageInfo>()
         data.forEach { page ->
-            if (page.content.isNullOrEmpty()) ret += page
+            if (page.content.isNullOrEmpty()) ret += PageInfo(
+                site = page.site,
+                image = page.image,
+                ep = page.ep,
+                rawInfo = page
+            )
             else {
                 val pageWidth =
                     recyclerView.width - referHolder.itemView.content_container.let { it.paddingLeft + it.paddingRight }
                 val titleHeight = if (page.index <= 1) referHolder.itemView.item_title.let {
-                    getEpTitle(page).let { content ->
+                    getEpTitle(page.ep).let { content ->
                         StaticLayout.Builder.obtain(content, 0, content.length, it.paint, pageWidth)
                             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
                             .setLineSpacing(it.lineSpacingExtra, it.lineSpacingMultiplier)
@@ -100,24 +117,56 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider
                     recyclerView.height - referHolder.itemView.content_container.let { it.paddingTop + it.paddingBottom }
                 var lastTextIndex = 0
                 var lastLineBottom = 0
-                for (i in 1 until layout.lineCount) {
-                    val curLineBottom = layout.getLineBottom(i) + titleHeight
+                tempPaint.set(layout.paint)
+                var spannableStringBuilder = SpannableStringBuilder()
+                for (i in 0 until layout.lineCount) {
+                    val lineEnd = layout.getLineEnd(i)
+                    val lineStart = layout.getLineStart(i)
+                    val visibleEnd = layout.getLineVisibleEnd(i)
+                    spannableStringBuilder.append(SpannableString(page.content.substring(lineStart, lineEnd)).also {
+                        val textCount = visibleEnd - lineStart - 1
+                        if (textCount <= 1 || it.endsWith('\n') || i == layout.lineCount - 1) return@also
+                        if (widthArray.size < textCount) widthArray = FloatArray(textCount)
+                        val letterSpacing = (pageWidth - layout.getLineWidth(i)) / textCount / 2
+                        var width = layout.getPrimaryHorizontal(lineStart + 1) + letterSpacing
+                        it.setSpan(LetterSpacingSpan(width.toInt(), 0f), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        for (c in 1 until textCount) {
+                            val dw = layout.getPrimaryHorizontal(lineStart + c + 1) + (2 * c + 1) * letterSpacing
+                            it.setSpan(
+                                LetterSpacingSpan(dw.toInt() - width.toInt(), letterSpacing + (width % 1)),
+                                c,
+                                c + 1,
+                                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                            )
+                            width = dw
+                        }
+                        it.setSpan(
+                            LetterSpacingSpan(pageWidth - width.toInt(), letterSpacing + (width % 1)),
+                            textCount,
+                            textCount + 1,
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                        )
+                    })
+                    val curLineBottom = layout.getLineBottom(i + 1) + titleHeight
                     if (curLineBottom - lastLineBottom < pageHeight) continue
-                    val prevLineEndIndex = layout.getLineVisibleEnd(i - 1)
-                    ret += BookProvider.PageInfo(
-                        content = page.content.substring(lastTextIndex, prevLineEndIndex),
+                    ret += PageInfo(
+                        content = spannableStringBuilder.subSequence(
+                            0,
+                            spannableStringBuilder.length - lineEnd + visibleEnd
+                        ),
                         ep = page.ep,
                         rawInfo = page,
-                        rawRange = Pair(lastTextIndex, prevLineEndIndex)
+                        rawRange = IntRange(lastTextIndex, visibleEnd)
                     )
-                    lastTextIndex = layout.getLineStart(i)
-                    lastLineBottom = layout.getLineTop(i) + titleHeight
+                    lastTextIndex = lineEnd
+                    lastLineBottom = layout.getLineBottom(i) + titleHeight
+                    spannableStringBuilder = SpannableStringBuilder()
                 }
-                ret += BookProvider.PageInfo(
-                    content = page.content.substring(lastTextIndex),
+                ret += PageInfo(
+                    content = spannableStringBuilder,
                     ep = page.ep,
                     rawInfo = page,
-                    rawRange = Pair(lastTextIndex, page.content.length)
+                    rawRange = IntRange(lastTextIndex, page.content.length)
                 )
             }
         }
@@ -132,7 +181,7 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider
         return ret
     }
 
-    override fun convert(holder: BaseViewHolder, item: BookProvider.PageInfo) {
+    override fun convert(holder: BaseViewHolder, item: PageInfo) {
         holder.itemView.image_sort.text = item.index.toString()
         holder.itemView.item_content.textSize = textSize
         holder.itemView.tag = item
@@ -146,12 +195,16 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider
             holder.itemView.content_container.paddingRight,
             if (isHorizontal || data.getOrNull(holder.adapterPosition + 1)?.index ?: 0 <= 1) holder.itemView.content_container.paddingLeft else 0
         )
+        holder.itemView.item_content.setPadding(
+            0, 0, 0, if (isHorizontal) 0
+            else holder.itemView.item_content.lineHeight - holder.itemView.item_content.paint.getFontMetricsInt(null)
+        )
         holder.itemView.content_container.layoutParams.width = recyclerView.width
         loadData(holder, item)
     }
 
     @SuppressLint("SetTextI18n")
-    private fun loadData(helper: BaseViewHolder, item: BookProvider.PageInfo) {
+    private fun loadData(helper: BaseViewHolder, item: PageInfo) {
         helper.itemView.item_image.setImageDrawable(null)
         helper.itemView.content_container.visibility = View.GONE
         helper.itemView.item_loading.visibility = View.VISIBLE
@@ -162,18 +215,18 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider
             helper.itemView.item_loading.visibility = View.GONE
             helper.itemView.content_container.visibility = View.VISIBLE
             helper.itemView.item_title.visibility = if (item.index <= 1) View.VISIBLE else View.GONE
-            helper.itemView.item_title.text = getEpTitle(item)
+            helper.itemView.item_title.text = getEpTitle(item.ep)
             helper.itemView.item_content.text = item.content
             return
         }
-        val imageRequest = requests[item] ?: if (item.site.isNullOrEmpty()) item.image else null
+        val imageRequest = requests[item.rawInfo] ?: if (item.site.isNullOrEmpty()) item.image else null
         if (imageRequest != null) {
             setImage(helper, item, imageRequest)
         } else {
             (LineProvider.getProvider(Provider.TYPE_BOOK, item.site ?: "")?.provider as? BookProvider)
-                ?.getImage("${item.site}_${item.index}", App.app.jsEngine, item)
+                ?.getImage("${item.site}_${item.index}", App.app.jsEngine, item.rawInfo)
                 ?.observeOn(AndroidSchedulers.mainThread())?.subscribe({
-                    requests[item] = it
+                    requests[item.rawInfo] = it
                     setImage(helper, item, it)
                 }, {
                     if (helper.itemView.tag == item) {
@@ -191,7 +244,7 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider
         helper.itemView.loading_text.text = message
     }
 
-    private fun setImage(helper: BaseViewHolder, item: BookProvider.PageInfo, imageRequest: HttpUtil.HttpRequest) {
+    private fun setImage(helper: BaseViewHolder, item: PageInfo, imageRequest: HttpUtil.HttpRequest) {
         helper.itemView.loading_progress.progress = 0
         GlideUtil.loadWithProgress(imageRequest, App.app.host, helper.itemView.item_image, {
             helper.itemView.loading_progress.isIndeterminate = false
@@ -214,18 +267,18 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider
         return layoutManager.findViewByPosition(pos)?.content_container?.visibility != View.VISIBLE
     }
 
-    val path = Path()
     private val posContent = IntArray(2)
     override fun drawSelection(c: Canvas, view: View, start: Int?, end: Int?, paint: Paint) {
         if (view.content_container.visibility != View.VISIBLE) return
         view.item_content.getLocationInWindow(posContent)
         c.save()
         c.translate(posContent[0] - recyclerView.x, posContent[1] - recyclerView.y)
+        c.clipRect(0, 0, view.item_content.width, view.item_content.height)
         drawSelectionImpl(c, view, start, end, paint)
-
         c.restore()
     }
 
+    val path = Path()
     private fun drawSelectionImpl(c: Canvas, view: View, start: Int?, end: Int?, paint: Paint) {
         if (start == null && end == null) {
             c.drawRect(Rect(0, 0, view.item_content.width, view.item_content.height), paint)
@@ -262,8 +315,11 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<BookProvider
         view.item_content.getLocationInWindow(posContent)
         return point.also {
             it.set(
-                (layout.getPrimaryHorizontal(offset) + posContent[0] - recyclerView.x).toInt(),
-                (layout.getLineBottom(layout.getLineForOffset(offset)) - view.item_content.lineSpacingExtra + posContent[1] - recyclerView.y).toInt()
+                (Math.max(
+                    0f,
+                    Math.min(view.item_content.width.toFloat(), layout.getPrimaryHorizontal(offset))
+                ) + posContent[0] - recyclerView.x).toInt(),
+                (layout.getLineTop(layout.getLineForOffset(offset)) + view.item_content.paint.getFontMetricsInt(null) + posContent[1] - recyclerView.y).toInt()
             )
         }
     }

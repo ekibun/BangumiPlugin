@@ -274,9 +274,9 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             val curIndex = layoutManager.findFirstVisibleItemPosition()
             val curItem = bookAdapter.getItem(curIndex)
             val curOffset = layoutManager.findViewByPosition(curIndex)?.let { layoutManager.getDecoratedTop(it) } ?: 0
-            bookAdapter.addData(0, pages.toMutableList())
+            bookAdapter.addProviderData(0, pages.toMutableList())
             layoutManager.scrollToPositionWithOffset(bookAdapter.data.indexOf(curItem), curOffset)
-        } else bookAdapter.addData(pages.toMutableList())
+        } else bookAdapter.addProviderData(pages.toMutableList())
     }
 
     fun loadEp(episode: Episode, isPrev: Boolean, callback: (Boolean) -> Unit) {

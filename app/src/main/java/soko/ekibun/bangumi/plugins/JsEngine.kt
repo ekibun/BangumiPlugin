@@ -103,9 +103,7 @@ class JsEngine {
             |       }else return "" + new java.lang.String(bytes, encoding);
             |   },
             |   html2text(html){
-            |       var doc = Jsoup.parse(html)
-            |       doc.select("br").after("\\n")
-            |       return doc.body().text().replace(/\\n/g, "\n")
+            |       return Jsoup.parse(html).wholeText()
             |   }
             |}
             |var webview = {
