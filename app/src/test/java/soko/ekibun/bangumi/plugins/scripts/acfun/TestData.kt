@@ -20,15 +20,15 @@ class TestData : VideoScriptTest.VideoTestData() {
     /**
      * 测试用的数据
      */
-    override val searchKey = "房间露营"
+    override val searchKey = "隐瞒之事"
     override val lineInfo = LineInfo(
         "acfun",
-        id = "6000901",
-        title = "房间露营"
+        id = "6001745",
+        title = "隐瞒之事"
     )
     override val video = VideoProvider.VideoInfo(
         site = "acfun",
-        id = "11188351",
-        url = "http://www.acfun.cn/bangumi/aa6000901_35425_1707941"
+        id = "12873383",
+        url = "http://www.acfun.cn/bangumi/aa6001745_36188_1726446"
     )
 }

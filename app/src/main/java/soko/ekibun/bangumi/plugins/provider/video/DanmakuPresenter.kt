@@ -6,7 +6,6 @@ import android.view.View
 import android.widget.SeekBar
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.LinearLayoutManager
-import io.reactivex.disposables.Disposable
 import kotlinx.android.synthetic.main.danmaku_setting.view.*
 import kotlinx.android.synthetic.main.plugin_video.view.*
 import master.flame.danmaku.danmaku.model.BaseDanmaku
@@ -14,7 +13,6 @@ import master.flame.danmaku.danmaku.model.IDisplayer
 import master.flame.danmaku.danmaku.model.android.DanmakuContext
 import master.flame.danmaku.danmaku.model.android.Danmakus
 import master.flame.danmaku.danmaku.parser.BaseDanmakuParser
-import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.LineProvider
@@ -22,6 +20,7 @@ import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
+import java.util.concurrent.ConcurrentHashMap
 
 @SuppressLint("UseSparseArrays")
 class DanmakuPresenter(
@@ -205,19 +204,15 @@ class DanmakuPresenter(
         const val VIDEO_FRAME_FILL = 2
         const val VIDEO_FRAME_16_9 = 3
         const val VIDEO_FRAME_4_3 = 4
+
+        const val DANMAKU_CALL_PREFIX = "damaku_"
     }
 
-    private val videoInfoCalls = ArrayList<Disposable>()
-    private val danmakuCalls: ArrayList<Disposable> = ArrayList()
-    private val danmakuKeys: HashMap<DanmakuListAdapter.DanmakuInfo, String> = HashMap()
+    private val danmakuKeys = ConcurrentHashMap<DanmakuListAdapter.DanmakuInfo, String>()
     fun loadDanmaku(lines: List<LineInfo>, episode: Episode) {
         linePresenter.pluginView.view.danmaku_flame.removeAllDanmakus(true)
-        danmakuCalls.forEach { it.dispose() }
-        danmakuCalls.clear()
+        linePresenter.cancel { it.startsWith(DANMAKU_CALL_PREFIX) }
         danmakuKeys.clear()
-
-        videoInfoCalls.forEach { it.dispose() }
-        videoInfoCalls.clear()
 
         adapter.setNewInstance(lines.map { DanmakuListAdapter.DanmakuInfo(it) }.toMutableList())
         adapter.data.forEach {
@@ -234,44 +229,31 @@ class DanmakuPresenter(
         when {
             danmakuInfo.videoInfo == null -> {
                 danmakuInfo.info = " 获取视频信息..."
-                linePresenter.activityRef.get()
-                    ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+                adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo))
                 val key = "getVideoInfo(${danmakuInfo.line}, ${episode.id})"
-                val videoCall = provider.getVideoInfo(
-                    key,
-                    App.app.jsEngine,
-                    danmakuInfo.line,
-                    episode
-                )
-                videoInfoCalls.add(linePresenter.subscribeOnUiThread(videoCall, { videoInfo ->
+                linePresenter.subscribe({
+                    danmakuInfo.info = " 获取视频信息出错: $it"
+                    adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo))
+                    onFinish(it)
+                }, key = DANMAKU_CALL_PREFIX + key) {
+                    val videoInfo = provider.getVideoInfo(key, danmakuInfo.line, episode)
                     danmakuInfo.videoInfo = videoInfo
                     loadDanmaku(danmakuInfo, episode)
-                }, {
-                    danmakuInfo.info = " 获取视频信息出错: $it"
-                    linePresenter.activityRef.get()
-                        ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
-                    onFinish(it)
-                }, key = key))
+                }
             }
             danmakuInfo.key == null -> {
                 danmakuInfo.info = " 获取弹幕信息..."
-                linePresenter.activityRef.get()
-                    ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+                adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo))
                 val key = "getDanmakuKey(${danmakuInfo.videoInfo})"
-                val call = provider.getDanmakuKey(
-                    key,
-                    App.app.jsEngine,
-                    danmakuInfo.videoInfo ?: return
-                )
-                danmakuCalls.add(linePresenter.subscribeOnUiThread(call, {
-                    danmakuInfo.key = it
-                    doAdd(Math.max(lastPos, 0) * 1000L * 300L, danmakuInfo)
-                }, {
+                linePresenter.subscribe({
                     danmakuInfo.info = " 获取弹幕信息出错: $it"
-                    linePresenter.activityRef.get()
-                        ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
+                    adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo))
                     onFinish(it)
-                }, key = key))
+                }, key = DANMAKU_CALL_PREFIX + key) {
+                    val danmakuKey = provider.getDanmakuKey(key, danmakuInfo.videoInfo ?: return@subscribe)
+                    danmakuInfo.key = danmakuKey
+                    doAdd(Math.max(lastPos, 0) * 1000L * 300L, danmakuInfo)
+                }
             }
             else -> doAdd(Math.max(lastPos, 0) * 1000L * 300L, danmakuInfo)
         }
@@ -282,17 +264,20 @@ class DanmakuPresenter(
             LineProvider.getProvider(Provider.TYPE_VIDEO, danmakuInfo.line.site)?.provider as? VideoProvider
                 ?: return
         val key = "getDanmakuKey(${danmakuInfo.videoInfo}, ${danmakuInfo.key}, ${pos / 1000})"
-        val call = provider.getDanmaku(
-            key,
-            App.app.jsEngine,
-            danmakuInfo.videoInfo ?: return,
-            danmakuInfo.key ?: return,
-            (pos / 1000).toInt()
-        )
         danmakuInfo.info = " 加载弹幕..."
-        linePresenter.activityRef.get()?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
-        danmakuCalls.add(linePresenter.subscribeOnUiThread(call, {
-            it.minus(ArrayList(danmakuInfo.danmakus)).forEach {
+        adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo))
+        linePresenter.subscribe({
+            danmakuInfo.info = " 加载弹幕出错: $it"
+            adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo))
+            onFinish(it)
+        }, key = DANMAKU_CALL_PREFIX + key) {
+            val danmakuList = provider.getDanmaku(
+                key,
+                danmakuInfo.videoInfo ?: return@subscribe,
+                danmakuInfo.key ?: return@subscribe,
+                (pos / 1000).toInt()
+            )
+            danmakuList.minus(ArrayList(danmakuInfo.danmakus)).forEach {
                 danmakuInfo.danmakus.add(it)
 
                 val danmaku = danmakuContext.mDanmakuFactory.createDanmaku(it.type, danmakuContext) ?: return@forEach
@@ -304,15 +289,9 @@ class DanmakuPresenter(
                 linePresenter.pluginView.view.danmaku_flame.addDanmaku(danmaku)
             }
             danmakuInfo.info = ""
-            linePresenter.activityRef.get()
-                ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
-            if (!it.isNullOrEmpty()) onFinish(null)
-        }, {
-            danmakuInfo.info = " 加载弹幕出错: $it"
-            linePresenter.activityRef.get()
-                ?.runOnUiThread { adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo)) }
-            onFinish(it)
-        }, key = key))
+            adapter.notifyItemChanged(adapter.data.indexOf(danmakuInfo))
+            if (!danmakuList.isNullOrEmpty()) onFinish(null)
+        }
     }
 
     private var lastPos = -1

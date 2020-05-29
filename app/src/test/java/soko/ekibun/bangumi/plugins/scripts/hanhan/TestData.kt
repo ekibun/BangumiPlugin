@@ -5,7 +5,6 @@ import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
-import soko.ekibun.bangumi.plugins.util.HttpUtil
 
 class TestData : BookScriptTest.BookTestData() {
     override val info = ProviderInfo(
@@ -29,7 +28,7 @@ class TestData : BookScriptTest.BookTestData() {
         url = "http://www.hhimm.com/cool323156/1.html?s=8"
     )
     override val page = BookProvider.PageInfo(
-        image = HttpUtil.HttpRequest(
+        image = Provider.HttpRequest(
             url = "http://www.hhimm.com/cool376511/1.html?s=3"
         )
     )

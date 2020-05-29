@@ -17,7 +17,6 @@ import com.google.android.exoplayer2.upstream.DefaultHttpDataSource
 import com.google.android.exoplayer2.upstream.DefaultHttpDataSourceFactory
 import com.google.android.exoplayer2.upstream.cache.CacheDataSourceFactory
 import com.google.android.exoplayer2.util.Util
-import io.reactivex.Observable
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.Subject
@@ -26,7 +25,6 @@ import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.video.VideoProvider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
-import soko.ekibun.bangumi.plugins.util.HttpUtil
 import soko.ekibun.bangumi.plugins.util.NetworkUtil
 import java.text.DecimalFormat
 
@@ -77,7 +75,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
         player
     }
 
-    private fun createMediaSource(request: HttpUtil.HttpRequest, streamKeys: List<StreamKey>? = null): MediaSource {
+    private fun createMediaSource(request: Provider.HttpRequest, streamKeys: List<StreamKey>? = null): MediaSource {
         val uri = Uri.parse(request.url)
         val dataSourceFactory = createDataSourceFactory(App.app.host, request, streamKeys != null)
         return when (@C.ContentType Util.inferContentType(uri, request.overrideExtension)) {
@@ -92,7 +90,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
     }
 
     var reload = {}
-    fun play(request: HttpUtil.HttpRequest, surface: SurfaceView, streamKeys: List<StreamKey>? = null) {
+    fun play(request: Provider.HttpRequest, surface: SurfaceView, streamKeys: List<StreamKey>? = null) {
         reload = {
             player.setVideoSurfaceView(surface)
             player.prepare(createMediaSource(request, streamKeys))
@@ -104,7 +102,7 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
     companion object {
         fun createDataSourceFactory(
             context: Context,
-            request: HttpUtil.HttpRequest,
+            request: Provider.HttpRequest,
             useCache: Boolean = false
         ): DefaultDataSourceFactory {
             val header = request.header ?: HashMap()
@@ -129,27 +127,24 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
         }
 
         //private val videoCacheModel by lazy{ App.getVideoCacheModel(content)}
-        fun getVideo(
+        suspend fun getVideo(
             key: String, subject: Subject, episode: Episode, info: LineInfo?,
-//            onGetVideoInfo: (VideoProvider.VideoInfo?, error: Exception?) -> Unit,
-//            onGetVideo: (HttpUtil.HttpRequest?, List<StreamKey>?, error: Exception?) -> Unit,
-            networkChecker: Observable<Boolean>
-        ): Observable<Any> {
+            onGetVideoInfo: (VideoProvider.VideoInfo) -> Unit,
+            networkChecker: suspend () -> Unit
+        ): Pair<Provider.HttpRequest?, List<StreamKey>?> {
             //val videoCache = videoCacheModel.getCache(episode, subject)
             val videoCache =
                 EpisodeCacheModel.getEpisodeCache(episode, subject)?.cache() as? EpisodeCache.VideoCache
             if (videoCache != null) {
-                return Observable.just(
-                    VideoProvider.VideoInfo("", videoCache.video.url, videoCache.video.url),
-                    videoCache.video to videoCache.streamKeys
-                )
+                onGetVideoInfo(VideoProvider.VideoInfo("", videoCache.video.url, videoCache.video.url))
+                return videoCache.video to videoCache.streamKeys
             } else {
                 val provider = LineProvider.getProvider(
                     Provider.TYPE_VIDEO,
                     info?.site ?: ""
                 )?.provider as? VideoProvider
                 if (info == null || provider == null) {
-                    return if (info?.site == "") {
+                    if (info?.site == "") {
                         val format =
                             (Regex("""\{\{(.*)\}\}""").find(info.id)?.groupValues ?: listOf(
                                 "{{ep}}",
@@ -161,33 +156,27 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
                         } catch (e: Exception) {
                             info.id
                         }
-                        Observable.just(
-                            VideoProvider.VideoInfo("", url, url),
-                            HttpUtil.HttpRequest(url) to null
-                        )
-                    } else Observable.empty()
-                }
-                val jsEngine = App.app.jsEngine
-
-                return provider.getVideoInfo(key, jsEngine, info, episode).flatMap { video ->
-                    Observable.merge(
-                        Observable.just(video),
-                        if (video.site == "") Observable.just(HttpUtil.HttpRequest(video.url) to null)
-                        else (if (!NetworkUtil.isWifiConnected(App.app.host)) networkChecker else Observable.just(0)).flatMap {
-                            val videoProvider = LineProvider.getProvider(
-                                Provider.TYPE_VIDEO,
-                                video.site
-                            )?.provider as VideoProvider
-                            videoProvider.getVideo(key, jsEngine, video)
-                        }.map {
-                            it to null
-                        }
-                    )
+                        onGetVideoInfo(VideoProvider.VideoInfo("", url, url))
+                        return Provider.HttpRequest(url) to null
+                    }
+                } else {
+                    val video = provider.getVideoInfo(key, info, episode)
+                    onGetVideoInfo(video)
+                    return if (video.site == "") Provider.HttpRequest(video.url) to null
+                    else {
+                        if (!NetworkUtil.isWifiConnected(App.app.host)) networkChecker()
+                        val videoProvider = LineProvider.getProvider(
+                            Provider.TYPE_VIDEO,
+                            video.site
+                        )?.provider as VideoProvider
+                        videoProvider.getVideo(key, video) to null
+                    }
                 }
             }
+            return null to null
         }
 
-        fun createDownloadRequest(request: HttpUtil.HttpRequest, callback: DownloadHelper.Callback) {
+        fun createDownloadRequest(request: Provider.HttpRequest, callback: DownloadHelper.Callback) {
             val uri = Uri.parse(request.url)
             val dataSourceFactory = createDataSourceFactory(App.app.host, request, true)
             val helper = when (@C.ContentType Util.inferContentType(uri, request.overrideExtension)) {

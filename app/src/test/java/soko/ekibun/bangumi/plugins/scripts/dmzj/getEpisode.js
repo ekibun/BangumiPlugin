@@ -1,4 +1,4 @@
-var doc = Jsoup.parse(http.get("https://m.dmzj.com/info/" + line.id + ".html").body().string())
+var doc = Jsoup.parse(http.fetch("https://m.dmzj.com/info/" + line.id + ".html").body().string())
 var $ = () => {}
 var initIntroData = (a) => { throw a }
 var data = []

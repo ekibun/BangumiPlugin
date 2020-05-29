@@ -2,56 +2,45 @@ package soko.ekibun.bangumi.plugins
 
 import android.app.Activity
 import android.widget.Toast
-import io.reactivex.Observable
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.disposables.Disposable
+import kotlinx.coroutines.*
 import soko.ekibun.bangumi.plugins.util.ReflectUtil
 import java.lang.ref.WeakReference
-import java.util.*
-import kotlin.collections.HashMap
+import java.util.concurrent.ConcurrentHashMap
 
-open class PluginPresenter(activityWeak: WeakReference<Activity>) {
-    private val disposables = CompositeDisposable()
-    private val keyDisposable = HashMap<String, Disposable>()
-
-    /**
-     * 在主线程回调
-     * - `onError`中调用`onComplete`保持协同
-     * - `onError`默认弹出[Toast]:
-     *    ```
-     *    Toast.makeText(App.app, it.message, Toast.LENGTH_SHORT).show()
-     *    ```
-     */
-    fun <T> subscribeOnUiThread(
-        observable: Observable<T>, onNext: (t: T) -> Unit,
-        onError: (t: Throwable) -> Unit = {
-            it.printStackTrace()
-        },
-        onComplete: () -> Unit = {},
-        key: String? = null
-    ): Disposable {
-        if (!key.isNullOrEmpty()) keyDisposable[key]?.dispose()
-        return observable.observeOn(AndroidSchedulers.mainThread())
-            .subscribe(onNext, {
-                if (!it.toString().toLowerCase(Locale.ROOT).contains("canceled")) {
-                    Toast.makeText(App.app.host, it.message, Toast.LENGTH_SHORT).show()
-                    onError(it)
-                }
-                onComplete()
-            }, onComplete).also {
-                if (!key.isNullOrEmpty()) keyDisposable[key] = it
-                disposables.add(it)
-            }
+open class PluginPresenter(activityWeak: WeakReference<Activity>) : CoroutineScope by MainScope() {
+    private val jobCollection = ConcurrentHashMap<String, Job>()
+    fun cancel(check: (String) -> Boolean) {
+        jobCollection.keys.forEach {
+            if (check(it)) jobCollection.remove(it)
+        }
     }
 
-    fun dispose(key: String) {
-        keyDisposable.remove(key)?.dispose()
+    fun subscribe(
+        onError: (t: Throwable) -> Unit = {},
+        onComplete: () -> Unit = {},
+        key: String? = null,
+        block: suspend CoroutineScope.() -> Unit
+    ): Job {
+        val oldJob = if (key.isNullOrEmpty()) null else jobCollection[key]
+        return launch {
+            try {
+                oldJob?.cancelAndJoin()
+                block.invoke(this)
+            } catch (_: CancellationException) {
+            } catch (t: Throwable) {
+                Toast.makeText(App.app.host, t.message, Toast.LENGTH_SHORT).show()
+                t.printStackTrace()
+                onError(t)
+            }
+            if (isActive) onComplete()
+        }.also {
+            if (!key.isNullOrEmpty()) jobCollection[key] = it
+        }
     }
 
     private val activityRef = ReflectUtil.proxyObjectWeak(activityWeak, IBaseActivity::class.java)!!
     open fun onDestroy() {
-        disposables.dispose()
+        cancel()
     }
 
     init {

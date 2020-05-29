@@ -3,10 +3,9 @@ package soko.ekibun.bangumi.plugins.provider
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.annotation.LayoutRes
-import io.reactivex.Observable
-import soko.ekibun.bangumi.plugins.JsEngine
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.Subject
+import soko.ekibun.bangumi.plugins.engine.JsEngine
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 import soko.ekibun.bangumi.plugins.provider.video.VideoProvider
@@ -18,17 +17,16 @@ abstract class Provider(
     @Code("打开", -1) val open: String? = null,
     @Code("搜索", 0) val search: String? = null
 ) {
-    fun open(scriptKey: String, jsEngine: JsEngine, line: LineInfo): Observable<String> {
+    suspend fun open(scriptKey: String, line: LineInfo): String {
         return JsEngine.makeScript(
-            jsEngine,
             "var line = ${JsonUtil.toJson(line)};\n$open",
             header,
             scriptKey
         ) { JsonUtil.toEntity<String>(it) ?: "" }
     }
 
-    fun search(scriptKey: String, jsEngine: JsEngine, key: String): Observable<List<LineInfo>> {
-        return JsEngine.makeScript(jsEngine, "var key = ${JsonUtil.toJson(key)};\n$search", header, scriptKey) {
+    suspend fun search(scriptKey: String, key: String): List<LineInfo> {
+        return JsEngine.makeScript("var key = ${JsonUtil.toJson(key)};\n$search", header, scriptKey) {
             JsonUtil.toEntity<List<LineInfo>>(it) ?: ArrayList()
         }
     }
@@ -78,4 +76,10 @@ abstract class Provider(
             }
         }
     }
+
+    data class HttpRequest(
+        val url: String,
+        val header: HashMap<String, String>? = null,
+        val overrideExtension: String? = null
+    )
 }

@@ -1,4 +1,4 @@
-var doc = Jsoup.parse(http.get(HANHAN_HOST + "/manhua/"+line.id+".html").body().string());
+var doc = Jsoup.parse(http.fetch(HANHAN_HOST + "/manhua/"+line.id+".html").body().string());
 return doc.select("#permalink > div.cVolList > ul.cVolUl > li > a").toArray().map(it => {
     var title = it.text()
     var sort = /(\d+)/.exec(title.split(" ")[1] || title)

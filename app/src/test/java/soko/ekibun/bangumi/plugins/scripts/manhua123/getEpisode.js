@@ -1,4 +1,4 @@
-var doc = Jsoup.parse(http.get("https://m.manhua123.net/comic/" + line.id + ".html").body().string())
+var doc = Jsoup.parse(http.fetch("https://m.manhua123.net/comic/" + line.id + ".html").body().string())
 return doc.select("ul.list_block a").toArray().map(it => {
     var sort = /(\d+)/.exec(it.text())
     return {

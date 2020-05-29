@@ -44,7 +44,6 @@ public class ProgressAppGlideModule extends AppGlideModule {
                     }
                 })
                 .build();
-        Byte[] by = new Byte[2];
 
         registry.replace(GlideUrl.class, InputStream.class, new OkHttpUrlLoader.Factory(client));
     }

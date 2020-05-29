@@ -1,5 +1,5 @@
 var url = "https://www.wenku8.net/novel/" + parseInt(line.id / 1000) + "/" + line.id + "/"
-var doc = Jsoup.parse(http.inflate(http.get(url + "index.htm").body().bytes(), "gb2312"))
+var doc = Jsoup.parse(http.inflate(http.fetch(url + "index.htm").body().bytes(), "gb2312"))
 var result = []
 var cat = ""
 var index = 0

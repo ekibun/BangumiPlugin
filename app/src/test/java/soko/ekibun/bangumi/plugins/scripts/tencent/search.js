@@ -1,5 +1,5 @@
 var url = "http://m.v.qq.com/search.html?keyWord="+key;
-var doc = Jsoup.parse(http.get(url).body().string());
+var doc = Jsoup.parse(http.fetch(url).body().string());
 return doc.select(".search_item").toArray().map(it => {
     try{
         if(it.selectFirst(".mask_scroe") == null || !it.selectFirst(".figure_source").text().includes("腾讯")) return null;

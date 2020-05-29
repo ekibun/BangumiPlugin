@@ -13,7 +13,7 @@ class TestData : BookScriptTest.BookTestData() {
         title = "漫画柜",
         type = Provider.TYPE_BOOK
     )
-    override val searchKey = "刺客守则"
+    override val searchKey = "刺客"
     override val lineInfo = LineInfo(
         "manhuagui",
         id = "/comic/24086/",

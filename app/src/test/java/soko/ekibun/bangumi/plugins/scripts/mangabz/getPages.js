@@ -1,7 +1,7 @@
 var data = []
 function getImage(page) {
-    var doc = http.get("http://www.mangabz.com/m" + episode.id + "/chapterimage.ashx?cid=" + episode.id + "&page=" + page, {
-        "referer": String("http://www.mangabz.com/m" + episode.id + "/")
+    var doc = http.fetch("http://www.mangabz.com/m" + episode.id + "/chapterimage.ashx?cid=" + episode.id + "&page=" + page, {
+        headers: { "referer": String("http://www.mangabz.com/m" + episode.id + "/") }
     }).body().string()
     var pageData = eval(doc)
     java.lang.System.out.println(JSON.stringify(pageData))

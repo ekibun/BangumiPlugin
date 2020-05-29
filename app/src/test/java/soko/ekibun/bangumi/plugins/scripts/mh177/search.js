@@ -1,4 +1,4 @@
-var doc = Jsoup.parse(http.get("https://so.177mh.net/k.php?k=" + key).body().string());
+var doc = Jsoup.parse(http.fetch("https://so.177mh.net/k.php?k=" + key).body().string());
 return doc.select("div.ar_list_co dl h1>a").toArray().map(it => {
     return {
         site: "mh177",

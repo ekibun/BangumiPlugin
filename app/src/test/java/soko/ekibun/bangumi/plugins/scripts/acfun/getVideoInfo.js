@@ -1,9 +1,9 @@
-var ep_sort = episode.sort + Number(line.extra||0)
-var url = "http://www.acfun.cn/album/abm/bangumis/video?albumId="+line.id+"&num="+ep_sort+"&size=1";
-var json = JSON.parse(http.get(url).body().string());
-var ep = json.data.content[0].videos[0];
+var ep_sort = episode.sort + Number(line.extra||0);
+var doc = http.fetch("https://m.acfun.cn/v/?ab="+line.id).body().string();
+var data = JSON.parse(/videoInfo *?= ?(.*?);/.exec(doc)[1]);
+var ep = data.group[(ep_sort - 1) | 0];
 return {
     site: "acfun",
-    id: ep.danmakuId,
-    url: "http://www.acfun.cn/bangumi/aa"+ep.albumId+"_"+ep.groupId+"_"+ep.id
-}
+    id: ep.videoId,
+    url: "http://www.acfun.cn/bangumi/aa"+ep.bangumiId+"_"+36188+"_"+ep.itemId
+};

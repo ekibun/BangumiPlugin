@@ -5,7 +5,6 @@ import android.content.Context
 import android.os.Handler
 import android.util.Log
 import android.webkit.*
-import soko.ekibun.bangumi.plugins.util.HttpUtil
 
 class BackgroundWebView(context: Context): WebView(context) {
     var onPageFinished = {_:String?->}
@@ -30,7 +29,6 @@ class BackgroundWebView(context: Context): WebView(context) {
     }
 
     init{
-        settings.userAgentString = HttpUtil.ua
         @SuppressLint("SetJavaScriptEnabled")
         settings.javaScriptEnabled = true
         settings.useWideViewPort = true

@@ -18,6 +18,8 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.ImageViewTarget
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
+import soko.ekibun.bangumi.plugins.App
+import soko.ekibun.bangumi.plugins.provider.Provider
 
 /**
  * 防止Glide崩溃
@@ -27,7 +29,7 @@ object GlideUtil {
      * Glide进度
      */
     fun loadWithProgress(
-        req: HttpUtil.HttpRequest,
+        req: Provider.HttpRequest,
         context: Context,
         view: ImageView,
         onProgress: (Float) -> Unit,
@@ -36,7 +38,7 @@ object GlideUtil {
     ): Target<Drawable>? {
         val request = with(context) ?: return null
         val header = req.header ?: HashMap()
-        header["User-Agent"] = header["User-Agent"] ?: HttpUtil.ua
+        header["User-Agent"] = header["User-Agent"] ?: App.ua
         ProgressAppGlideModule.expect(req.url, object : ProgressAppGlideModule.UIonProgressListener {
             override fun onProgress(bytesRead: Long, expectedLength: Long) {
                 onProgress(bytesRead * 1f / expectedLength)

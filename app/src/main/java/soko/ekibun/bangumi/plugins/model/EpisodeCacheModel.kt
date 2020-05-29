@@ -1,7 +1,7 @@
 package soko.ekibun.bangumi.plugins.model
 
 import androidx.room.Room
-import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.runBlocking
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.Subject
@@ -14,19 +14,19 @@ object EpisodeCacheModel {
         Room.databaseBuilder(App.app.plugin, CacheDatabase::class.java, "cache.sqlite").build().cacheDao()
     }
 
-    fun getCacheList(): List<SubjectCache> {
-        return cacheDao.get().subscribeOn(Schedulers.io()).blockingGet()
+    fun getCacheList(): List<SubjectCache> = runBlocking {
+        cacheDao.get()
     }
 
-    fun getSubjectCacheList(subject: Subject): SubjectCache? {
-        return cacheDao.get(subject.id).subscribeOn(Schedulers.io()).blockingGet()
+    fun getSubjectCacheList(subject: Subject): SubjectCache? = runBlocking {
+        cacheDao.get(subject.id)
     }
 
-    fun getEpisodeCache(episode: Episode, subject: Subject): EpisodeCache? {
-        return getSubjectCacheList(subject)?.episodeList?.firstOrNull { Episode.compareEpisode(it.episode, episode) }
+    fun getEpisodeCache(episode: Episode, subject: Subject): EpisodeCache? = runBlocking {
+        getSubjectCacheList(subject)?.episodeList?.firstOrNull { Episode.compareEpisode(it.episode, episode) }
     }
 
-    fun addEpisodeCache(subject: Subject, cache: EpisodeCache) {
+    fun addEpisodeCache(subject: Subject, cache: EpisodeCache) = runBlocking {
         cacheDao.inset(
             SubjectCache(
                 subject,
@@ -39,10 +39,10 @@ object EpisodeCacheModel {
                     cache
                 )
             )
-        ).subscribeOn(Schedulers.io()).subscribe()
+        )
     }
 
-    fun removeEpisodeCache(episode: Episode, subject: Subject) {
+    fun removeEpisodeCache(episode: Episode, subject: Subject) = runBlocking {
         val cache = SubjectCache(
             subject,
             (getSubjectCacheList(subject)?.episodeList ?: ArrayList()).filterNot {
@@ -53,6 +53,5 @@ object EpisodeCacheModel {
             }
         )
         (if (cache.episodeList.isEmpty()) cacheDao.delete(cache) else cacheDao.inset(cache))
-            .subscribeOn(Schedulers.io()).subscribe()
     }
 }

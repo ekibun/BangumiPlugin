@@ -1,4 +1,4 @@
-var doc = Jsoup.parse(http.get("http://www.mangabz.com" + line.id).body().string())
+var doc = Jsoup.parse(http.fetch("http://www.mangabz.com" + line.id).body().string())
 return doc.select(".detail-list-item a").toArray().map(it => ({
     site: "mangabz",
     id: it.attr("href").replace(/[/m]/g, ""),

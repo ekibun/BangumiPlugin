@@ -32,6 +32,7 @@ abstract class BaseFragmentActivity(@LayoutRes private val resId: Int? = null) :
         title = title
 
         root_layout.setOnApplyWindowInsetsListener { _, insets ->
+            @Suppress("DEPRECATION")
             view.dispatchApplyWindowInsets(
                 insets.replaceSystemWindowInsets(
                     insets.systemWindowInsetLeft, 0,

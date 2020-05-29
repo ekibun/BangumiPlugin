@@ -1,4 +1,4 @@
-var doc = Jsoup.parse(http.get(episode.url).body().string());
+var doc = Jsoup.parse(http.fetch(episode.url).body().string());
 eval(doc.selectFirst("script").html())
 return msg.split("|").map(it => ({
     image: {

@@ -6,9 +6,7 @@ import android.widget.ListPopupWindow
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import io.reactivex.disposables.Disposable
 import kotlinx.android.synthetic.main.dialog_search.view.*
-import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
@@ -94,38 +92,19 @@ class SearchDialog(private val linePresenter: LinePresenter) :
             )
             insets.consumeSystemWindowInsets()
         }
-
-        val searchCall =
-            ArrayList<Pair<ProviderInfo, Disposable>>()
         view.item_search.setOnClickListener {
             adapter.setNewInstance(null)
             val key = view.item_search_key.text.toString()
-            searchCall.forEach { it.second.dispose() }
-            searchCall.clear()
-
-            val jsEngine = App.app.jsEngine
+            linePresenter.cancel { it.startsWith("search_") }
             val provider = view.item_line.tag as? ProviderInfo ?: emptyProvider
-            searchCall.addAll(
-                (if (provider == emptyProvider) {
-                    ArrayList(
-                        LineProvider.getProviderList(linePresenter.type)
-                            .filter { !it.provider?.search.isNullOrEmpty() })
-                        .map {
-                            Pair(it, it.provider!!.search("search_${it.site}", jsEngine, key))
-                        }
-                } else listOf(provider.let {
-                    Pair(
-                        it,
-                        it.provider!!.search("search_${it.site}", jsEngine, key)
-                    )
-                })).map {
-                    it.first to linePresenter.subscribeOnUiThread(it.second, { lines ->
-                        adapter.addData(lines)
-                    }, { e ->
-                        Toast.makeText(context, "${it.first.title}: ${e.message}", Toast.LENGTH_LONG).show()
-                    }, key = "search_${it.first.site}")
+            (if (provider == emptyProvider) {
+                LineProvider.getProviderList(linePresenter.type)
+                    .filter { !it.provider?.search.isNullOrEmpty() }
+            } else listOf(provider)).forEach { line ->
+                linePresenter.subscribe(key = "search_${line.site}") {
+                    adapter.addData(line.provider!!.search("search_${line.site}", key))
                 }
-            )
+            }
         }
     }
 

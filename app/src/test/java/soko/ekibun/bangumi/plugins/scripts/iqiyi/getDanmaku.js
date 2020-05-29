@@ -1,6 +1,6 @@
 function getDanmaku(page){
     var url = "http://cmts.iqiyi.com/bullet/"+video.id.substring(video.id.length-4,video.id.length-2)+"/"+video.id.substring(video.id.length-2,video.id.length)+"/"+video.id+"_300_"+page+".z";
-    var doc = Jsoup.parse(http.inflate(http.get(url).body().bytes(),"gzip"));
+    var doc = org.jsoup.Jsoup.parse(http.inflate(http.fetch(url).body().bytes(),"gzip"));
     return doc.select("bulletInfo").toArray().map(it=>{
         return {
             time: Number(it.selectFirst("showTime").text()),

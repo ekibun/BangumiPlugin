@@ -1,5 +1,5 @@
 var url = "https://comment.bilibili.com/"+video.id+".xml";
-var doc = Jsoup.parse(http.inflate(http.get(url).body().bytes(), "deflate"));
+var doc = Jsoup.parse(http.inflate(http.fetch(url).body().bytes(), "deflate"));
 return doc.select("d").toArray().map(it => {
     var p = it.attr("p").split(",");
     return {

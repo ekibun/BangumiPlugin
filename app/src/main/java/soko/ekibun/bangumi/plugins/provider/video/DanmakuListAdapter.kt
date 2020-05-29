@@ -5,6 +5,8 @@ import android.view.View
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.viewholder.BaseViewHolder
 import kotlinx.android.synthetic.main.item_provider.view.*
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
@@ -15,10 +17,13 @@ class DanmakuListAdapter(data: MutableList<DanmakuInfo>? = null) :
 
     override fun convert(holder: BaseViewHolder, item: DanmakuInfo) {
         holder.itemView.item_title.text = item.line.id
-        val providerInfo = LineProvider.getProvider(Provider.TYPE_VIDEO, item.line.site) ?: return
+        MainScope().launch {
+            val providerInfo = LineProvider.getProvider(Provider.TYPE_VIDEO, item.line.site) ?: return@launch
+            holder.itemView.item_site.backgroundTintList =
+                ColorStateList.valueOf((0xff000000 + providerInfo.color).toInt())
+            holder.itemView.item_site.text = providerInfo.title
+        }
         holder.itemView.item_switch.visibility = View.GONE
-        holder.itemView.item_site.backgroundTintList = ColorStateList.valueOf((0xff000000 + providerInfo.color).toInt())
-        holder.itemView.item_site.text = providerInfo.title
         holder.itemView.item_id.text = if (item.info.isNotEmpty()) item.info else " ${item.danmakus.size} 条弹幕"
     }
 

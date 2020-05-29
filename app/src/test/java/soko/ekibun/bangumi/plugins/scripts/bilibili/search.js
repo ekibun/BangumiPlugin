@@ -1,5 +1,5 @@
 var url = "https://api.bilibili.com/x/web-interface/search/type?search_type=media_bangumi&keyword=";
-var json = JSON.parse(http.get(url+key).body().string());
+var json = JSON.parse(http.fetch(url+key).body().string());
 return json.data.result.map(it => {
     return {
         site: "bilibili",

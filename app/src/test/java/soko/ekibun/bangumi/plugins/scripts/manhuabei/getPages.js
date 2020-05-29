@@ -9,14 +9,14 @@ function decode(data) {
     cipher.init(crypto.Cipher.DECRYPT_MODE, secretKeySpec, paramSpec)
     return new java.lang.String(cipher.doFinal(Base64.decode(data, Base64.DEFAULT)))
 }
-var doc = Jsoup.parse(http.get(episode.url).body().string());
+var doc = Jsoup.parse(http.fetch(episode.url).body().string());
 var script = doc.select("script").toArray().find(it => it.html().includes("chapterImages")).html()
 eval(script)
 return JSON.parse(decode(chapterImages)).map(item => ({
     image: {
         url: item.startsWith("http")? item : "https://mhcdn.manhuazj.com/" + chapterPath + item,
         header: {
-            referer: item.includes("dmzj")? "https://m.dmzj.com/" : "https://m.manhuadui.com/"
+            referer: item.includes("dmzj")? "https://m.dmzj.com/" : "https://m.manhuabei.com/"
         }
     }
 }))

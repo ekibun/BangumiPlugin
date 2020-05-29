@@ -6,10 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import io.reactivex.Observable
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.Disposable
-import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.*
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.Subject
@@ -19,9 +16,9 @@ import soko.ekibun.bangumi.plugins.util.AppUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import soko.ekibun.bangumi.plugins.util.NotificationUtil
 
-class DownloadService(val app: Context, val pluginContext: Context) {
+class DownloadService(val app: Context, val pluginContext: Context) : CoroutineScope by MainScope() {
     private val manager = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    private val taskCollection = HashMap<String, Pair<EpisodeCache, Disposable>>()
+    private val taskCollection = HashMap<String, Pair<EpisodeCache, Job>>()
 
     private fun getTaskKey(episode: Episode, subject: Subject): String {
         return subject.prefKey + "_${episode.book?.id ?: episode.id}"
@@ -57,7 +54,7 @@ class DownloadService(val app: Context, val pluginContext: Context) {
                 val task = taskCollection[taskKey]
                 if (task != null) {
                     taskCollection.remove(taskKey)
-                    task.second.dispose()
+                    task.second.cancel()
                     sendBroadcast(episode, subject, task.first, false)
                     val pIntent = PendingIntent.getActivity(
                         app, taskKey.hashCode(),
@@ -76,18 +73,19 @@ class DownloadService(val app: Context, val pluginContext: Context) {
                 } else {
                     val cache = JsonUtil.toEntity<EpisodeCache>(request.getStringExtra(EXTRA_CACHE) ?: "") ?: return
                     taskCollection[taskKey] =
-                        cache to createDownloadTask(cache).observeOn(AndroidSchedulers.mainThread())
-                            .subscribe({ epCache ->
-                                EpisodeCacheModel.addEpisodeCache(subject, cache)
-                                val status = taskCollection.filter { epCache.cache()?.isFinished() != true }.size
-                                val isFinished = epCache.cache()?.isFinished() == true
+                        cache to launch {
+                            try {
+                                createDownloadTask(cache) { epCache ->
+                                    EpisodeCacheModel.addEpisodeCache(subject, cache)
+                                    val status = taskCollection.filter { epCache.cache()?.isFinished() != true }.size
+                                    val isFinished = epCache.cache()?.isFinished() == true
 
-                                sendBroadcast(episode, subject, epCache, true)
-                                val pIntent = PendingIntent.getActivity(
-                                    app, taskKey.hashCode(),
-                                    AppUtil.parseSubjectActivityIntent(subject), PendingIntent.FLAG_UPDATE_CURRENT
-                                )
-                                manager.notify(taskKey, 0, NotificationUtil.builder(app, downloadChannelId, "下载")
+                                    sendBroadcast(episode, subject, epCache, true)
+                                    val pIntent = PendingIntent.getActivity(
+                                        app, taskKey.hashCode(),
+                                        AppUtil.parseSubjectActivityIntent(subject), PendingIntent.FLAG_UPDATE_CURRENT
+                                    )
+                                    manager.notify(taskKey, 0, NotificationUtil.builder(app, downloadChannelId, "下载")
                                     .setSmallIcon(if (isFinished) R.drawable.offline_pin else android.R.drawable.stat_sys_download)
                                     .setOngoing(!isFinished)
                                     .setAutoCancel(true)
@@ -97,36 +95,38 @@ class DownloadService(val app: Context, val pluginContext: Context) {
                                             pluginContext
                                         )}"
                                     )
-                                    .setContentText(epCache.cache()?.getProgressInfo() ?: "")
-                                    .also {
-                                        if (!isFinished) it.setProgress(
-                                            10000,
-                                            ((epCache.cache()?.getProgress() ?: 0f) * 10000).toInt(),
-                                            epCache.cache()?.getProgress() ?: 0f < 1e-10
-                                        )
-                                    }
-                                    .setContentIntent(pIntent).build())
-                            }, {
-                                it.printStackTrace()
-                                taskCollection.remove(taskKey)
-                            }, {
-                                taskCollection.remove(taskKey)
-                            })
+                                        .setContentText(epCache.cache()?.getProgressInfo() ?: "")
+                                        .also {
+                                            if (!isFinished) it.setProgress(
+                                                10000,
+                                                ((epCache.cache()?.getProgress() ?: 0f) * 10000).toInt(),
+                                                epCache.cache()?.getProgress() ?: 0f < 1e-10
+                                            )
+                                        }
+                                        .setContentIntent(pIntent).build())
+                                }
+                            } catch (e: Throwable) {
+                                e.printStackTrace()
+                            }
+                            taskCollection.remove(taskKey)
+                        }
                 }
             }
             ACTION_REMOVE -> {
                 manager.cancel(taskKey, 0)
                 if (taskCollection.containsKey(taskKey)) {
-                    taskCollection[taskKey]!!.second.dispose()
+                    taskCollection[taskKey]!!.second.cancel()
                     taskCollection.remove(taskKey)
                 }
                 if (taskCollection.isEmpty())
                     manager.cancel(0)
 
-                val videoCache = EpisodeCacheModel.getEpisodeCache(episode, subject) ?: return
-                sendBroadcast(episode, subject, null, false)
-                videoCache.remove()
-                EpisodeCacheModel.removeEpisodeCache(episode, subject)
+                launch {
+                    val videoCache = EpisodeCacheModel.getEpisodeCache(episode, subject) ?: return@launch
+                    sendBroadcast(episode, subject, null, false)
+                    videoCache.remove()
+                    EpisodeCacheModel.removeEpisodeCache(episode, subject)
+                }
             }
         }
     }
@@ -139,30 +139,27 @@ class DownloadService(val app: Context, val pluginContext: Context) {
         app.sendBroadcast(broadcastIntent)
     }
 
-    private fun createDownloadTask(cache: EpisodeCache): Observable<EpisodeCache> {
-        return Observable.create<EpisodeCache> { emitter ->
-            val cacheCache = cache.cache() ?: return@create emitter.onComplete()
-            if (!emitter.isDisposed) emitter.onNext(cache)
-            while (!emitter.isDisposed && !cacheCache.isFinished()) {
+    private suspend fun createDownloadTask(cache: EpisodeCache, onUpdate: suspend (EpisodeCache) -> Unit) {
+        withContext(Dispatchers.IO) {
+            val cacheCache = cache.cache() ?: return@withContext
+            withContext(Dispatchers.Main) { if (isActive) onUpdate(cache) }
+            while (isActive && !cacheCache.isFinished()) {
                 try {
                     if (!cacheCache.download {
                             cache.cache = JsonUtil.toJson(cacheCache)
-                            if (!emitter.isDisposed) emitter.onNext(cache)
+                            launch(Dispatchers.Main) { if (isActive) onUpdate(cache) }
                         }) break
                 } catch (e: InterruptedException) {
                     break
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    Thread.sleep(1000)
+                    delay(1000)
                 }
             }
             cache.cache = JsonUtil.toJson(cacheCache)
             Log.v("cache", cacheCache.toString())
-            if (!emitter.isDisposed) {
-                emitter.onNext(cache)
-                emitter.onComplete()
-            }
-        }.subscribeOn(Schedulers.computation())
+            withContext(Dispatchers.Main) { if (isActive) onUpdate(cache) }
+        }
     }
 
     companion object {

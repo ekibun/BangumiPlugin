@@ -1,4 +1,4 @@
-var doc = Jsoup.parse(http.get(episode.url).body().string());
+var doc = Jsoup.parse(http.fetch(episode.url).body().string());
 var pageCount = parseInt(doc.selectFirst("#hdPageCount").attr("value"));
 var path = doc.selectFirst("#hdVolID").attr("value");
 var hdS = doc.selectFirst("#hdS").attr("value");

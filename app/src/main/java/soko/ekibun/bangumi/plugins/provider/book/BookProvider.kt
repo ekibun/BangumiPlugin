@@ -1,11 +1,9 @@
 package soko.ekibun.bangumi.plugins.provider.book
 
-import io.reactivex.Observable
-import soko.ekibun.bangumi.plugins.JsEngine
+import soko.ekibun.bangumi.plugins.engine.JsEngine
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
-import soko.ekibun.bangumi.plugins.util.HttpUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 
 class BookProvider(
@@ -15,19 +13,17 @@ class BookProvider(
     @Code("获取页面信息", 3) val getPages: String? = "",   // (episode: BookEpisode) -> List<PageInfo>
     @Code("获取图片", 4) val getImage: String? = ""        // (image: ImageInfo) -> HttpRequest
 ) : Provider(search) {
-    fun getEpisode(
+    suspend fun getEpisode(
         scriptKey: String,
-        jsEngine: JsEngine,
         line: LineInfo
-    ): Observable<List<BookEpisode>> {
-        return JsEngine.makeScript(jsEngine, "var line = ${JsonUtil.toJson(line)};\n$getEpisode", header, scriptKey) {
+    ): List<BookEpisode> {
+        return JsEngine.makeScript("var line = ${JsonUtil.toJson(line)};\n$getEpisode", header, scriptKey) {
             JsonUtil.toEntity<List<BookEpisode>>(it)!!
         }
     }
 
-    fun getUpdate(scriptKey: String, jsEngine: JsEngine): Observable<List<AirInfo>> {
+    suspend fun getUpdate(scriptKey: String): List<AirInfo> {
         return JsEngine.makeScript(
-            jsEngine,
             getUpdate ?: "",
             header,
             scriptKey
@@ -36,9 +32,8 @@ class BookProvider(
         }
     }
 
-    fun getPages(scriptKey: String, jsEngine: JsEngine, episode: BookEpisode): Observable<List<PageInfo>> {
+    suspend fun getPages(scriptKey: String, episode: BookEpisode): List<PageInfo> {
         return JsEngine.makeScript(
-            jsEngine,
             "var episode = ${JsonUtil.toJson(episode)};\n$getPages",
             header,
             scriptKey
@@ -52,12 +47,12 @@ class BookProvider(
         }
     }
 
-    fun getImage(scriptKey: String, jsEngine: JsEngine, page: PageInfo): Observable<HttpUtil.HttpRequest> {
+    suspend fun getImage(scriptKey: String, page: PageInfo): HttpRequest {
         return JsEngine.makeScript(
-            jsEngine, "var page = ${JsonUtil.toJson(page)};\n${
+            "var page = ${JsonUtil.toJson(page)};\n${
             if (!getImage.isNullOrEmpty()) getImage else "return page.image;"}", header, scriptKey
         ) {
-            JsonUtil.toEntity<HttpUtil.HttpRequest>(it)!!
+            JsonUtil.toEntity<HttpRequest>(it)!!
         }
     }
 
@@ -72,7 +67,7 @@ class BookProvider(
 
     data class PageInfo(
         val site: String? = null,
-        val image: HttpUtil.HttpRequest? = null,
+        val image: HttpRequest? = null,
         val content: String? = null,
         var ep: BookEpisode? = null,
         var index: Int = 0

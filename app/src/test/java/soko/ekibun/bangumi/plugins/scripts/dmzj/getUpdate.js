@@ -1,6 +1,6 @@
 var getUpdate = async((page)=>{
     var url = "https://m.dmzj.com/latest/"+ page +".json";
-    var json = JSON.parse(http.get(url).body().string());
+    var json = JSON.parse(http.fetch(url).body().string());
     return json.map(it => ({
         site: "dmzj",
         id: it.id,

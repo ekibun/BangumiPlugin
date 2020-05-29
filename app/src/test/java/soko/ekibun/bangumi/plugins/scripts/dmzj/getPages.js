@@ -1,4 +1,4 @@
-var doc = Jsoup.parse(http.get(episode.url).body().string())
+var doc = Jsoup.parse(http.fetch(episode.url).body().string())
 var $ = () => ({ ready: (a) => a() })
 var document = {}
 var mReader = { initData: (a) => { throw a } }

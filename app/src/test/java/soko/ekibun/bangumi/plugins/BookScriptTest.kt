@@ -1,5 +1,8 @@
 package soko.ekibun.bangumi.plugins
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runBlockingTest
+import org.junit.Rule
 import org.junit.Test
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
@@ -13,63 +16,71 @@ import java.io.File
 class BookScriptTest {
 
     abstract class BookTestData {
+        @ExperimentalCoroutinesApi
+        @get:Rule
+        var mainCoroutineRule = MainCoroutineRule()
+
         abstract val info: ProviderInfo
         open val searchKey: String? = null
         open val lineInfo: LineInfo? = null
         open val episode: BookProvider.BookEpisode? = null
         open val page: BookProvider.PageInfo? = null
-    }
 
-    val testData: BookTestData = soko.ekibun.bangumi.plugins.scripts.wenku8.TestData()
-    val provider = ScriptTest.getProvider<BookProvider>(testData.info.site)
+        val provider by lazy { ScriptTest.getProvider<BookProvider>(info.site) }
 
-    @Test
-    fun search() {
-        if (provider.search.isNullOrEmpty()) println("no search script!")
-        else println(
-            JsonUtil.toJson(
-                provider.search("test", ScriptTest.jsEngine, testData.searchKey!!).blockingSingle()
+        @Test
+        @ExperimentalCoroutinesApi
+        fun search() = mainCoroutineRule.runBlockingTest {
+            if (provider.search.isNullOrEmpty()) println("no search script!")
+            else println(
+                JsonUtil.toJson(
+                    provider.search("test", searchKey!!)
+                )
             )
-        )
-    }
+        }
 
-    @Test
-    fun getUpdate() {
-        if (provider.getUpdate.isNullOrEmpty()) println("no getUpdate script!")
-        else println(JsonUtil.toJson(provider.getUpdate("test", ScriptTest.jsEngine).blockingSingle()))
-    }
+        @Test
+        @ExperimentalCoroutinesApi
+        fun getUpdate() = mainCoroutineRule.runBlockingTest {
+            if (provider.getUpdate.isNullOrEmpty()) println("no getUpdate script!")
+            else println(JsonUtil.toJson(provider.getUpdate("test")))
+        }
 
-    @Test
-    fun getEpisode() {
-        if (provider.getEpisode.isNullOrEmpty()) println("no getEpisode script!")
-        else println(
-            JsonUtil.toJson(
-                provider.getEpisode("test", ScriptTest.jsEngine, testData.lineInfo!!).blockingSingle()
+        @Test
+        @ExperimentalCoroutinesApi
+        fun getEpisode() = mainCoroutineRule.runBlockingTest {
+            if (provider.getEpisode.isNullOrEmpty()) println("no getEpisode script!")
+            else println(
+                JsonUtil.toJson(
+                    provider.getEpisode("test", lineInfo!!)
+                )
             )
-        )
-    }
+        }
 
-    @Test
-    fun getPages() {
-        if (provider.getPages.isNullOrEmpty()) println("no getPages script!")
-        else println(
-            JsonUtil.toJson(
-                provider.getPages("test", ScriptTest.jsEngine, testData.episode!!).blockingSingle()
+        @Test
+        @ExperimentalCoroutinesApi
+        fun getPages() = mainCoroutineRule.runBlockingTest {
+            if (provider.getPages.isNullOrEmpty()) println("no getPages script!")
+            else println(
+                JsonUtil.toJson(
+                    provider.getPages("test", episode!!)
+                )
             )
-        )
-    }
+        }
 
-    @Test
-    fun getImage() {
-        if (provider.getImage.isNullOrEmpty()) println("no getImage script!")
-        else println(JsonUtil.toJson(provider.getImage("test", ScriptTest.jsEngine, testData.page!!).blockingSingle()))
-    }
+        @Test
+        @ExperimentalCoroutinesApi
+        fun getImage() = mainCoroutineRule.runBlockingTest {
+            if (provider.getImage.isNullOrEmpty()) println("no getImage script!")
+            else println(JsonUtil.toJson(provider.getImage("test", page!!)))
+        }
 
-    @Test
-    fun printProvider() {
-        println(JsonUtil.toJson(testData.info.also {
-            it.code = JsonUtil.toJson(ScriptTest.getProvider<BookProvider>(it.site))
-        }))
+        @Test
+        fun printProvider() {
+            println(JsonUtil.toJson(info.also {
+                it.code = JsonUtil.toJson(ScriptTest.getProvider<BookProvider>(it.site))
+            }))
+        }
     }
 
     @Test
@@ -86,7 +97,7 @@ class BookScriptTest {
         soko.ekibun.bangumi.plugins.scripts.hanhan.TestData(),
         soko.ekibun.bangumi.plugins.scripts.mangabz.TestData(),
         soko.ekibun.bangumi.plugins.scripts.manhua123.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.manhuadui.TestData(),
+        soko.ekibun.bangumi.plugins.scripts.manhuabei.TestData(),
         soko.ekibun.bangumi.plugins.scripts.manhuagui.TestData(),
         soko.ekibun.bangumi.plugins.scripts.mh177.TestData(),
         soko.ekibun.bangumi.plugins.scripts.pica.TestData(),

@@ -1,4 +1,4 @@
-var doc = Jsoup.parse(http.get("https://m.manhuagui.com"+line.id).body().string());
+var doc = Jsoup.parse(http.fetch("https://m.manhuagui.com"+line.id).body().string());
 return doc.select("div.chapter > div.chapter-list ul li a").toArray().map(it => {
     var id = /\/(\d+).html/.exec(it.attr("href"))[1];
     var sort = /(\d+)/.exec(it.text())

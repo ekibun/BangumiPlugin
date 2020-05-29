@@ -1,6 +1,8 @@
 var url = PICA_HOST + "/comics/search?q="+java.net.URLEncoder.encode(key)+"&page=1";
-var json = JSON.parse(http.get(url, headerBuild("get", url, {
-    "authorization": token
+var json = JSON.parse(http.fetch(url, {
+    headers: headerBuild("get", url, {
+        "authorization": token
+    })
 })).body().string())
 return json.data.comics.docs.map(it =>{
     return {

@@ -15,6 +15,9 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import kotlinx.android.synthetic.main.subject_episode.view.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.PluginPresenter
 import soko.ekibun.bangumi.plugins.R
@@ -24,6 +27,7 @@ import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.model.cache.EpisodeCache
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
+import soko.ekibun.bangumi.plugins.model.line.SubjectLine
 import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
@@ -140,7 +144,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
             subject.vol_count = newSubject.vol_count
             subject.vol_status = newSubject.vol_status
             subjectView.updateEpisode(subject)
-            refreshLines()
+            runBlocking { refreshLines() }
         }
         proxy.onActivityResultListener = onActivityResultListener@{ requestCode: Int, resultCode: Int, data: Intent? ->
             if (requestCode == AppUtil.REQUEST_PROVIDER && resultCode == AppCompatActivity.RESULT_OK) {//Provider
@@ -196,11 +200,157 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
         popupMenu.show()
     }
 
+    private fun setProvider(infos: SubjectLine, info: LineInfo?, newInfo: LineInfo?) {
+        Log.v("info", "$info, $newInfo")
+        val position =
+            infos.providers.indexOfFirst { it.id == info?.id && it.site == info.site }
+        when {
+            newInfo == null -> if (position >= 0) {
+                infos.providers.removeAt(position)
+                infos.defaultLine -= if (infos.defaultLine > position) 1 else 0
+                infos.defaultLine =
+                    Math.max(0, Math.min(infos.providers.size - 1, infos.defaultLine))
+            }
+            position >= 0 -> infos.providers[position] = newInfo
+            else -> infos.providers.add(newInfo)
+        }
+        LineInfoModel.saveInfo(infos)
+    }
+
     var selectCache = false
     var epInfo: ProviderInfo? = null
     fun refreshLines() {
-        val infos = LineInfoModel.getInfo(subject)
+        val subjectLine = LineInfoModel.getInfo(subject)
+        type = Provider.getProviderType(subject)
+        updateLineView(subjectLine)
 
+        val editLines = { info: LineInfo? ->
+            LineDialog.showDialog(
+                this,
+                info
+            ) { oldInfo, newInfo ->
+                setProvider(subjectLine, oldInfo, newInfo)
+                refreshLines()
+            }
+        }
+
+        val defaultLine = subjectLine.getDefaultProvider()
+        val showPlugin = type.isNotEmpty()
+        epLayout.getChildAt(0).visibility = if (showPlugin) View.GONE else View.VISIBLE
+        epLayout.getChildAt(1).visibility = if (showPlugin) View.GONE else View.VISIBLE
+        epView.visibility = if (showPlugin) View.VISIBLE else View.GONE
+        epLayout.visibility = if (showPlugin || subject.eps?.size ?: 0 > 0) View.VISIBLE else View.GONE
+
+        if (defaultLine != null) {
+            val provider = LineProvider.getProvider(type, defaultLine.site)
+            epView.episodes_line_id.text = if (defaultLine.title.isEmpty()) defaultLine.id else defaultLine.title
+            epView.episodes_line_site.backgroundTintList =
+                ColorStateList.valueOf(((provider?.color ?: 0) + 0xff000000).toInt())
+            epView.episodes_line_site.visibility = View.VISIBLE
+            epView.episodes_line_site.text = provider?.title ?: { if (defaultLine.site == "") "线路" else "错误接口" }()
+            epView.episodes_line.setOnLongClickListener { _ ->
+                subscribe(key = "open") {
+                    LineProvider.getProvider(type, defaultLine.site)?.provider?.let { p ->
+                        if (p.open.isNullOrEmpty()) return@let
+                        val url = withContext(Dispatchers.IO) { p.open("open", defaultLine) }
+                        activityRef.get()?.let { AppUtil.openBrowser(it, url) }
+                    }
+                }
+                true
+            }
+            epView.episodes_line.setOnClickListener {
+                val popList = ListPopupWindow(pluginContext)
+                popList.anchorView = epView.episodes_line
+                val lines = ArrayList(subjectLine.providers)
+                lines.add(LineInfo("", "已缓存"))
+                lines.add(LineInfo("", "添加线路"))
+                val adapter = LineAdapter(type, pluginContext, lines)
+                adapter.selectIndex = if (selectCache) lines.size - 2 else subjectLine.defaultLine
+                popList.setAdapter(adapter)
+                popList.isModal = true
+                popList.show()
+                popList.listView?.setOnItemClickListener { _, _, position, _ ->
+                    popList.dismiss()
+                    selectCache = position == lines.size - 2
+                    when (position) {
+                        lines.size - 2 -> refreshLines()
+                        lines.size - 1 -> editLines(null)
+                        else -> {
+                            subjectLine.defaultLine = position
+                            LineInfoModel.saveInfo(subjectLine)
+                            epInfo = null
+                            refreshLines()
+                        }
+                    }
+                }
+                popList.listView?.setOnItemLongClickListener { _, _, position, _ ->
+                    popList.dismiss()
+                    if (position == lines.size - 1) editLines(null)
+                    else if (position < lines.size - 2) editLines(lines[position])
+                    true
+                }
+            }
+            // 加载eps
+            if (selectCache) {
+                epView.episodes_line_site.visibility = View.GONE
+                epView.episodes_line_id.text = "已缓存"
+                emptyView.text = "什么都没有哦"
+                val eps = EpisodeCacheModel.getSubjectCacheList(subject)?.episodeList?.map {
+                    it.episode
+                }
+                episodeAdapter.setNewInstance(eps?.toMutableList())
+                val list = eps?.map {
+                    EpisodeAdapter.EpisodeSection(it)
+                }?.toMutableList() ?: ArrayList()
+                list.add(0, EpisodeAdapter.EpisodeSection(true, "已缓存"))
+                episodeDetailAdapter.setNewInstance(list)
+                epView.btn_detail.text = pluginContext.getString(R.string.parse_cache_eps, eps?.size ?: 0)
+            } else if (epInfo != provider) (provider?.provider as? BookProvider)?.let {
+                emptyView.text = "加载中..."
+                episodeAdapter.setNewInstance(null)
+                epInfo = provider
+                subscribe({ e ->
+                    emptyView.text = e.localizedMessage
+                }, key = "loadEp") {
+                    val eps = it.getEpisode("loadEps", defaultLine)
+                    if (epInfo == provider) {
+                        emptyView.text = "什么都没有哦"
+                        subject.eps = eps.map { bookEpisode ->
+                            Episode(
+                                type = if (bookEpisode.category.isNullOrEmpty()) Episode.TYPE_MAIN else Episode.TYPE_MUSIC,
+                                sort = bookEpisode.sort,
+                                category = bookEpisode.category,
+                                book = bookEpisode
+                            )
+                        }
+                        episodeAdapter.setNewInstance(subject.eps?.toMutableList())
+                        subjectView.updateEpisode(subject)
+                        updateProgress()
+                    }
+                    (epView.episode_list.layoutManager as LinearLayoutManager)
+                        .scrollToPositionWithOffset(
+                            episodeAdapter.data.indexOfLast { it.progress == Episode.PROGRESS_WATCH },
+                            0
+                        )
+                }
+            }
+            updateProgress()
+        } else {
+            epView.episodes_line_site.visibility = View.GONE
+            epView.episodes_line_id.text = "+ 添加线路"
+            epView.episodes_line.setOnClickListener {
+                editLines(null)
+            }
+            emptyView.text = "点击线路加载剧集"
+            episodeAdapter.setNewInstance(null)
+        }
+
+        (if (type == Provider.TYPE_BOOK || selectCache) episodeAdapter else subjectView.episodeAdapter).also { adapter ->
+            if (epView.episode_list.adapter != adapter) epView.episode_list.adapter = adapter
+        }
+    }
+
+    private fun updateLineView(subjectLine: SubjectLine) {
         episodeAdapter.setOnItemChildClickListener { _, _, position ->
             pluginView.loadEp(episodeAdapter.data[position])
         }
@@ -209,7 +359,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
             true
         }
         subjectView.episodeAdapter.setOnItemChildClickListener { _, _, position ->
-            infos.getDefaultProvider()?.let {
+            subjectLine.getDefaultProvider()?.let {
                 pluginView.loadEp(subjectView.episodeAdapter.data[position])
             } ?: Toast.makeText(pluginContext, "请先添加播放源", Toast.LENGTH_SHORT).show()
         }
@@ -218,7 +368,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
             true
         }
         subjectView.episodeDetailAdapter.setOnItemClickListener { _, _, position ->
-            infos.getDefaultProvider()?.let {
+            subjectLine.getDefaultProvider()?.let {
                 subjectView.episodeDetailAdapter.data[position].t?.let { pluginView.loadEp(it) }
             } ?: Toast.makeText(pluginContext, "请先添加播放源", Toast.LENGTH_SHORT).show()
         }
@@ -229,7 +379,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
             true
         }
         episodeDetailAdapter.setOnItemClickListener { _, _, position ->
-            infos.getDefaultProvider()?.let {
+            subjectLine.getDefaultProvider()?.let {
                 episodeDetailAdapter.data[position].t?.let { pluginView.loadEp(it) }
             } ?: Toast.makeText(pluginContext, "请先添加播放源", Toast.LENGTH_SHORT).show()
         }
@@ -238,153 +388,6 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
                 proxy.subjectPresenter.showEpisodeDialog(it.id)
             }
             true
-        }
-
-        type = Provider.getProviderType(subject)
-
-        val setProvider = setProvider@{ info: LineInfo?, newInfo: LineInfo? ->
-            Log.v("info", "$info, $newInfo")
-            val position =
-                infos.providers.indexOfFirst { it.id == info?.id && it.site == info.site }
-            when {
-                newInfo == null -> if (position >= 0) {
-                    infos.providers.removeAt(position)
-                    infos.defaultLine -= if (infos.defaultLine > position) 1 else 0
-                    infos.defaultLine =
-                        Math.max(0, Math.min(infos.providers.size - 1, infos.defaultLine))
-                }
-                position >= 0 -> infos.providers[position] = newInfo
-                else -> infos.providers.add(newInfo)
-            }
-            LineInfoModel.saveInfo(infos)
-        }
-
-        val editLines = { info: LineInfo? ->
-            LineDialog.showDialog(
-                this,
-                info
-            ) { oldInfo, newInfo ->
-                setProvider(oldInfo, newInfo)
-                refreshLines()
-            }
-        }
-
-        val defaultLine = infos.getDefaultProvider()
-        activityRef.get()?.runOnUiThread {
-            val showPlugin = type.isNotEmpty()
-            epLayout.getChildAt(0).visibility = if (showPlugin) View.GONE else View.VISIBLE
-            epLayout.getChildAt(1).visibility = if (showPlugin) View.GONE else View.VISIBLE
-            epView.visibility = if (showPlugin) View.VISIBLE else View.GONE
-            epLayout.visibility = if (showPlugin || subject.eps?.size ?: 0 > 0) View.VISIBLE else View.GONE
-
-            if (defaultLine != null) {
-                val provider = LineProvider.getProvider(type, defaultLine.site)
-                epView.episodes_line_id.text = if (defaultLine.title.isEmpty()) defaultLine.id else defaultLine.title
-                epView.episodes_line_site.backgroundTintList =
-                    ColorStateList.valueOf(((provider?.color ?: 0) + 0xff000000).toInt())
-                epView.episodes_line_site.visibility = View.VISIBLE
-                epView.episodes_line_site.text = provider?.title ?: { if (defaultLine.site == "") "线路" else "错误接口" }()
-                epView.episodes_line.setOnLongClickListener { _ ->
-                    LineProvider.getProvider(type, defaultLine.site)?.provider?.let { p ->
-                        if (!p.open.isNullOrEmpty())
-                            subscribeOnUiThread(p.open("open", App.app.jsEngine, defaultLine), { url ->
-                                activityRef.get()?.let { AppUtil.openBrowser(it, url) }
-                            }, key = "open")
-                    }
-                    true
-                }
-                epView.episodes_line.setOnClickListener {
-                    val popList = ListPopupWindow(pluginContext)
-                    popList.anchorView = epView.episodes_line
-                    val lines = ArrayList(infos.providers)
-                    lines.add(LineInfo("", "已缓存"))
-                    lines.add(LineInfo("", "添加线路"))
-                    val adapter = LineAdapter(type, pluginContext, lines)
-                    adapter.selectIndex = if (selectCache) lines.size - 2 else infos.defaultLine
-                    popList.setAdapter(adapter)
-                    popList.isModal = true
-                    popList.show()
-                    popList.listView?.setOnItemClickListener { _, _, position, _ ->
-                        popList.dismiss()
-                        selectCache = position == lines.size - 2
-                        when (position) {
-                            lines.size - 2 -> refreshLines()
-                            lines.size - 1 -> editLines(null)
-                            else -> {
-                                infos.defaultLine = position
-                                LineInfoModel.saveInfo(infos)
-                                epInfo = null
-                                refreshLines()
-                            }
-                        }
-                    }
-                    popList.listView?.setOnItemLongClickListener { _, _, position, _ ->
-                        popList.dismiss()
-                        if (position == lines.size - 1) editLines(null)
-                        else if (position < lines.size - 2) editLines(lines[position])
-                        true
-                    }
-                }
-                // 加载eps
-                if (selectCache) {
-                    epView.episodes_line_site.visibility = View.GONE
-                    epView.episodes_line_id.text = "已缓存"
-                    emptyView.text = "什么都没有哦"
-                    val eps = EpisodeCacheModel.getSubjectCacheList(subject)?.episodeList?.map {
-                        it.episode
-                    }
-                    episodeAdapter.setNewInstance(eps?.toMutableList())
-                    val list = eps?.map {
-                        EpisodeAdapter.EpisodeSection(it)
-                    }?.toMutableList() ?: ArrayList()
-                    list.add(0, EpisodeAdapter.EpisodeSection(true, "已缓存"))
-                    episodeDetailAdapter.setNewInstance(list)
-                    epView.btn_detail.text = pluginContext.getString(R.string.parse_cache_eps, eps?.size ?: 0)
-                } else if (epInfo != provider) (provider?.provider as? BookProvider)?.let {
-                    emptyView.text = "加载中..."
-                    episodeAdapter.setNewInstance(null)
-                    epInfo = provider
-                    subscribeOnUiThread(
-                        it.getEpisode("loadEps", App.app.jsEngine, defaultLine),
-                        { eps ->
-                            if (epInfo == provider) {
-                                emptyView.text = "什么都没有哦"
-                                subject.eps = eps.map { bookEpisode ->
-                                    Episode(
-                                        type = if (bookEpisode.category.isNullOrEmpty()) Episode.TYPE_MAIN else Episode.TYPE_MUSIC,
-                                        sort = bookEpisode.sort,
-                                        category = bookEpisode.category,
-                                        book = bookEpisode
-                                    )
-                                }
-                                episodeAdapter.setNewInstance(subject.eps?.toMutableList())
-                                subjectView.updateEpisode(subject)
-                                updateProgress()
-                            }
-                            (epView.episode_list.layoutManager as LinearLayoutManager)
-                                .scrollToPositionWithOffset(
-                                    episodeAdapter.data.indexOfLast { it.progress == Episode.PROGRESS_WATCH },
-                                    0
-                                )
-                        }, {
-                            emptyView.text = it.message
-                        }, key = "loadEps"
-                    )
-                }
-                updateProgress()
-            } else {
-                epView.episodes_line_site.visibility = View.GONE
-                epView.episodes_line_id.text = "+ 添加线路"
-                epView.episodes_line.setOnClickListener {
-                    editLines(null)
-                }
-                emptyView.text = "点击线路加载剧集"
-                episodeAdapter.setNewInstance(null)
-            }
-
-            (if (type == Provider.TYPE_BOOK || selectCache) episodeAdapter else subjectView.episodeAdapter).also { adapter ->
-                if (epView.episode_list.adapter != adapter) epView.episode_list.adapter = adapter
-            }
         }
     }
 }

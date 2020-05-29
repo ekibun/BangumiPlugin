@@ -1,10 +1,9 @@
-var doc = JSON.parse(http.post("https://www.manhuagui.com/tools/word.ashx",{},{
-    key:key,s:"1"
-}).body().string());
-return doc.map(it => {
+var doc = Jsoup.parse(http.fetch("https://m.manhuagui.com/s/" + key + ".html").body().string());
+return doc.select("#detail li > a").toArray().map(it => {
+    it.selec
     return {
         site: "manhuagui",
-        id: it.u,
-        title: it.t
+        id: it.attr("href"),
+        title: it.selectFirst("h3").text()
     }
 });

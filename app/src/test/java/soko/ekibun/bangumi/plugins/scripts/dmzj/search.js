@@ -1,4 +1,4 @@
-var doc = Jsoup.parse(http.get("https://m.dmzj.com/search/" + key + ".html").body().string())
+var doc = Jsoup.parse(http.fetch("https://m.dmzj.com/search/" + key + ".html").body().string())
 var $ = () => {}
 try { eval(doc.select("script").html()) } catch(e) {}
 return serchArry.map(it => ({

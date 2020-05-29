@@ -7,18 +7,16 @@ import androidx.appcompat.view.ContextThemeWrapper
 import com.google.android.exoplayer2.database.ExoDatabaseProvider
 import com.google.android.exoplayer2.upstream.cache.NoOpCacheEvictor
 import com.google.android.exoplayer2.upstream.cache.SimpleCache
+import kotlinx.coroutines.MainScope
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.util.AppUtil
 import java.io.File
 import java.lang.ref.WeakReference
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 
 class App(host: Context, plugin: Context) : BaseApp(host, plugin) {
     val handler = android.os.Handler { true }
     private val databaseProvider by lazy { ExoDatabaseProvider(host) }
     private val downloadCachePath = AppUtil.getDiskFileDir(host, "download").absolutePath
-    val sp by lazy { plugin.getSharedPreferences("plugin", Context.MODE_PRIVATE) }
 
     val downloadCache by lazy {
         SimpleCache(
@@ -27,7 +25,6 @@ class App(host: Context, plugin: Context) : BaseApp(host, plugin) {
             databaseProvider
         )
     }
-    val jsEngine by lazy { JsEngine() }
 
     private val downloadService: DownloadService = DownloadService(host, plugin)
 
@@ -39,8 +36,9 @@ class App(host: Context, plugin: Context) : BaseApp(host, plugin) {
     }
 
     companion object {
-        val cachedThreadPool: ExecutorService = Executors.newCachedThreadPool()
-
+        val mainScope = MainScope()
+        const val ua =
+            "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Mobile Safari/537.36"
         val inited get() = ::app.isInitialized
 
         lateinit var app: App

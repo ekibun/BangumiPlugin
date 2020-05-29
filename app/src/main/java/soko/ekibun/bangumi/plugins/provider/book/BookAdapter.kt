@@ -9,8 +9,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.load.HttpException
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.viewholder.BaseViewHolder
-import io.reactivex.android.schedulers.AndroidSchedulers
 import kotlinx.android.synthetic.main.item_page.view.*
+import kotlinx.coroutines.launch
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.model.LineProvider
@@ -19,13 +19,12 @@ import soko.ekibun.bangumi.plugins.ui.view.SelectableRecyclerView
 import soko.ekibun.bangumi.plugins.ui.view.book.BookLayoutManager
 import soko.ekibun.bangumi.plugins.ui.view.book.LetterSpacingSpan
 import soko.ekibun.bangumi.plugins.util.GlideUtil
-import soko.ekibun.bangumi.plugins.util.HttpUtil
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
-class BookAdapter(val recyclerView: RecyclerView, data: MutableList<PageInfo>? = null) :
+class BookAdapter(private val recyclerView: RecyclerView, data: MutableList<PageInfo>? = null) :
     BaseQuickAdapter<BookAdapter.PageInfo, BaseViewHolder>(R.layout.item_page, data),
     BookLayoutManager.ScalableAdapter, SelectableRecyclerView.TextSelectionAdapter {
-    val requests = HashMap<BookProvider.PageInfo, HttpUtil.HttpRequest>()
+    val requests = HashMap<BookProvider.PageInfo, Provider.HttpRequest>()
 
     private val referHolder by lazy { createViewHolder(recyclerView, 0) }
 
@@ -44,8 +43,8 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<PageInfo>? =
     }
 
     var textSize = 0f
-    fun updateTextSize(textSize: Float) {
-        if (this.textSize == textSize) return
+    fun updateTextSize(textSize: Float = this.textSize, force: Boolean = false) {
+        if (!force && this.textSize == textSize) return
         referHolder.itemView.item_content.textSize = textSize
         this.textSize = textSize
         val layoutManager = recyclerView.layoutManager as? LinearLayoutManager
@@ -67,7 +66,7 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<PageInfo>? =
 
     data class PageInfo(
         val site: String? = null,
-        val image: HttpUtil.HttpRequest? = null,
+        val image: Provider.HttpRequest? = null,
         val content: CharSequence? = null,
         var ep: BookProvider.BookEpisode? = null,
         var index: Int = 0,
@@ -223,18 +222,18 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<PageInfo>? =
         if (imageRequest != null) {
             setImage(helper, item, imageRequest)
         } else {
-            (LineProvider.getProvider(Provider.TYPE_BOOK, item.site ?: "")?.provider as? BookProvider)
-                ?.getImage("${item.site}_${item.index}", App.app.jsEngine, item.rawInfo)
-                ?.observeOn(AndroidSchedulers.mainThread())?.subscribe({
-                    requests[item.rawInfo] = it
-                    setImage(helper, item, it)
-                }, {
-                    if (helper.itemView.tag == item) {
-                        showError(helper, "接口错误\n${it.message}")
-                    }
-                }) ?: {
-                showError(helper, "接口不存在")
-            }()
+            App.mainScope.launch {
+                try {
+                    val image =
+                        (LineProvider.getProvider(Provider.TYPE_BOOK, item.site ?: "")?.provider as? BookProvider)
+                            ?.getImage("${item.site}_${item.index}", item.rawInfo)
+                            ?: return@launch showError(helper, "接口不存在")
+                    requests[item.rawInfo] = image
+                    setImage(helper, item, image)
+                } catch (e: Throwable) {
+                    showError(helper, "接口错误\n${e.localizedMessage}")
+                }
+            }
         }
     }
 
@@ -244,7 +243,7 @@ class BookAdapter(val recyclerView: RecyclerView, data: MutableList<PageInfo>? =
         helper.itemView.loading_text.text = message
     }
 
-    private fun setImage(helper: BaseViewHolder, item: PageInfo, imageRequest: HttpUtil.HttpRequest) {
+    private fun setImage(helper: BaseViewHolder, item: PageInfo, imageRequest: Provider.HttpRequest) {
         helper.itemView.loading_progress.progress = 0
         GlideUtil.loadWithProgress(imageRequest, App.app.host, helper.itemView.item_image, {
             helper.itemView.loading_progress.isIndeterminate = false

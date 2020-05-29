@@ -1,5 +1,8 @@
 package soko.ekibun.bangumi.plugins
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runBlockingTest
+import org.junit.Rule
 import org.junit.Test
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
@@ -14,6 +17,10 @@ import java.io.File
 class VideoScriptTest {
 
     abstract class VideoTestData {
+        @ExperimentalCoroutinesApi
+        @get:Rule
+        var mainCoroutineRule = MainCoroutineRule()
+
         abstract val info: ProviderInfo
         open val searchKey: String? = null
         open val lineInfo: LineInfo? = null
@@ -22,69 +29,62 @@ class VideoScriptTest {
         )
         open val video: VideoProvider.VideoInfo? = null
         open val danmakuKey: String = JsonUtil.toJson("")
-    }
 
-    val testData: VideoTestData = soko.ekibun.bangumi.plugins.scripts.tencent.TestData()
-    val provider = ScriptTest.getProvider<VideoProvider>(testData.info.site)
+        val provider by lazy { ScriptTest.getProvider<VideoProvider>(info.site) }
 
-    @Test
-    fun search() {
-        if (provider.search.isNullOrEmpty()) println("no search script!")
-        else println(
-            JsonUtil.toJson(
-                provider.search("test", ScriptTest.jsEngine, testData.searchKey!!).blockingSingle()
+        @Test
+        @ExperimentalCoroutinesApi
+        fun search() = mainCoroutineRule.runBlockingTest {
+            if (provider.search.isNullOrEmpty()) println("no search script!")
+            else println(
+                JsonUtil.toJson(
+                    provider.search("test", searchKey!!)
+                )
             )
-        )
-    }
+        }
 
-    @Test
-    fun getVideoInfo() {
-        if (provider.getVideoInfo.isNullOrEmpty()) println("no getVideoInfo script!")
-        else println(
-            JsonUtil.toJson(
-                provider.getVideoInfo(
-                    "test",
-                    ScriptTest.jsEngine,
-                    testData.lineInfo!!,
-                    testData.episode
-                ).blockingSingle()
+        @Test
+        @ExperimentalCoroutinesApi
+        fun getVideoInfo() = mainCoroutineRule.runBlockingTest {
+            if (provider.getVideoInfo.isNullOrEmpty()) println("no getVideoInfo script!")
+            else println(
+                JsonUtil.toJson(
+                    provider.getVideoInfo(
+                        "test",
+                        lineInfo!!,
+                        episode
+                    )
+                )
             )
-        )
-    }
+        }
 
-    @Test
-    fun getVideo() {
-        if (provider.getVideo.isNullOrEmpty()) println("no getVideo script!")
-        else println(JsonUtil.toJson(provider.getVideo("test", ScriptTest.jsEngine, testData.video!!).blockingSingle()))
-    }
+        @Test
+        @ExperimentalCoroutinesApi
+        fun getVideo() = mainCoroutineRule.runBlockingTest {
+            if (provider.getVideo.isNullOrEmpty()) println("no getVideo script!")
+            else println(JsonUtil.toJson(provider.getVideo("test", video!!)))
+        }
 
-    @Test
-    fun getDanmakuKey() {
-        if (provider.getDanmakuKey.isNullOrEmpty()) println("no getDanmakuKey script!")
-        else println(provider.getDanmakuKey("test", ScriptTest.jsEngine, testData.video!!).blockingSingle())
-    }
+        @Test
+        @ExperimentalCoroutinesApi
+        fun getDanmakuKey() = mainCoroutineRule.runBlockingTest {
+            if (provider.getDanmakuKey.isNullOrEmpty()) println("no getDanmakuKey script!")
+            else println(provider.getDanmakuKey("test", video!!))
+        }
 
-    @Test
-    fun getDanmaku() {
-        if (provider.getDanmaku.isNullOrEmpty()) println("no getDanmaku script!")
-        else println(
-            JsonUtil.toJson(
-                provider.getDanmaku(
-                    "test",
-                    ScriptTest.jsEngine,
-                    testData.video!!,
-                    testData.danmakuKey,
-                    0
-                ).blockingSingle()
-            )
-        )
-    }
+        @Test
+        @ExperimentalCoroutinesApi
+        fun getDanmaku() = mainCoroutineRule.runBlockingTest {
+            if (provider.getDanmaku.isNullOrEmpty()) println("no getDanmaku script!")
+            else println(JsonUtil.toJson(provider.getDanmaku("test", video!!, danmakuKey, 0)))
+        }
 
-    @Test
-    fun printProvider() {
-        println(JsonUtil.toJson(testData.info.also {
-            it.code = JsonUtil.toJson(ScriptTest.getProvider<VideoProvider>(it.site))
-        }))
+        @Test
+        fun printProvider() {
+            println(JsonUtil.toJson(info.also {
+                it.code = JsonUtil.toJson(ScriptTest.getProvider<VideoProvider>(it.site))
+            }))
+        }
     }
 
     @Test

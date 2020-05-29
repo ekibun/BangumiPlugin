@@ -144,6 +144,9 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             linePresenter.proxy.item_mask.visibility = maskVisibility
             linePresenter.proxy.app_bar.visibility = maskVisibility
         }
+        view.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob ->
+            if (l != ol || t != ot || r != or || b != ob) bookAdapter.updateTextSize(force = true)
+        }
         view.viewTreeObserver.addOnWindowFocusChangeListener {
             linePresenter.activityRef.get()?.window?.decorView?.systemUiVisibility =
                 if (linePresenter.proxy.subjectPresenter.subjectView.behavior.state != BottomSheetBehavior.STATE_HIDDEN)
@@ -302,34 +305,38 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
             return
         }
         layoutManager.reset()
-        linePresenter.subscribeOnUiThread(provider.getPages("getManga", App.app.jsEngine, ep), {
-            updatePage(it, isPrev)
-            updateProgress()
-            callback(true)
-        }, {
+        linePresenter.subscribe({
             Toast.makeText(App.app.plugin, it.message, Toast.LENGTH_LONG).show()
             updateProgress()
             callback(false)
-        }, key = "getManga")
+        }, key = "getManga") {
+            val pages = provider.getPages("getManga", ep)
+            updatePage(pages, isPrev)
+            updateProgress()
+            callback(true)
+        }
     }
 
     override fun downloadEp(episode: Episode, updateInfo: (String) -> Unit) {
         val ep = episode.book
-        val cache = EpisodeCacheModel.getEpisodeCache(episode, linePresenter.subject)
-        if (cache != null) {
-            DownloadService.download(
-                linePresenter.pluginContext,
-                episode,
-                linePresenter.proxy.subjectPresenter.subject,
-                cache
-            )
-            return
-        }
-        val provider =
-            LineProvider.getProvider(Provider.TYPE_BOOK, ep?.site ?: "")?.provider as? BookProvider
-        if (ep == null || provider == null) return
-        updateInfo("获取图片列表")
-        linePresenter.subscribeOnUiThread(provider.getPages("getManga_${ep.id}", App.app.jsEngine, ep), {
+        linePresenter.subscribe({
+            updateInfo("获取页面信息出错")
+        }, key = "getManga_${ep?.id}") {
+            val cache = EpisodeCacheModel.getEpisodeCache(episode, linePresenter.subject)
+            if (cache != null) {
+                DownloadService.download(
+                    linePresenter.pluginContext,
+                    episode,
+                    linePresenter.proxy.subjectPresenter.subject,
+                    cache
+                )
+                return@subscribe
+            }
+            val provider =
+                LineProvider.getProvider(Provider.TYPE_BOOK, ep?.site ?: "")?.provider as? BookProvider
+            if (ep == null || provider == null) return@subscribe
+            updateInfo("获取页面信息")
+            val pages = provider.getPages("getManga_${ep.id}", ep)
             updateInfo("创建下载请求")
             DownloadService.download(
                 linePresenter.pluginContext, episode, linePresenter.proxy.subjectPresenter.subject,
@@ -337,13 +344,11 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
                     episode, Provider.TYPE_BOOK,
                     JsonUtil.toJson(
                         EpisodeCache.BookCache(
-                            it, HashMap(), HashMap()
+                            pages, HashMap(), HashMap()
                         )
                     )
                 )
             )
-        }, {
-            updateInfo("获取图片列表出错")
-        }, key = "getManga_${ep.id}")
+        }
     }
 }

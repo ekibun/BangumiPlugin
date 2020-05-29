@@ -1,7 +1,7 @@
-var doc = Jsoup.parse(http.inflate(http.get(episode.url).body().bytes(), "gb2312"))
+var doc = Jsoup.parse(http.inflate(http.fetch(episode.url).body().bytes(), "gb2312"))
 var content = doc.selectFirst("#content");
 content.select("#contentdp").remove()
-var novel = http.html2text(content.html())
+var novel = content.wholeText()
 novel = novel.trim() && [{
     content: novel
 }] || [];

@@ -1,6 +1,6 @@
 var getDanmaku = async((page)=>{
     var url = "https://mfm.video.qq.com/danmu?timestamp="+(page*30)+"&target_id="+key;
-    var json = JSON.parse(http.get(url).body().string());
+    var json = JSON.parse(http.fetch(url).body().string());
     return json.comments.map(it=>{
         var contentStyle = it.content_style && JSON.parse(it.content_style);
         return {

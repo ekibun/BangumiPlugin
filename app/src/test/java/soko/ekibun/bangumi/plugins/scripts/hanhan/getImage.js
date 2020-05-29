@@ -1,4 +1,4 @@
-var doc = Jsoup.parse(http.get(page.image.url).body().string());
+var doc = Jsoup.parse(http.fetch(page.image.url).body().string());
 var server = doc.selectFirst("#hdDomain").attr("value").split("|")[0];
 var name = doc.selectFirst("#iBodyQ > img").attr("name")
 

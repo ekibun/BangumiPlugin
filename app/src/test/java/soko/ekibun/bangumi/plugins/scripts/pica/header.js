@@ -4,10 +4,14 @@ const PICA_HOST = "https://" + PICA_BASE_HOST;
 var url = PICA_HOST + "/auth/sign-in"
 var token = App.load("pica_token")
 if(!token) {
-    token = JSON.parse(http.post(url, headerBuild("post", url, {}), JSON.stringify({
-        email: "",
-        password: "",
-    }), "application/json; charset=UTF-8").body().string()).data.token;
+    token = JSON.parse(http.fetch(url, {
+        headers: headerBuild("post", url, {}),
+        body: JSON.stringify({
+            email: "",
+            password: "",
+        }),
+        contentType: "application/json; charset=UTF-8"
+    }).body().string()).data.token;
     App.dump("pica_token", token)
 }
 

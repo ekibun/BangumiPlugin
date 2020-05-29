@@ -1,4 +1,4 @@
-var doc = Jsoup.parse(http.get("https://www.177mh.net/colist_"+line.id+".html").body().string());
+var doc = Jsoup.parse(http.fetch("https://www.177mh.net/colist_"+line.id+".html").body().string());
 return doc.select(".ar_list_col li>a").toArray().map(it => {
     var sort = /(\d+)/.exec(it.text())
     return {

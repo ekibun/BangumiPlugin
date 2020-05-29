@@ -12,7 +12,6 @@ import soko.ekibun.bangumi.plugins.model.VideoModel
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 import soko.ekibun.bangumi.plugins.util.GlideUtil
-import soko.ekibun.bangumi.plugins.util.HttpUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import java.io.File
 
@@ -36,7 +35,7 @@ data class EpisodeCache(
         fun getProgressInfo(): String
         fun getProgress(): Float
 
-        fun download(update: () -> Unit): Boolean
+        suspend fun download(update: () -> Unit): Boolean
 
         fun remove()
     }
@@ -44,7 +43,7 @@ data class EpisodeCache(
     class VideoCache(
         val type: String,
         val streamKeys: List<StreamKey>,
-        val video: HttpUtil.HttpRequest,
+        val video: Provider.HttpRequest,
         var contentLength: Long = 0L,
         var bytesDownloaded: Long = 0L,
         var percentDownloaded: Float = 0f
@@ -60,7 +59,8 @@ data class EpisodeCache(
 
         override fun getProgress(): Float = percentDownloaded / 100f
 
-        override fun download(update: () -> Unit): Boolean {
+        @Suppress("BlockingMethodInNonBlockingContext")
+        override suspend fun download(update: () -> Unit): Boolean {
             var time = 0L
             createDownloader().download { contentLength, bytesDownloaded, percentDownloaded ->
                 this.contentLength = contentLength
@@ -98,7 +98,7 @@ data class EpisodeCache(
 
     class BookCache(
         val pages: List<BookProvider.PageInfo>,
-        val request: HashMap<Int, HttpUtil.HttpRequest>,
+        val request: HashMap<Int, Provider.HttpRequest>,
         val paths: HashMap<Int, String>
     ) : Cache {
         override fun isFinished(): Boolean = paths.size >= pages.size
@@ -107,7 +107,7 @@ data class EpisodeCache(
 
         override fun getProgress(): Float = paths.size * 1f / pages.size
 
-        override fun download(update: () -> Unit): Boolean {
+        override suspend fun download(update: () -> Unit): Boolean {
             pages.forEachIndexed { index, page ->
                 if (!page.content.isNullOrEmpty()) {
                     paths[index] = "content"
@@ -119,7 +119,7 @@ data class EpisodeCache(
                     Provider.TYPE_BOOK,
                     page.site ?: ""
                 )?.provider as? BookProvider)
-                    ?.getImage("download_${page.site}_${page.index}", App.app.jsEngine, page)?.blockingFirst()
+                    ?.getImage("download_${page.site}_${page.index}", page)
                 ?: return@forEachIndexed
                 request[index] = req
                 val header = req.header ?: HashMap()
