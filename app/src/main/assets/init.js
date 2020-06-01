@@ -6,6 +6,7 @@ var __TEST__ = !__pkg__.App.Companion.getInited();
 require("json-wrapper");
 var http = require("http");
 var App = require("app");
+var CryptoJS = require("crypto");
 
 /**
  * 输出wrapper

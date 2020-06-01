@@ -254,7 +254,7 @@ class BookLayoutManager(val context: Context, val updateContent: (View, BookLayo
             override fun onDoubleTap(e: MotionEvent) {
                 val oldScale = scale
                 scale = if (scale < 2f) 2f else 1f
-                scrollOnScale(e.x, e.y, oldScale)
+                view.post { scrollOnScale(e.x, e.y, oldScale) }
                 requestLayout()
             }
 

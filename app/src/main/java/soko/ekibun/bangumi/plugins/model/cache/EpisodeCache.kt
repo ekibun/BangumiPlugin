@@ -5,6 +5,7 @@ import android.text.format.Formatter
 import androidx.room.TypeConverter
 import com.bumptech.glide.load.model.GlideUrl
 import com.google.android.exoplayer2.offline.*
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.LineProvider
@@ -124,7 +125,11 @@ data class EpisodeCache(
                 request[index] = req
                 val header = req.header ?: HashMap()
                 val path = paths[index] ?: GlideUtil.with(App.app.host)?.downloadOnly()?.load(
-                    GlideUrl(req.url) { if (!header.containsKey("referer")) header.plus("referer" to req.url) else req.header }
+                    GlideUrl(req.url) {
+                        if (!header.containsKey("referer")) header.plus(
+                            "referer" to req.url.toHttpUrlOrNull().toString()
+                        ) else req.header
+                    }
                 )?.submit()?.get()?.absolutePath ?: return@forEachIndexed
                 paths[index] = path
                 update()

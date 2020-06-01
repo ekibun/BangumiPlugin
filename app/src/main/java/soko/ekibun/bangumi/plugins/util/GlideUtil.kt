@@ -18,6 +18,7 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.ImageViewTarget
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.provider.Provider
 
@@ -51,7 +52,7 @@ object GlideUtil {
         return request.asDrawable()
             .load(GlideUrl(req.url) {
                 when {
-                    !header.containsKey("referer") -> header.plus("referer" to req.url)
+                    !header.containsKey("referer") -> header.plus("referer" to req.url.toHttpUrlOrNull().toString())
                     header["referer"].isNullOrEmpty() -> header.minus("referer")
                     else -> header
                 }
