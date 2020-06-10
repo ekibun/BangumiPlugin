@@ -10,13 +10,14 @@ import java.lang.ref.WeakReference
 
 @Keep
 class Plugin : BasePlugin() {
-    val pluginList: Map<String, PluginPresenter.Builder> = mapOf(
+    private val pluginList: Map<String, PluginPresenter.Builder> = mapOf(
         "soko.ekibun.bangumi.ui.subject.SubjectActivity" to SubjectActivityPlugin(),
         "soko.ekibun.bangumi.ui.main.MainActivity" to MainActivityPlugin()
     )
 
     @Keep
     override fun setUpPlugins(activity: Activity, context: Context) {
+        super.setUpPlugins(activity, context)
         Log.v("plugin", activity.javaClass.name)
         App.init(activity.application, context)
         try {

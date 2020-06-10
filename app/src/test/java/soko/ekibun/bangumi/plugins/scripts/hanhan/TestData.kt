@@ -20,7 +20,7 @@ class TestData : BookScriptTest.BookTestData() {
         title = "机械依存系少女的麻烦日常",
         extra = ""
     )
-    override val episode = BookProvider.BookEpisode(
+    override val episode = Provider.ProviderEpisode(
         site = "hanhan",
         id = "/cool323156/1.html?s=8",
         sort = 1f,

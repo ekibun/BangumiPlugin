@@ -8,14 +8,15 @@ import soko.ekibun.bangumi.plugins.bean.Subject
 import soko.ekibun.bangumi.plugins.engine.JsEngine
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
+import soko.ekibun.bangumi.plugins.provider.music.MusicProvider
 import soko.ekibun.bangumi.plugins.provider.video.VideoProvider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 
 abstract class Provider(
-    @Code("全局", -2) val header: String? = null,
-    @Code("打开", -1) val open: String? = null,
-    @Code("搜索", 0) val search: String? = null
+    @Code("全局", -3) val header: String? = null,
+    @Code("打开", -2) val open: String? = null,
+    @Code("搜索", -1) val search: String? = null
 ) {
     suspend fun open(scriptKey: String, line: LineInfo): String {
         return JsEngine.makeScript(
@@ -28,6 +29,19 @@ abstract class Provider(
     suspend fun search(scriptKey: String, key: String): List<LineInfo> {
         return JsEngine.makeScript("var key = ${JsonUtil.toJson(key)};\n$search", header, scriptKey) {
             JsonUtil.toEntity<List<LineInfo>>(it) ?: ArrayList()
+        }
+    }
+
+    abstract class EpisodeProvider(
+        @Code("获取剧集列表", 0) val getEpisode: String? = "" // (line: LineInfo) -> List<BookEpisode>
+    ) : Provider() {
+        suspend fun getEpisode(
+            scriptKey: String,
+            line: LineInfo
+        ): List<ProviderEpisode> {
+            return JsEngine.makeScript("var line = ${JsonUtil.toJson(line)};\n$getEpisode", header, scriptKey) {
+                JsonUtil.toEntity<List<ProviderEpisode>>(it)!!
+            }
         }
     }
 
@@ -54,16 +68,19 @@ abstract class Provider(
     companion object {
         const val TYPE_VIDEO = "video"
         const val TYPE_BOOK = "book"
+        const val TYPE_MUSIC = "music"
 
         val providers: Map<String, Class<out Provider>> = mapOf(
             TYPE_VIDEO to VideoProvider::class.java,
-            TYPE_BOOK to BookProvider::class.java
+            TYPE_BOOK to BookProvider::class.java,
+            TYPE_MUSIC to MusicProvider::class.java
         )
 
         fun getProviderType(subject: Subject): String {
             return when (subject.type) {
                 Subject.TYPE_ANIME, Subject.TYPE_REAL -> TYPE_VIDEO
                 Subject.TYPE_BOOK -> TYPE_BOOK
+                Subject.TYPE_MUSIC -> TYPE_MUSIC
                 else -> ""
             }
         }
@@ -81,5 +98,14 @@ abstract class Provider(
         val url: String,
         val header: HashMap<String, String>? = null,
         val overrideExtension: String? = null
+    )
+
+    data class ProviderEpisode(
+        val site: String,
+        val id: String,
+        val sort: Float,
+        var category: String? = null,
+        val title: String,
+        val url: String
     )
 }

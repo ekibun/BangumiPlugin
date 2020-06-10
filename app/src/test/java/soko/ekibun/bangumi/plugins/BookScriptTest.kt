@@ -6,6 +6,7 @@ import org.junit.Rule
 import org.junit.Test
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
+import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import java.io.File
@@ -23,7 +24,7 @@ class BookScriptTest {
         abstract val info: ProviderInfo
         open val searchKey: String? = null
         open val lineInfo: LineInfo? = null
-        open val episode: BookProvider.BookEpisode? = null
+        open val episode: Provider.ProviderEpisode? = null
         open val page: BookProvider.PageInfo? = null
 
         val provider by lazy { ScriptTest.getProvider<BookProvider>(info.site) }

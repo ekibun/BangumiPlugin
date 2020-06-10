@@ -21,7 +21,7 @@ class DownloadService(val app: Context, val pluginContext: Context) : CoroutineS
     private val taskCollection = HashMap<String, Pair<EpisodeCache, Job>>()
 
     private fun getTaskKey(episode: Episode, subject: Subject): String {
-        return subject.prefKey + "_${episode.book?.id ?: episode.id}"
+        return subject.prefKey + "_${episode.provider?.id ?: episode.id}"
     }
 
     private fun getGroupSummary(status: Int): String {

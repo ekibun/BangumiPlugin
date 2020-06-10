@@ -1,26 +1,15 @@
 package soko.ekibun.bangumi.plugins.provider.book
 
 import soko.ekibun.bangumi.plugins.engine.JsEngine
-import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 
 class BookProvider(
-    search: String? = null,
     @Code("获取更新列表", 1) val getUpdate: String? = "",  // () -> List<AirInfo>
-    @Code("获取剧集列表", 2) val getEpisode: String? = "", // (line: LineInfo) -> List<BookEpisode>
-    @Code("获取页面信息", 3) val getPages: String? = "",   // (episode: BookEpisode) -> List<PageInfo>
-    @Code("获取图片", 4) val getImage: String? = ""        // (image: ImageInfo) -> HttpRequest
-) : Provider(search) {
-    suspend fun getEpisode(
-        scriptKey: String,
-        line: LineInfo
-    ): List<BookEpisode> {
-        return JsEngine.makeScript("var line = ${JsonUtil.toJson(line)};\n$getEpisode", header, scriptKey) {
-            JsonUtil.toEntity<List<BookEpisode>>(it)!!
-        }
-    }
+    @Code("获取页面信息", 2) val getPages: String? = "",   // (episode: BookEpisode) -> List<PageInfo>
+    @Code("获取图片", 3) val getImage: String? = ""        // (image: ImageInfo) -> HttpRequest
+) : Provider.EpisodeProvider() {
 
     suspend fun getUpdate(scriptKey: String): List<AirInfo> {
         return JsEngine.makeScript(
@@ -32,7 +21,7 @@ class BookProvider(
         }
     }
 
-    suspend fun getPages(scriptKey: String, episode: BookEpisode): List<PageInfo> {
+    suspend fun getPages(scriptKey: String, episode: ProviderEpisode): List<PageInfo> {
         return JsEngine.makeScript(
             "var episode = ${JsonUtil.toJson(episode)};\n$getPages",
             header,
@@ -56,20 +45,11 @@ class BookProvider(
         }
     }
 
-    data class BookEpisode(
-        val site: String,
-        val id: String,
-        val sort: Float,
-        var category: String? = null,
-        val title: String,
-        val url: String
-    )
-
     data class PageInfo(
         val site: String? = null,
         val image: HttpRequest? = null,
         val content: String? = null,
-        var ep: BookEpisode? = null,
+        var ep: ProviderEpisode? = null,
         var index: Int = 0
     )
 

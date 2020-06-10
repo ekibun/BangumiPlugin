@@ -90,9 +90,9 @@ class VideoModel(private val linePresenter: LinePresenter, private val onAction:
     }
 
     var reload = {}
-    fun play(request: Provider.HttpRequest, surface: SurfaceView, streamKeys: List<StreamKey>? = null) {
+    fun play(request: Provider.HttpRequest, surface: SurfaceView? = null, streamKeys: List<StreamKey>? = null) {
         reload = {
-            player.setVideoSurfaceView(surface)
+            if (surface != null) player.setVideoSurfaceView(surface)
             player.prepare(createMediaSource(request, streamKeys))
             player.playWhenReady = true
         }

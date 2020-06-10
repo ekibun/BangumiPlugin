@@ -6,12 +6,15 @@ import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import androidx.annotation.Keep
+import soko.ekibun.bangumi.plugins.model.ThemeModel
 
 @Keep
 abstract class BasePlugin : Service() {
 
     @Keep
-    abstract fun setUpPlugins(activity: Activity, context: Context)
+    open fun setUpPlugins(activity: Activity, context: Context) {
+        ThemeModel.classLoader = activity.classLoader
+    }
 
     override fun onBind(intent: Intent?): IBinder? {
         return null

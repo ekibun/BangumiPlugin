@@ -4,7 +4,6 @@ import soko.ekibun.bangumi.plugins.BookScriptTest
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
-import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 
 class TestData : BookScriptTest.BookTestData() {
     override val info = ProviderInfo(
@@ -20,7 +19,7 @@ class TestData : BookScriptTest.BookTestData() {
         title = "刺客守则",
         extra = ""
     )
-    override val episode = BookProvider.BookEpisode(
+    override val episode = Provider.ProviderEpisode(
         site = "mh177",
         id = "/201707/362631.html",
         sort = 1f,

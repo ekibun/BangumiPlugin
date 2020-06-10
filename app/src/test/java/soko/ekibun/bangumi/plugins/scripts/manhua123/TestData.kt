@@ -4,7 +4,6 @@ import soko.ekibun.bangumi.plugins.BookScriptTest
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
-import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 
 class TestData : BookScriptTest.BookTestData() {
     override val info = ProviderInfo(
@@ -20,7 +19,7 @@ class TestData : BookScriptTest.BookTestData() {
         title = "大室家摇曳百合外传",
         extra = ""
     )
-    override val episode = BookProvider.BookEpisode(
+    override val episode = Provider.ProviderEpisode(
         site = "manhua123",
         id = "/comic/28093/1451941.html",
         sort = 52f,

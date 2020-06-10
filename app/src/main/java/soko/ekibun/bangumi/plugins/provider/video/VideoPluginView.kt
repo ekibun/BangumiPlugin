@@ -30,6 +30,7 @@ import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
+import soko.ekibun.bangumi.plugins.model.ThemeModel
 import soko.ekibun.bangumi.plugins.model.VideoModel
 import soko.ekibun.bangumi.plugins.model.cache.EpisodeCache
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
@@ -593,6 +594,10 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
         }
 
         linePresenter.proxy.subjectPresenter.subjectView.onStateChangedListener = onStateChangedListener@{ state ->
+            linePresenter.activityRef.get()?.let {
+                if (state == BottomSheetBehavior.STATE_HIDDEN) ThemeModel.fullScreen(it.window)
+                else ThemeModel.updateNavigationTheme(it)
+            }
             if (!isLandscape) return@onStateChangedListener
             if (state == BottomSheetBehavior.STATE_COLLAPSED) doPlayPause(false)
             val maskVisibility = if (state == BottomSheetBehavior.STATE_HIDDEN) View.INVISIBLE else View.VISIBLE

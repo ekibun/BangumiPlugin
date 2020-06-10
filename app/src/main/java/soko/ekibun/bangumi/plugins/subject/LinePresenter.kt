@@ -22,6 +22,7 @@ import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.PluginPresenter
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
+import soko.ekibun.bangumi.plugins.bean.Subject
 import soko.ekibun.bangumi.plugins.model.EpisodeCacheModel
 import soko.ekibun.bangumi.plugins.model.LineInfoModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
@@ -30,7 +31,6 @@ import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.model.line.SubjectLine
 import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
-import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.ui.provider.ProviderActivity
 import soko.ekibun.bangumi.plugins.util.AppUtil
@@ -56,6 +56,8 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
     val pluginView: Provider.PluginView by lazy {
         Provider.providers[type]!!.newInstance().createPluginView(this)
     }
+
+    val typeUseBgmEp = arrayOf(Subject.TYPE_ANIME, Subject.TYPE_REAL)
 
     val epLayout = ReflectUtil.findViewById<LinearLayout>(proxy.subjectPresenter.subjectView.detail, "item_episodes")
 
@@ -131,6 +133,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
             epView, 2,
             ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         )
+        if (subject.type !in typeUseBgmEp) subject.eps = null
         subjectView.updateEpisode(subject)
         epView.btn_detail.setOnClickListener {
             EpisodeListDialog.showDialog(this)
@@ -138,7 +141,8 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
         proxy.subjectPresenter.subjectRefreshListener = { _ ->
             val newSubject = proxy.subjectPresenter.subject
             subject.type = newSubject.type
-            subject.eps = if (newSubject.eps?.size ?: 0 > 0) newSubject.eps else subject.eps
+            subject.eps =
+                if (subject.type in typeUseBgmEp && newSubject.eps?.size ?: 0 > 0) newSubject.eps else subject.eps
             subject.eps_count = newSubject.eps_count
             subject.ep_status = newSubject.ep_status
             subject.vol_count = newSubject.vol_count
@@ -181,7 +185,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
     }
 
     private fun showEpDialog(ep: Episode, v: View) {
-        if (ep.book == null) {
+        if (ep.provider == null) {
             proxy.subjectPresenter.showEpisodeDialog(ep.id)
             return
         }
@@ -192,7 +196,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
             val cats = episodeAdapter.data.mapNotNull { it.category }.distinct()
             when (menu.title) {
                 "看到" -> proxy.subjectPresenter.updateSubjectProgress(cats.indexOf(ep.category) + 1, ep.sort.toInt())
-                "打开" -> activityRef.get()?.let { ctx -> AppUtil.openBrowser(ctx, ep.book?.url ?: "") }
+                "打开" -> activityRef.get()?.let { ctx -> AppUtil.openBrowser(ctx, ep.provider?.url ?: "") }
             }
 
             false
@@ -305,7 +309,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
                 list.add(0, EpisodeAdapter.EpisodeSection(true, "已缓存"))
                 episodeDetailAdapter.setNewInstance(list)
                 epView.btn_detail.text = pluginContext.getString(R.string.parse_cache_eps, eps?.size ?: 0)
-            } else if (epInfo != provider) (provider?.provider as? BookProvider)?.let {
+            } else if (epInfo != provider) (provider?.provider as? Provider.EpisodeProvider)?.let {
                 emptyView.text = "加载中..."
                 episodeAdapter.setNewInstance(null)
                 epInfo = provider
@@ -315,12 +319,12 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
                     val eps = it.getEpisode("loadEps", defaultLine)
                     if (epInfo == provider) {
                         emptyView.text = "什么都没有哦"
-                        subject.eps = eps.map { bookEpisode ->
+                        subject.eps = eps.map { providerEpisode ->
                             Episode(
-                                type = if (bookEpisode.category.isNullOrEmpty()) Episode.TYPE_MAIN else Episode.TYPE_MUSIC,
-                                sort = bookEpisode.sort,
-                                category = bookEpisode.category,
-                                book = bookEpisode
+                                type = if (providerEpisode.category.isNullOrEmpty()) Episode.TYPE_MAIN else Episode.TYPE_MUSIC,
+                                sort = providerEpisode.sort,
+                                category = providerEpisode.category,
+                                provider = providerEpisode
                             )
                         }
                         episodeAdapter.setNewInstance(subject.eps?.toMutableList())
@@ -345,7 +349,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
             episodeAdapter.setNewInstance(null)
         }
 
-        (if (type == Provider.TYPE_BOOK || selectCache) episodeAdapter else subjectView.episodeAdapter).also { adapter ->
+        (if (type != Provider.TYPE_VIDEO || selectCache) episodeAdapter else subjectView.episodeAdapter).also { adapter ->
             if (epView.episode_list.adapter != adapter) epView.episode_list.adapter = adapter
         }
     }

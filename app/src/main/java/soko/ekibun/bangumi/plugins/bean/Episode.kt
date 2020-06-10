@@ -5,7 +5,7 @@ import androidx.annotation.IntDef
 import androidx.annotation.StringDef
 import androidx.annotation.StringRes
 import soko.ekibun.bangumi.plugins.R
-import soko.ekibun.bangumi.plugins.provider.book.BookProvider
+import soko.ekibun.bangumi.plugins.provider.Provider
 import java.text.DecimalFormat
 
 data class Episode(
@@ -17,11 +17,11 @@ data class Episode(
     @EpisodeStatus var status: String? = null,
     @ProgressType var progress: String? = null,
     var category: String? = null,
-    var book: BookProvider.BookEpisode? = null
+    var provider: Provider.ProviderEpisode? = null
 ) {
-    val displayName get() = book?.title ?: if (name_cn.isNullOrEmpty()) name else name_cn
+    val displayName get() = provider?.title ?: if (name_cn.isNullOrEmpty()) name else name_cn
     val isAir
-        get() = book != null || status == STATUS_AIR || progress == PROGRESS_WATCH || (category?.startsWith("Disc")
+        get() = provider != null || status == STATUS_AIR || progress == PROGRESS_WATCH || (category?.startsWith("Disc")
             ?: false)
 
     /**
@@ -89,7 +89,7 @@ data class Episode(
         }
 
         fun compareEpisode(a: Episode?, b: Episode?): Boolean {
-            return if (a?.book != null) a.book?.id == b?.book?.id else a?.id == b?.id || (a?.type == b?.type && a?.sort == b?.sort)
+            return if (a?.provider != null) a.provider?.id == b?.provider?.id else a?.id == b?.id || (a?.type == b?.type && a?.sort == b?.sort)
         }
     }
 }

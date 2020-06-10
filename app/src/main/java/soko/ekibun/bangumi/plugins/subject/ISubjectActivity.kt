@@ -51,6 +51,8 @@ interface ISubjectActivity {
 
             interface ICollapsibleAppBarHelper {
                 var onTitleClickListener: (Any) -> Unit
+
+                fun setTitle(title: String? = null, subTitle: String? = null, group: String? = null)
             }
         }
     }

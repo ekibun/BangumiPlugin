@@ -38,7 +38,7 @@ class BookAdapter(private val recyclerView: RecyclerView, data: MutableList<Page
         super.addData(position, wrapData(newData.toList()))
     }
 
-    private fun getEpTitle(ep: BookProvider.BookEpisode?): String {
+    private fun getEpTitle(ep: Provider.ProviderEpisode?): String {
         return "${ep?.category ?: ""} ${ep?.title}".trim()
     }
 
@@ -68,7 +68,7 @@ class BookAdapter(private val recyclerView: RecyclerView, data: MutableList<Page
         val site: String? = null,
         val image: Provider.HttpRequest? = null,
         val content: CharSequence? = null,
-        var ep: BookProvider.BookEpisode? = null,
+        var ep: Provider.ProviderEpisode? = null,
         var index: Int = 0,
         var rawInfo: BookProvider.PageInfo,
         var rawRange: IntRange? = null
@@ -169,7 +169,7 @@ class BookAdapter(private val recyclerView: RecyclerView, data: MutableList<Page
                 )
             }
         }
-        var lastEp: BookProvider.BookEpisode? = null
+        var lastEp: Provider.ProviderEpisode? = null
         var lastIndex = 0
         ret.forEachIndexed { index, page ->
             if (lastEp != page.ep) lastIndex = 0

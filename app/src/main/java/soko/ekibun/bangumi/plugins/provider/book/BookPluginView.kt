@@ -20,6 +20,7 @@ import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.model.EpisodeCacheModel
 import soko.ekibun.bangumi.plugins.model.LineProvider
+import soko.ekibun.bangumi.plugins.model.ThemeModel
 import soko.ekibun.bangumi.plugins.model.cache.EpisodeCache
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.service.DownloadService
@@ -103,14 +104,14 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
 
         view.btn_next.setOnClickListener {
             val visibleItem = bookAdapter.data.getOrNull(layoutManager.findFirstVisibleItemPosition())
-            val curIndex = linePresenter.episodeAdapter.data.indexOfFirst { it.book == visibleItem?.ep }
+            val curIndex = linePresenter.episodeAdapter.data.indexOfFirst { it.provider == visibleItem?.ep }
             linePresenter.episodeAdapter.data.getOrNull(curIndex + 1)?.let { ep -> loadEp(ep) } ?: {
                 Toast.makeText(App.app.plugin, "没有下一章了", Toast.LENGTH_LONG).show()
             }()
         }
         view.btn_prev.setOnClickListener {
             val visibleItem = bookAdapter.data.getOrNull(layoutManager.findFirstVisibleItemPosition())
-            val curIndex = linePresenter.episodeAdapter.data.indexOfFirst { it.book == visibleItem?.ep }
+            val curIndex = linePresenter.episodeAdapter.data.indexOfFirst { it.provider == visibleItem?.ep }
             linePresenter.episodeAdapter.data.getOrNull(curIndex - 1)?.let { ep -> loadEp(ep) } ?: {
                 Toast.makeText(App.app.plugin, "没有上一章了", Toast.LENGTH_LONG).show()
             }()
@@ -139,6 +140,10 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
         }
 
         linePresenter.proxy.subjectPresenter.subjectView.onStateChangedListener = { state ->
+            linePresenter.activityRef.get()?.let {
+                if (state == BottomSheetBehavior.STATE_HIDDEN) ThemeModel.fullScreen(it.window)
+                else ThemeModel.updateNavigationTheme(it)
+            }
             val maskVisibility = if (state == BottomSheetBehavior.STATE_HIDDEN) View.INVISIBLE else View.VISIBLE
             linePresenter.proxy.item_mask.visibility = maskVisibility
             linePresenter.proxy.app_bar.visibility = maskVisibility
@@ -233,7 +238,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
         view.item_pull_layout.listener = object : PullLoadLayout.PullLoadListener {
             override fun onRefresh() {
                 val curIndex =
-                    linePresenter.episodeAdapter.data.indexOfFirst { it.book == bookAdapter.data.firstOrNull()?.ep }
+                    linePresenter.episodeAdapter.data.indexOfFirst { it.provider == bookAdapter.data.firstOrNull()?.ep }
                 linePresenter.episodeAdapter.data.getOrNull(curIndex - 1)?.let { ep ->
                     loadEp(ep, true) { view.item_pull_layout.response(it) }
                 } ?: view.item_pull_layout.response(false)
@@ -241,7 +246,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
 
             override fun onLoad() {
                 val curIndex =
-                    linePresenter.episodeAdapter.data.indexOfFirst { it.book == bookAdapter.data.lastOrNull()?.ep }
+                    linePresenter.episodeAdapter.data.indexOfFirst { it.provider == bookAdapter.data.lastOrNull()?.ep }
                 linePresenter.episodeAdapter.data.getOrNull(curIndex + 1)?.let { ep ->
                     loadEp(ep, false) { view.item_pull_layout.response(it) }
                 } ?: view.item_pull_layout.response(false)
@@ -284,7 +289,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
     }
 
     fun loadEp(episode: Episode, isPrev: Boolean, callback: (Boolean) -> Unit) {
-        val ep = episode.book
+        val ep = episode.provider
         val cache = EpisodeCacheModel.getEpisodeCache(
             episode,
             linePresenter.subject
@@ -319,7 +324,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
     }
 
     override fun downloadEp(episode: Episode, updateInfo: (String) -> Unit) {
-        val ep = episode.book
+        val ep = episode.provider
         linePresenter.subscribe({
             updateInfo("获取页面信息出错")
         }, key = "getManga_${ep?.id}") {
