@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable
 import kotlinx.android.synthetic.main.item_pull_load.view.*
 import soko.ekibun.bangumi.plugins.R
+import soko.ekibun.bangumi.plugins.ui.view.book.layout.PageLayoutManager
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 import kotlin.math.sign
 
@@ -36,6 +37,8 @@ class PullLoadLayout constructor(context: Context, attrs: AttributeSet) : ViewGr
 
     val isHorizontal get() = ((contentView as RecyclerView).layoutManager as LinearLayoutManager).orientation == RecyclerView.HORIZONTAL
 
+    val isRtl get() = ((contentView as RecyclerView).layoutManager as? PageLayoutManager)?.rtl ?: false
+
     val contentView by lazy { getChildAt(0) }
 
     val loadView by lazy {
@@ -59,7 +62,7 @@ class PullLoadLayout constructor(context: Context, attrs: AttributeSet) : ViewGr
         loadView.item_hint.text = hint ?: when {
             loading -> "加载中..."
             Math.abs(offset) > triggerDistance -> "释放加载"
-            offset > 0 -> "加载上一章"
+            offset * (if (isRtl) -1 else 1) > 0 -> "加载上一章"
             else -> "加载下一章"
         }
         progressDrawable.arrowEnabled = !loading
@@ -146,7 +149,7 @@ class PullLoadLayout constructor(context: Context, attrs: AttributeSet) : ViewGr
                     loading = true
                     startAnimate()
                     updateProgress()
-                    if (offset > 0) listener?.onRefresh() else listener?.onLoad()
+                    if (offset * (if (isRtl) -1 else 1) > 0) listener?.onRefresh() else listener?.onLoad()
                 } else startAnimate()
             }
         }

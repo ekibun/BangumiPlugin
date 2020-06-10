@@ -1,0 +1,88 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "7104d9453dd44675da2e591ad3edb7b1",
+    "entities": [
+      {
+        "tableName": "SubjectCache",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`episodeList` TEXT NOT NULL, `id` INTEGER NOT NULL, `type` TEXT NOT NULL, `name` TEXT, `name_cn` TEXT, `image` TEXT, `eps_count` INTEGER NOT NULL, `vol_count` INTEGER NOT NULL, `ep_status` INTEGER NOT NULL, `vol_status` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "episodeList",
+            "columnName": "episodeList",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "subject.id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "subject.type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "subject.name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "subject.name_cn",
+            "columnName": "name_cn",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "subject.image",
+            "columnName": "image",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "subject.eps_count",
+            "columnName": "eps_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "subject.vol_count",
+            "columnName": "vol_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "subject.ep_status",
+            "columnName": "ep_status",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "subject.vol_status",
+            "columnName": "vol_status",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "id"
+          ],
+          "autoGenerate": false
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7104d9453dd44675da2e591ad3edb7b1')"
+    ]
+  }
+}

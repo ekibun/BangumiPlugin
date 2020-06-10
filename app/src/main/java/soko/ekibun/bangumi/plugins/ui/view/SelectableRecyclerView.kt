@@ -21,7 +21,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.chad.library.adapter.base.BaseQuickAdapter
 import soko.ekibun.bangumi.plugins.App
 import soko.ekibun.bangumi.plugins.R
-import soko.ekibun.bangumi.plugins.ui.view.book.BookLayoutManager
+import soko.ekibun.bangumi.plugins.ui.view.book.ScalableLayoutManager
 import soko.ekibun.bangumi.plugins.ui.view.book.SelectableActionMode
 import soko.ekibun.bangumi.plugins.util.AppUtil
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
@@ -30,7 +30,7 @@ import kotlin.math.roundToInt
 class SelectableRecyclerView constructor(context: Context, attrs: AttributeSet) : RecyclerView(context, attrs) {
     val bookAdapter get() = adapter as BaseQuickAdapter<*, *>
     val textSelectionAdapter get() = adapter as TextSelectionAdapter
-    val bookLayoutManager get() = layoutManager as BookLayoutManager
+    val bookLayoutManager get() = layoutManager as ScalableLayoutManager
 
     var actionMode: ActionMode? = null
 
@@ -162,7 +162,7 @@ class SelectableRecyclerView constructor(context: Context, attrs: AttributeSet) 
         if (!isActive) return super.onTouchEvent(e)
         when (e.actionMasked) {
             MotionEvent.ACTION_MOVE -> {
-                if ((layoutManager as? BookLayoutManager)?.orientation != LinearLayoutManager.VERTICAL
+                if ((layoutManager as? ScalableLayoutManager)?.orientation != LinearLayoutManager.VERTICAL
                     || (!inTopSpot && !inBottomSpot)
                 ) //更新滑动选择区域
                     updateSelectedRange(e.x, e.y)

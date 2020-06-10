@@ -16,14 +16,14 @@ import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.ui.view.SelectableRecyclerView
-import soko.ekibun.bangumi.plugins.ui.view.book.BookLayoutManager
 import soko.ekibun.bangumi.plugins.ui.view.book.LetterSpacingSpan
+import soko.ekibun.bangumi.plugins.ui.view.book.ScalableLayoutManager
 import soko.ekibun.bangumi.plugins.util.GlideUtil
 import soko.ekibun.bangumi.plugins.util.ResourceUtil
 
 class BookAdapter(private val recyclerView: RecyclerView, data: MutableList<PageInfo>? = null) :
     BaseQuickAdapter<BookAdapter.PageInfo, BaseViewHolder>(R.layout.item_page, data),
-    BookLayoutManager.ScalableAdapter, SelectableRecyclerView.TextSelectionAdapter {
+    ScalableLayoutManager.ScalableAdapter, SelectableRecyclerView.TextSelectionAdapter {
     val requests = HashMap<BookProvider.PageInfo, Provider.HttpRequest>()
 
     private val referHolder by lazy { createViewHolder(recyclerView, 0) }
@@ -262,10 +262,6 @@ class BookAdapter(private val recyclerView: RecyclerView, data: MutableList<Page
         })
     }
 
-    override fun isItemScalable(pos: Int, layoutManager: LinearLayoutManager): Boolean {
-        return layoutManager.findViewByPosition(pos)?.content_container?.visibility != View.VISIBLE
-    }
-
     private val posContent = IntArray(2)
     override fun drawSelection(c: Canvas, view: View, start: Int?, end: Int?, paint: Paint) {
         if (view.content_container.visibility != View.VISIBLE) return
@@ -343,5 +339,18 @@ class BookAdapter(private val recyclerView: RecyclerView, data: MutableList<Page
         }
         str.append(lastRaw?.content?.substring(lastStart, lastEnd))
         return str.toString()
+    }
+
+    override fun isItemScalable(pos: Int, layoutManager: ScalableLayoutManager): Boolean {
+        return layoutManager.findViewByPosition(pos)?.content_container?.visibility != View.VISIBLE
+    }
+
+    override fun updateContent(view: View, layoutManager: ScalableLayoutManager) {
+        view.content_container?.let {
+            if (it.visibility != View.VISIBLE) return@let
+            it.layoutParams.width = layoutManager.recyclerView.width
+            it.translationX = layoutManager.offsetX.toFloat()
+        }
+        view.item_loading?.translationX = layoutManager.offsetX + layoutManager.width * (1 - layoutManager.scale) / 2
     }
 }

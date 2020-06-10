@@ -25,22 +25,21 @@ import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.service.DownloadService
 import soko.ekibun.bangumi.plugins.subject.LinePresenter
 import soko.ekibun.bangumi.plugins.ui.view.PullLoadLayout
-import soko.ekibun.bangumi.plugins.ui.view.book.BookLayoutManager
 import soko.ekibun.bangumi.plugins.ui.view.book.GestureTouchListener
+import soko.ekibun.bangumi.plugins.ui.view.book.ScalableLayoutManager
+import soko.ekibun.bangumi.plugins.ui.view.book.layout.PageLayoutManager
+import soko.ekibun.bangumi.plugins.ui.view.book.layout.RollLayoutManager
 import soko.ekibun.bangumi.plugins.util.AppUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 
 class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_book) {
 
-    val layoutManager =
-        BookLayoutManager(linePresenter.pluginContext) { child, lm ->
-            child.content_container?.let {
-                if (it.visibility != View.VISIBLE) return@let
-                it.layoutParams.width = lm.recyclerView.width
-                it.translationX = lm.offsetX.toFloat()
-            }
-            child.item_loading?.translationX = lm.offsetX + lm.width * (1 - lm.scale) / 2
-        }
+    val bookLayoutManagers = listOf(
+        RollLayoutManager(view.item_manga, linePresenter.pluginContext),
+        PageLayoutManager(view.item_manga, linePresenter.pluginContext, rtl = false),
+        PageLayoutManager(view.item_manga, linePresenter.pluginContext, rtl = true)
+    )
+    val layoutManager get() = view.item_manga.layoutManager as ScalableLayoutManager
     val bookAdapter = BookAdapter(view.item_manga)
 
     companion object {
@@ -52,18 +51,18 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
     val sp = PreferenceManager.getDefaultSharedPreferences(App.app.plugin)
     private fun updateConfigAndProgress() {
         val direction = sp.getInt("plugin_book_direction", RecyclerView.VERTICAL)
-        view.btn_direction.text = if (direction == RecyclerView.VERTICAL) "纵向" else "横向"
-        if (layoutManager.orientation != direction) {
+        view.btn_direction.text = arrayOf("卷轴", "普通", "日漫").getOrNull(direction) ?: "卷轴"
+        if (bookLayoutManagers.indexOf(layoutManager) != direction) {
             val curIndex = layoutManager.findFirstVisibleItemPosition()
             val curOffset = layoutManager.findViewByPosition(curIndex)?.let { layoutManager.getDecoratedTop(it) } ?: 0
-            layoutManager.orientation = direction
-            bookAdapter.notifyDataSetChanged()
+            view.item_manga.layoutManager = bookLayoutManagers.getOrNull(direction) ?: layoutManager
+            view.item_manga.adapter = bookAdapter
             layoutManager.scrollToPositionWithOffset(curIndex, curOffset)
         }
         view.btn_direction.setOnClickListener {
             sp.edit().putInt(
                 "plugin_book_direction",
-                if (direction == RecyclerView.VERTICAL) RecyclerView.HORIZONTAL else RecyclerView.VERTICAL
+                (direction + 1) % bookLayoutManagers.size
             ).apply()
             updateConfigAndProgress()
         }
@@ -170,6 +169,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
 
             override fun onSingleTapConfirmed(e: MotionEvent) {
                 if (view.item_manga.clearSelect()) return
+                val layoutManager = layoutManager
                 if (layoutManager.orientation == LinearLayoutManager.VERTICAL) {
                     val h = view.item_manga.height
                     when {
@@ -177,7 +177,7 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
                         h - e.y < h * tapScrollRange -> view.item_manga.smoothScrollBy(0, (h * tapScrollRatio).toInt())
                         else -> showControl(true)
                     }
-                } else {
+                } else if (layoutManager is PageLayoutManager) {
                     val w = view.item_manga.width
                     when {
                         e.x < w * tapScrollRange -> layoutManager.snapToTarget(layoutManager.currentPos.toInt() - 1)
@@ -212,7 +212,8 @@ class BookPluginView(val linePresenter: LinePresenter) : Provider.PluginView(lin
                 dialog.show()
             }
         })
-        layoutManager.setupWithRecyclerView(view.item_manga, touchListener)
+        view.item_manga.layoutManager = bookLayoutManagers[0]
+        ScalableLayoutManager.setupWithRecyclerView(view.item_manga, touchListener)
         linePresenter.proxy.subjectPresenter.subjectView.let {
             it.behavior.isHideable = true
             it.behavior.state = BottomSheetBehavior.STATE_COLLAPSED
