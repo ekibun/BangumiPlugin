@@ -6,6 +6,7 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import androidx.core.view.GestureDetectorCompat
+import androidx.recyclerview.widget.RecyclerView
 import soko.ekibun.bangumi.plugins.App
 
 class GestureTouchListener : View.OnTouchListener {
@@ -50,8 +51,14 @@ class GestureTouchListener : View.OnTouchListener {
         open fun onTouch(e: MotionEvent) {}
     }
 
+    var tapOnScroll = false
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(v: View, event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            tapOnScroll = (v as? RecyclerView)?.scrollState != RecyclerView.SCROLL_STATE_IDLE
+        }
+        if (tapOnScroll) return false
         listeners.forEach { it.onTouch(event) }
         scaleGestureDetector.onTouchEvent(event)
         gestureDetector.onTouchEvent(event)

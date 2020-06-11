@@ -54,7 +54,7 @@ class BookAdapter(private val recyclerView: RecyclerView, data: MutableList<Page
         val currentPageInfo = data.getOrNull(currentIndex)
         val currentInfo = currentPageInfo?.rawInfo
         val currentInfoPos = currentPageInfo?.rawRange?.first ?: 0
-        setNewInstance(wrapData(data.map { it.rawInfo }.distinct()).toMutableList())
+        setNewInstance(wrapData(data.map { it.rawInfo }.distinct().filter { it.ep == currentInfo?.ep }).toMutableList())
         currentInfo?.let { current ->
             (recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(
                 data.indexOfFirst {

@@ -94,14 +94,14 @@ class BookScriptTest {
     }
 
     val scriptList = arrayOf(
-        soko.ekibun.bangumi.plugins.scripts.dmzj.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.hanhan.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.mangabz.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.manhua123.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.manhuabei.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.manhuagui.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.mh177.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.pica.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.wenku8.TestData()
+        soko.ekibun.bangumi.plugins.scripts.book.dmzj.TestData(),
+        soko.ekibun.bangumi.plugins.scripts.book.hanhan.TestData(),
+        soko.ekibun.bangumi.plugins.scripts.book.mangabz.TestData(),
+        soko.ekibun.bangumi.plugins.scripts.book.manhua123.TestData(),
+        soko.ekibun.bangumi.plugins.scripts.book.manhuabei.TestData(),
+        soko.ekibun.bangumi.plugins.scripts.book.manhuagui.TestData(),
+        soko.ekibun.bangumi.plugins.scripts.book.mh177.TestData(),
+        soko.ekibun.bangumi.plugins.scripts.book.pica.TestData(),
+        soko.ekibun.bangumi.plugins.scripts.book.wenku8.TestData()
     )
 }
