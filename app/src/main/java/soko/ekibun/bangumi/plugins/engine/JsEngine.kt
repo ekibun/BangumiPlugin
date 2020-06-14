@@ -17,23 +17,21 @@ import java.util.concurrent.ConcurrentHashMap
 object JsEngine {
     private val webviewList = ConcurrentHashMap<String, BackgroundWebView>()
 
-    private val sealedSharedScope by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+    private val scopeMap = ConcurrentHashMap<Thread, ScriptableObject>()
+
+    private val polyfillScript by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         val context = Context.getCurrentContext()
-        val polyfillScript = context.compileReader(
+        context.compileReader(
             AssetAndUrlModuleSourceProvider.getAssetInputStream("polyfill.min.js"),
             "<polyfill>", 1, null
         )
-        val globalMethods = context.compileReader(
+    }
+    private val globalMethods by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        val context = Context.getCurrentContext()
+        context.compileReader(
             AssetAndUrlModuleSourceProvider.getAssetInputStream("init.js"),
             "<init>", 1, null
         )
-        val sharedScope = context.initStandardObjects()
-        ScriptableObject.putConstProperty(sharedScope, "__webview_list__", webviewList)
-        initRequireBuilder(context, sharedScope)
-        polyfillScript.exec(context, sharedScope)
-        globalMethods.exec(context, sharedScope)
-        sharedScope.sealObject()
-        sharedScope
     }
 
     private fun initRequireBuilder(context: Context, scope: Scriptable) {
@@ -51,6 +49,15 @@ object JsEngine {
                 it.wrapFactory.isJavaPrimitiveWrap = false
                 it.optimizationLevel = -1
             }
+            val sealedSharedScope = scopeMap.getOrPut(Thread.currentThread()) {
+                val sharedScope = context.initStandardObjects()
+                ScriptableObject.putConstProperty(sharedScope, "__webview_list__", webviewList)
+                initRequireBuilder(context, sharedScope)
+                polyfillScript.exec(context, sharedScope)
+                globalMethods.exec(context, sharedScope)
+                sharedScope.sealObject()
+                sharedScope
+            }
             val scope = context.newObject(sealedSharedScope)
             scope.prototype = sealedSharedScope
             scope.parentScope = null
@@ -64,7 +71,7 @@ object JsEngine {
             ).toString()
         } finally {
             webviewList.remove(key)?.finish()
-            Context.exit()
+//            Context.exit()
         }
     }
 
