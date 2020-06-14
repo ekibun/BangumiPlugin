@@ -2,8 +2,11 @@ package soko.ekibun.bangumi.plugins.provider.music
 
 import android.view.View
 import android.widget.SeekBar
+import com.google.android.exoplayer2.Player
 import kotlinx.android.synthetic.main.plugin_music.view.*
 import soko.ekibun.bangumi.plugins.R
+import soko.ekibun.bangumi.plugins.model.VideoModel
+import soko.ekibun.bangumi.plugins.service.MusicService
 import soko.ekibun.bangumi.plugins.ui.view.controller.Controller
 import kotlin.jvm.internal.Intrinsics
 
@@ -27,6 +30,13 @@ class MusicController(view: View, onActionListener: OnActionListener) {
 
     fun updateLoading(loading: Boolean) {}
 
+    fun updateRepeat(res: Int) {
+        MusicService.updateNotification()
+        ctrView.ctr_repeat.setImageResource(res)
+        VideoModel.player.repeatMode =
+            if (res == R.drawable.ic_repeat_one) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+    }
+
     fun updateProgress(posLong: Long, skip: Boolean = false) {
         if (!doSkip || skip) {
             position = Math.max(0, (posLong / 10).toInt())
@@ -34,7 +44,7 @@ class MusicController(view: View, onActionListener: OnActionListener) {
         }
     }
 
-    fun updateProgress(pos: Int, dur: Int, buf: Int) {
+    private fun updateProgress(pos: Int, dur: Int, buf: Int) {
         if (Thread.currentThread() != ctrView.context.mainLooper.thread) {
             ctrView.post { updateProgress(pos, dur, buf) }
             return
@@ -51,6 +61,7 @@ class MusicController(view: View, onActionListener: OnActionListener) {
             ctrView.post { updatePauseResume(isPlaying) }
             return
         }
+        MusicService.updateNotification()
         ctrView.ctr_pause.setImageResource(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play)
     }
 

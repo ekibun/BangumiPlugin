@@ -35,7 +35,7 @@ class PullLoadLayout constructor(context: Context, attrs: AttributeSet) : ViewGr
 
     val touchSlop = ResourceUtil.dip2px(context, 1f)
 
-    val isHorizontal get() = ((contentView as RecyclerView).layoutManager as LinearLayoutManager).orientation == RecyclerView.HORIZONTAL
+    val isHorizontal get() = ((contentView as? RecyclerView)?.layoutManager as? LinearLayoutManager)?.orientation == RecyclerView.HORIZONTAL
 
     val isRtl get() = ((contentView as RecyclerView).layoutManager as? PageLayoutManager)?.rtl ?: false
 

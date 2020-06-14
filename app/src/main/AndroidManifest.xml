@@ -7,16 +7,22 @@
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
     <application
             android:allowBackup="true"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:networkSecurityConfig="@xml/network_security_config"
+            android:process="soko.ekibun.bangumi"
             android:roundIcon="@mipmap/ic_launcher_round"
             android:supportsRtl="true"
             android:theme="@style/AppTheme"
             tools:ignore="AllowBackup,GoogleAppIndexingWarning,UnusedAttribute">
+        <service android:name=".service.MusicService">
+        </service>
+        <service android:name=".service.DownloadService">
+        </service>
         <service
                 android:name=".Plugin"
                 android:exported="true"
@@ -25,8 +31,10 @@
                 <action android:name="soko.ekibun.bangumi.plugins"/>
             </intent-filter>
         </service>
+
         <activity
                 android:name=".ui.provider.ProviderActivity"
                 android:label="@string/provide_activity_label"/>
     </application>
+
 </manifest>

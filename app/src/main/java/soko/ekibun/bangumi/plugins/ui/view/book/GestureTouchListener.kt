@@ -58,6 +58,7 @@ class GestureTouchListener : View.OnTouchListener {
         if (event.actionMasked == MotionEvent.ACTION_DOWN) {
             tapOnScroll = (v as? RecyclerView)?.scrollState != RecyclerView.SCROLL_STATE_IDLE
         }
+        if (event.pointerCount > 1) tapOnScroll = false
         if (tapOnScroll) return false
         listeners.forEach { it.onTouch(event) }
         scaleGestureDetector.onTouchEvent(event)

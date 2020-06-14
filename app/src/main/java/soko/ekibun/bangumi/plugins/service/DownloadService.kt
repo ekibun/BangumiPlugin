@@ -2,9 +2,10 @@ package soko.ekibun.bangumi.plugins.service
 
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.ComponentName
+import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.IBinder
 import android.util.Log
 import kotlinx.coroutines.*
 import soko.ekibun.bangumi.plugins.R
@@ -16,8 +17,8 @@ import soko.ekibun.bangumi.plugins.util.AppUtil
 import soko.ekibun.bangumi.plugins.util.JsonUtil
 import soko.ekibun.bangumi.plugins.util.NotificationUtil
 
-class DownloadService(val app: Context, val pluginContext: Context) : CoroutineScope by MainScope() {
-    private val manager = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+class DownloadService : Service(), CoroutineScope by MainScope() {
+    private val manager by lazy { this.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager }
     private val taskCollection = HashMap<String, Pair<EpisodeCache, Job>>()
 
     private fun getTaskKey(episode: Episode, subject: Subject): String {
@@ -27,7 +28,7 @@ class DownloadService(val app: Context, val pluginContext: Context) : CoroutineS
     private fun getGroupSummary(status: Int): String {
         val groupKey = "download"
         manager.notify(
-            0, NotificationUtil.builder(app, downloadChannelId, "下载")
+            0, NotificationUtil.builder(this, downloadChannelId, "下载")
                 .setSmallIcon(
                     when (status) {
                         0 -> R.drawable.offline_pin
@@ -44,10 +45,20 @@ class DownloadService(val app: Context, val pluginContext: Context) : CoroutineS
         return groupKey
     }
 
-    fun onStartCommand(intent: Intent?, flags: Int, startId: Int) {
-        val request = intent ?: return
-        val episode = JsonUtil.toEntity<Episode>(request.getStringExtra(EXTRA_EPISODE) ?: "") ?: return
-        val subject = JsonUtil.toEntity<Subject>(request.getStringExtra(EXTRA_SUBJECT) ?: "") ?: return
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val request = intent ?: return super.onStartCommand(intent, flags, startId)
+        val episode =
+            JsonUtil.toEntity<Episode>(request.getStringExtra(EXTRA_EPISODE) ?: "") ?: return super.onStartCommand(
+                intent,
+                flags,
+                startId
+            )
+        val subject =
+            JsonUtil.toEntity<Subject>(request.getStringExtra(EXTRA_SUBJECT) ?: "") ?: return super.onStartCommand(
+                intent,
+                flags,
+                startId
+            )
         val taskKey = getTaskKey(episode, subject)
         when (request.action) {
             ACTION_DOWNLOAD -> {
@@ -57,21 +68,22 @@ class DownloadService(val app: Context, val pluginContext: Context) : CoroutineS
                     task.second.cancel()
                     sendBroadcast(episode, subject, task.first, false)
                     val pIntent = PendingIntent.getActivity(
-                        app, taskKey.hashCode(),
+                        this, taskKey.hashCode(),
                         AppUtil.parseSubjectActivityIntent(subject), PendingIntent.FLAG_UPDATE_CURRENT
                     )
                     manager.notify(
-                        taskKey, 0, NotificationUtil.builder(app, downloadChannelId, "下载")
+                        taskKey, 0, NotificationUtil.builder(this, downloadChannelId, "下载")
                             .setSmallIcon(R.drawable.ic_pause)
                             .setOngoing(false)
                             .setAutoCancel(true)
                             .setGroup(this@DownloadService.getGroupSummary(-1))
-                            .setContentTitle("已暂停 ${subject.name} ${episode.parseSort(pluginContext)}")
+                            .setContentTitle("已暂停 ${subject.name} ${episode.parseSort(this)}")
                             .setContentText(task.first.cache()?.getProgressInfo() ?: "")
                             .setContentIntent(pIntent).build()
                     )
                 } else {
-                    val cache = JsonUtil.toEntity<EpisodeCache>(request.getStringExtra(EXTRA_CACHE) ?: "") ?: return
+                    val cache = JsonUtil.toEntity<EpisodeCache>(request.getStringExtra(EXTRA_CACHE) ?: "")
+                        ?: return super.onStartCommand(intent, flags, startId)
                     taskCollection[taskKey] =
                         cache to launch {
                             try {
@@ -82,20 +94,23 @@ class DownloadService(val app: Context, val pluginContext: Context) : CoroutineS
 
                                     sendBroadcast(episode, subject, epCache, true)
                                     val pIntent = PendingIntent.getActivity(
-                                        app, taskKey.hashCode(),
+                                        this@DownloadService, taskKey.hashCode(),
                                         AppUtil.parseSubjectActivityIntent(subject), PendingIntent.FLAG_UPDATE_CURRENT
                                     )
-                                    manager.notify(taskKey, 0, NotificationUtil.builder(app, downloadChannelId, "下载")
-                                    .setSmallIcon(if (isFinished) R.drawable.offline_pin else android.R.drawable.stat_sys_download)
-                                    .setOngoing(!isFinished)
-                                    .setAutoCancel(true)
-                                    .setGroup(this@DownloadService.getGroupSummary(status))
-                                    .setContentTitle(
-                                        (if (isFinished) "已完成 " else "") + "${subject.name} ${episode.parseSort(
-                                            pluginContext
-                                        )}"
-                                    )
-                                        .setContentText(epCache.cache()?.getProgressInfo() ?: "")
+                                    manager.notify(
+                                        taskKey,
+                                        0,
+                                        NotificationUtil.builder(this@DownloadService, downloadChannelId, "下载")
+                                            .setSmallIcon(if (isFinished) R.drawable.offline_pin else android.R.drawable.stat_sys_download)
+                                            .setOngoing(!isFinished)
+                                            .setAutoCancel(true)
+                                            .setGroup(this@DownloadService.getGroupSummary(status))
+                                            .setContentTitle(
+                                                (if (isFinished) "已完成 " else "") + "${subject.name} ${episode.parseSort(
+                                                    this@DownloadService
+                                                )}"
+                                            )
+                                            .setContentText(epCache.cache()?.getProgressInfo() ?: "")
                                         .also {
                                             if (!isFinished) it.setProgress(
                                                 10000,
@@ -129,6 +144,11 @@ class DownloadService(val app: Context, val pluginContext: Context) : CoroutineS
                 }
             }
         }
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    override fun onBind(intent: Intent?): IBinder? {
+        return null
     }
 
     private fun sendBroadcast(episode: Episode, subject: Subject, cache: EpisodeCache?, downloading: Boolean) {
@@ -136,7 +156,7 @@ class DownloadService(val app: Context, val pluginContext: Context) : CoroutineS
         broadcastIntent.putExtra(EXTRA_EPISODE, JsonUtil.toJson(episode))
         cache?.let { broadcastIntent.putExtra(EXTRA_CACHE, JsonUtil.toJson(cache)) }
         broadcastIntent.putExtra(EXTRA_DOWNLOADING, downloading)
-        app.sendBroadcast(broadcastIntent)
+        this.sendBroadcast(broadcastIntent)
     }
 
     private suspend fun createDownloadTask(cache: EpisodeCache, onUpdate: suspend (EpisodeCache) -> Unit) {
@@ -177,11 +197,8 @@ class DownloadService(val app: Context, val pluginContext: Context) : CoroutineS
             return "soko.ekibun.bangumi.plugin.download.${subject.prefKey}"
         }
 
-        val serviceComp = ComponentName("soko.ekibun.bangumi", "soko.ekibun.bangumi.RemoteService")
-
         fun download(context: Context, episode: Episode, subject: Subject, cache: EpisodeCache) {
-            val intent = Intent()
-            intent.component = serviceComp
+            val intent = Intent(context, DownloadService::class.java)
             intent.action = ACTION_DOWNLOAD
             intent.putExtra(EXTRA_SUBJECT, JsonUtil.toJson(subject))
             intent.putExtra(EXTRA_EPISODE, JsonUtil.toJson(episode))
@@ -190,8 +207,7 @@ class DownloadService(val app: Context, val pluginContext: Context) : CoroutineS
         }
 
         fun remove(context: Context, episode: Episode, subject: Subject) {
-            val intent = Intent()
-            intent.component = serviceComp
+            val intent = Intent(context, DownloadService::class.java)
             intent.action = ACTION_REMOVE
             intent.putExtra(EXTRA_SUBJECT, JsonUtil.toJson(subject))
             intent.putExtra(EXTRA_EPISODE, JsonUtil.toJson(episode))

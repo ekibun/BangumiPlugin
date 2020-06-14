@@ -47,7 +47,7 @@ import kotlin.coroutines.suspendCoroutine
 
 class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(linePresenter, R.layout.plugin_video) {
     val isLandscape get() = linePresenter.activityRef.get()?.resources?.configuration?.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val isInMultiWindowMode get() = Build.VERSION.SDK_INT > 24 && linePresenter.activityRef.get()?.isInMultiWindowMode == true
+    private val isInMultiWindowMode get() = Build.VERSION.SDK_INT > 24 && linePresenter.activityRef.get()?.isInMultiWindowMode == true
 
     private fun updateView() {
         linePresenter.proxy.subjectPresenter.subjectView.behavior.isHideable = isLandscape
@@ -87,7 +87,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
     val controller: VideoController by lazy {
         VideoController(view.controller_frame, object : VideoController.OnActionListener {
             override fun onPlayPause() {
-                doPlayPause(!videoModel.player.playWhenReady)
+                doPlayPause(!VideoModel.player.playWhenReady)
             }
 
             override fun onFullscreen() {
@@ -111,8 +111,8 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
             }
 
             override fun seekTo(pos: Long) {
-                videoModel.player.seekTo(pos)
-                controller.updateProgress(videoModel.player.currentPosition)
+                VideoModel.player.seekTo(pos)
+                controller.updateProgress(VideoModel.player.currentPosition)
             }
 
             override fun onDanmakuSetting() {
@@ -195,58 +195,56 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
 
     var startAt: Long? = null
     var endFlag = false
-    val videoModel: VideoModel by lazy {
-        VideoModel(linePresenter, object : VideoModel.Listener {
-            override fun onReady(playWhenReady: Boolean) {
-                if (!controller.ctrVisibility) {
-                    controller.ctrVisibility = true
-                    view.item_logcat.visibility = View.INVISIBLE
-                    controller.doShowHide(false)
+    private val videoListener = object : VideoModel.Listener {
+        override fun onReady(playWhenReady: Boolean) {
+            if (!controller.ctrVisibility) {
+                controller.ctrVisibility = true
+                view.item_logcat.visibility = View.INVISIBLE
+                controller.doShowHide(false)
+            }
+            if (playWhenReady) {
+                doPlayPause(true)
+                startAt?.let {
+                    VideoModel.player.seekTo(it)
+                    startAt = null
                 }
-                if (playWhenReady) {
-                    doPlayPause(true)
-                    startAt?.let {
-                        videoModel.player.seekTo(it)
-                        startAt = null
-                    }
-                }
-                if (!controller.isShow) view.item_mask.visibility = View.INVISIBLE
+            }
+            if (!controller.isShow) view.item_mask.visibility = View.INVISIBLE
 //                context.systemUIPresenter.updateSystemUI()
-                controller.updateLoading(false)
-                endFlag = true
-            }
+            controller.updateLoading(false)
+            endFlag = true
+        }
 
-            override fun onBuffering() {
-                view.danmaku_flame.pause()
-                controller.updateLoading(true)
-            }
+        override fun onBuffering() {
+            view.danmaku_flame.pause()
+            controller.updateLoading(true)
+        }
 
-            override fun onEnded() {
-                doPlayPause(false)
-                if (endFlag) {
-                    endFlag = false
-                    nextEpisode()?.let { loadEp(it) }
-                }
+        override fun onEnded() {
+            doPlayPause(false)
+            if (endFlag) {
+                endFlag = false
+                nextEpisode()?.let { loadEp(it) }
             }
+        }
 
-            override fun onVideoSizeChange(
-                width: Int,
-                height: Int,
-                unappliedRotationDegrees: Int,
-                pixelWidthHeightRatio: Float
-            ) {
-                videoWidth = (width * pixelWidthHeightRatio).toInt()
-                videoHeight = height
-                resizeVideoSurface()
-            }
+        override fun onVideoSizeChange(
+            width: Int,
+            height: Int,
+            unappliedRotationDegrees: Int,
+            pixelWidthHeightRatio: Float
+        ) {
+            videoWidth = (width * pixelWidthHeightRatio).toInt()
+            videoHeight = height
+            resizeVideoSurface()
+        }
 
-            override fun onError(error: ExoPlaybackException) {
-                showVideoError("视频加载错误\n${error.sourceException.localizedMessage}", "重新加载") {
-                    startAt = videoModel.player.currentPosition
-                    videoModel.reload()
-                }
+        override fun onError(error: ExoPlaybackException) {
+            showVideoError("视频加载错误\n${error.sourceException.localizedMessage}", "重新加载") {
+                startAt = VideoModel.player.currentPosition
+                VideoModel.player.retry()
             }
-        })
+        }
     }
 
     fun showVideoError(error: String, retry: String, callback: () -> Unit) {
@@ -262,7 +260,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
 
     private var playLoopTask: TimerTask? = null
     fun doPlayPause(play: Boolean) {
-        videoModel.player.playWhenReady = play
+        VideoModel.player.playWhenReady = play
         updatePauseResume()
         playLoopTask?.cancel()
 
@@ -272,22 +270,22 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
                     linePresenter.activityRef.get()?.runOnUiThread {
                         updateProgress()
 //                    updatePlayProgress((videoModel.player.currentPosition/ 10).toInt())
-                        danmakuPresenter.add(videoModel.player.currentPosition)
+                        danmakuPresenter.add(VideoModel.player.currentPosition)
                         if (view.danmaku_flame.isShown && !view.danmaku_flame.isPaused) {
-                            view.danmaku_flame.start(videoModel.player.currentPosition)
+                            view.danmaku_flame.start(VideoModel.player.currentPosition)
                         }
                     }
                 }
             }
             controller.timer.schedule(playLoopTask, 0, 1000)
             view.video_surface.keepScreenOn = true
-            if (videoModel.player.playbackState == Player.STATE_READY)
+            if (VideoModel.player.playbackState == Player.STATE_READY)
                 view.danmaku_flame.resume()
         }
         if (play) {
             if (NetworkUtil.isWifiConnected(App.app.host) || ignoreNetwork) doPlay()
             else showVideoError("正在使用非wifi网络", "继续播放") {
-                videoModel.player.playWhenReady = true
+                VideoModel.player.playWhenReady = true
                 updatePauseResume()
                 ignoreNetwork = true
                 doPlay()
@@ -300,16 +298,16 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
 
     private fun updateProgress() {
         linePresenter.activityRef.get()?.runOnUiThread {
-            controller.duration = videoModel.player.duration.toInt() / 10
-            controller.buffedPosition = videoModel.player.bufferedPosition.toInt() / 10
-            controller.updateProgress(videoModel.player.currentPosition)
+            controller.duration = VideoModel.player.duration.toInt() / 10
+            controller.buffedPosition = VideoModel.player.bufferedPosition.toInt() / 10
+            controller.updateProgress(VideoModel.player.currentPosition)
         }
     }
 
     private fun updatePauseResume() {
         linePresenter.activityRef.get()?.runOnUiThread {
-            controller.updatePauseResume(videoModel.player.playWhenReady)
-            setPictureInPictureParams(!videoModel.player.playWhenReady)
+            controller.updatePauseResume(VideoModel.player.playWhenReady)
+            setPictureInPictureParams(!VideoModel.player.playWhenReady)
         }
     }
 
@@ -386,10 +384,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
             prevEpisode = {
                 val position =
                     linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst {
-                        Episode.compareEpisode(
-                            it.t,
-                            episode
-                        )
+                        Episode.compareEpisode(it.t, episode)
                     }
                 val ep = linePresenter.subjectView.episodeDetailAdapter.data.getOrNull(position - 1)?.t
                 if ((ep?.status ?: "") !in listOf("Air")) null else ep
@@ -397,10 +392,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
             nextEpisode = {
                 val position =
                     linePresenter.subjectView.episodeDetailAdapter.data.indexOfFirst {
-                        Episode.compareEpisode(
-                            it.t,
-                            episode
-                        )
+                        Episode.compareEpisode(it.t, episode)
                     }
                 val ep = linePresenter.subjectView.episodeDetailAdapter.data.getOrNull(position + 1)?.t
                 if ((ep?.status ?: "") !in listOf("Air")) null else ep
@@ -413,7 +405,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
     var ignoreNetwork = false
     private fun play(episode: Episode, info: LineInfo, infos: List<LineInfo>) {
         ignoreNetwork = false
-        videoModel.player.playWhenReady = false
+        VideoModel.player.playWhenReady = false
         loadVideoInfo = null
         loadVideo = null
         loadDanmaku = null
@@ -470,7 +462,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
             val (request: Provider.HttpRequest?, streamKeys: List<StreamKey>?) = data
             loadVideo = request != null
             ignoreNetwork = ignoreNetwork || streamKeys != null
-            if (request != null) videoModel.play(request, view.video_surface, streamKeys)
+            if (request != null) VideoModel.play(request, view.video_surface, streamKeys)
         }
     }
 
@@ -480,10 +472,10 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
                 Icon.createWithResource(linePresenter.pluginContext, R.drawable.ic_prev), "上一集", "上一集",
                 PendingIntent.getBroadcast(
                     App.app.host,
-                    CONTROL_TYPE_PREV,
-                    Intent(ACTION_MEDIA_CONTROL + linePresenter.subject.id).putExtra(
-                        EXTRA_CONTROL_TYPE,
-                        CONTROL_TYPE_PREV
+                    VideoModel.CONTROL_TYPE_PREV,
+                    Intent(VideoModel.ACTION_MEDIA_CONTROL + linePresenter.subject.id).putExtra(
+                        VideoModel.EXTRA_CONTROL_TYPE,
+                        VideoModel.CONTROL_TYPE_PREV
                     ),
                     PendingIntent.FLAG_UPDATE_CURRENT
                 )
@@ -493,10 +485,10 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
                 Icon.createWithResource(linePresenter.pluginContext, R.drawable.ic_next), "下一集", "下一集",
                 PendingIntent.getBroadcast(
                     App.app.host,
-                    CONTROL_TYPE_NEXT,
-                    Intent(ACTION_MEDIA_CONTROL + linePresenter.subject.id).putExtra(
-                        EXTRA_CONTROL_TYPE,
-                        CONTROL_TYPE_NEXT
+                    VideoModel.CONTROL_TYPE_NEXT,
+                    Intent(VideoModel.ACTION_MEDIA_CONTROL + linePresenter.subject.id).putExtra(
+                        VideoModel.EXTRA_CONTROL_TYPE,
+                        VideoModel.CONTROL_TYPE_NEXT
                     ),
                     PendingIntent.FLAG_UPDATE_CURRENT
                 )
@@ -514,10 +506,10 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
                                 ), if (playPause) "播放" else "暂停", if (playPause) "播放" else "暂停",
                                 PendingIntent.getBroadcast(
                                     App.app.host,
-                                    CONTROL_TYPE_PLAY,
-                                    Intent(ACTION_MEDIA_CONTROL + linePresenter.subject.id).putExtra(
-                                        EXTRA_CONTROL_TYPE,
-                                        if (playPause) CONTROL_TYPE_PLAY else CONTROL_TYPE_PAUSE
+                                    VideoModel.CONTROL_TYPE_PLAY,
+                                    Intent(VideoModel.ACTION_MEDIA_CONTROL + linePresenter.subject.id).putExtra(
+                                        VideoModel.EXTRA_CONTROL_TYPE,
+                                        if (playPause) VideoModel.CONTROL_TYPE_PLAY else VideoModel.CONTROL_TYPE_PAUSE
                                     ),
                                     PendingIntent.FLAG_UPDATE_CURRENT
                                 )
@@ -533,17 +525,17 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            when (intent.getIntExtra(EXTRA_CONTROL_TYPE, 0)) {
-                CONTROL_TYPE_PAUSE -> {
+            when (intent.getIntExtra(VideoModel.EXTRA_CONTROL_TYPE, 0)) {
+                VideoModel.CONTROL_TYPE_PAUSE -> {
                     doPlayPause(false)
                 }
-                CONTROL_TYPE_PLAY -> {
+                VideoModel.CONTROL_TYPE_PLAY -> {
                     doPlayPause(true)
                 }
-                CONTROL_TYPE_NEXT -> {
+                VideoModel.CONTROL_TYPE_NEXT -> {
                     nextEpisode()?.let { loadEp(it) }
                 }
-                CONTROL_TYPE_PREV -> {
+                VideoModel.CONTROL_TYPE_PREV -> {
                     prevEpisode()?.let { loadEp(it) }
                 }
             }
@@ -552,7 +544,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
 
     private val networkReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (!NetworkUtil.isWifiConnected(context) && videoModel.player.playWhenReady) {
+            if (!NetworkUtil.isWifiConnected(context) && VideoModel.player.playWhenReady) {
                 doPlayPause(true)
                 Toast.makeText(context, "正在使用非wifi网络", Toast.LENGTH_LONG).show()
             }
@@ -561,12 +553,17 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
 
     init {
         linePresenter.activityRef.get()
-            ?.registerReceiver(receiver, IntentFilter(ACTION_MEDIA_CONTROL + linePresenter.subject.id))
+            ?.registerReceiver(receiver, IntentFilter(VideoModel.ACTION_MEDIA_CONTROL + linePresenter.subject.id))
         linePresenter.activityRef.get()
             ?.registerReceiver(networkReceiver, IntentFilter("android.net.conn.CONNECTIVITY_CHANGE"))
         linePresenter.onDestroyListener = {
             linePresenter.activityRef.get()?.unregisterReceiver(receiver)
             linePresenter.activityRef.get()?.unregisterReceiver(networkReceiver)
+            if (VideoModel.lastState == null) {
+                VideoModel.player.stop(true)
+                VideoModel.player.clearVideoSurface()
+            }
+            VideoModel.detachToActivity(videoListener)
         }
     }
 
@@ -575,21 +572,24 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
         if (inited) return
         inited = true
 
+        VideoModel.player.stop(true)
+        VideoModel.attachToActivity(videoListener)
+
         view.visibility = View.VISIBLE
 
         var pauseOnStop = false
         linePresenter.proxy.onResumeListener = {
-            if (videoModel.player.duration > 0 && pauseOnStop)
+            if (VideoModel.player.duration > 0 && pauseOnStop)
                 doPlayPause(true)
             pauseOnStop = false
         }
         linePresenter.proxy.onPauseListener = {
-            pauseOnStop = videoModel.player.playWhenReady
+            pauseOnStop = VideoModel.player.playWhenReady
             if (linePresenter.activityRef.get()?.isInPictureInPictureMode != true)
                 doPlayPause(false)
         }
         linePresenter.proxy.onStopListener = {
-            pauseOnStop = videoModel.player.playWhenReady
+            pauseOnStop = VideoModel.player.playWhenReady
             doPlayPause(false)
         }
 
@@ -630,7 +630,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
             } else false
         }
         linePresenter.proxy.onUserLeaveHintListener = {
-            if (isLandscape && !isInMultiWindowMode && videoModel.player.playWhenReady && Build.VERSION.SDK_INT >= 24) {
+            if (isLandscape && !isInMultiWindowMode && VideoModel.player.playWhenReady && Build.VERSION.SDK_INT >= 24) {
                 @Suppress("DEPRECATION") linePresenter.activityRef.get()?.enterPictureInPictureMode()
                 setPictureInPictureParams(false)
             }
@@ -646,7 +646,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
                 0, 0, 0,
                 if (!isLandscape) 0 else insets.systemWindowInsetBottom
             )
-            insets.consumeSystemWindowInsets()
+            insets
         }
         view.hide_danmaku_panel.setOnClickListener {
             showDanmakuSetting(false)
@@ -666,7 +666,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
             updateInfo("解析视频出错：${it.message}")
         }, key = "download_ep_${episode.id}") {
             val subject = linePresenter.proxy.subjectPresenter.subject
-            val info = LineInfoModel.getInfo(subject).getDefaultProvider() ?: return@subscribe
+            val info = LineInfoModel.getInfo(subject).getDefaultProvider() ?: throw IllegalStateException("请先添加播放源")
             updateInfo("获取视频信息")
             val data = VideoModel.getVideo(episode.parseSort(App.app.plugin), subject, episode, info, {
                 updateInfo("解析视频地址")
@@ -694,14 +694,5 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
                 }
             })
         }
-    }
-
-    companion object {
-        const val ACTION_MEDIA_CONTROL = "soko.ekibun.bangumi.plugin.video.mediaControl"
-        const val EXTRA_CONTROL_TYPE = "extraControlType"
-        const val CONTROL_TYPE_PAUSE = 1
-        const val CONTROL_TYPE_PLAY = 2
-        const val CONTROL_TYPE_NEXT = 3
-        const val CONTROL_TYPE_PREV = 4
     }
 }

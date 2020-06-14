@@ -29,7 +29,7 @@ class VideoProvider(
 
     suspend fun getVideo(scriptKey: String, video: VideoInfo): HttpRequest {
         return JsEngine.makeScript(
-            "var video = ${JsonUtil.toJson(video)};\n${if (!getVideo.isNullOrEmpty()) getVideo else "return http.webview(video.url);"}",
+            "var video = ${JsonUtil.toJson(video)};\n${if (!getVideo.isNullOrEmpty()) getVideo else "return webview(video.url);"}",
             header,
             scriptKey
         ) {

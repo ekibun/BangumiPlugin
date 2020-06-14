@@ -130,7 +130,7 @@ module.exports = {
             return "" + new java.lang.String(inflate(bytes, false));
         }else return "" + new java.lang.String(bytes, encoding);
     },
-    webview(url, header, script, onInterceptRequest){
+    __webview__(url, header, script, onInterceptRequest){
         return webviewload(this.__env_key__, url||"", header||{}, script, onInterceptRequest || function(request){
             if(request.getRequestHeaders().get("Range") != null)
                 return makeRequest(request);

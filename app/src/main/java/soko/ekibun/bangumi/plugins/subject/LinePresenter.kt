@@ -53,9 +53,7 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
     }()
 
     var type = ""
-    val pluginView: Provider.PluginView by lazy {
-        Provider.providers[type]!!.newInstance().createPluginView(this)
-    }
+    lateinit var pluginView: Provider.PluginView
 
     val typeUseBgmEp = arrayOf(Subject.TYPE_ANIME, Subject.TYPE_REAL)
 
@@ -114,15 +112,17 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        activityRef.get()?.unregisterReceiver(downloadReceiver)
+        onDestroyListener()
+    }
+
     init {
         activityRef.get()?.registerReceiver(
             downloadReceiver,
             IntentFilter(DownloadService.getBroadcastAction(subject))
         )
-        proxy.onDestroyListener = {
-            activityRef.get()?.unregisterReceiver(downloadReceiver)
-            onDestroyListener()
-        }
 
         episodeAdapter.setEmptyView(emptyView)
 //        epView.episode_list.adapter = episodeAdapter
@@ -244,6 +244,11 @@ class LinePresenter(val activityRef: WeakReference<Activity>) : PluginPresenter(
         epLayout.getChildAt(1).visibility = if (showPlugin) View.GONE else View.VISIBLE
         epView.visibility = if (showPlugin) View.VISIBLE else View.GONE
         epLayout.visibility = if (showPlugin || subject.eps?.size ?: 0 > 0) View.VISIBLE else View.GONE
+
+        val providerClass = Provider.providers[type]
+        if (providerClass != null && !::pluginView.isInitialized) {
+            pluginView = providerClass.newInstance().createPluginView(this)
+        }
 
         if (defaultLine != null) {
             val provider = LineProvider.getProvider(type, defaultLine.site)

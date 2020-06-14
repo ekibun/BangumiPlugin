@@ -5,6 +5,7 @@ var __TEST__ = !__pkg__.App.Companion.getInited();
 
 require("json-wrapper");
 var http = require("http");
+var webview = http.__webview__;
 var App = require("app");
 var CryptoJS = require("crypto");
 

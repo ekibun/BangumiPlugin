@@ -55,6 +55,7 @@ abstract class Provider(
                 it.removeAllViews()
                 it.addView(view, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             }
+            linePresenter.proxy.item_plugin.requestApplyInsets()
         }
 
         abstract fun loadEp(episode: Episode)

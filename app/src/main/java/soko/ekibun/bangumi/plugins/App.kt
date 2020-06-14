@@ -3,15 +3,16 @@ package soko.ekibun.bangumi.plugins
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import androidx.appcompat.view.ContextThemeWrapper
 import com.google.android.exoplayer2.database.ExoDatabaseProvider
 import com.google.android.exoplayer2.upstream.cache.NoOpCacheEvictor
 import com.google.android.exoplayer2.upstream.cache.SimpleCache
-import kotlinx.coroutines.MainScope
-import soko.ekibun.bangumi.plugins.service.DownloadService
+import kotlinx.coroutines.*
 import soko.ekibun.bangumi.plugins.util.AppUtil
 import java.io.File
 import java.lang.ref.WeakReference
+import java.util.concurrent.ConcurrentHashMap
 
 class App(host: Context, plugin: Context) : BaseApp(host, plugin) {
     val handler = android.os.Handler { true }
@@ -26,13 +27,9 @@ class App(host: Context, plugin: Context) : BaseApp(host, plugin) {
         )
     }
 
-    private val downloadService: DownloadService = DownloadService(host, plugin)
 
     init {
         File(downloadCachePath).mkdirs()
-        appHost!!.remoteAction = { intent, flags, startId ->
-            downloadService.onStartCommand(intent, flags, startId)
-        }
     }
 
     companion object {
@@ -44,6 +41,30 @@ class App(host: Context, plugin: Context) : BaseApp(host, plugin) {
         lateinit var app: App
         fun init(host: Context, plugin: Context) {
             if (!inited) app = App(host, plugin)
+        }
+
+        private val jobCollection = ConcurrentHashMap<String, Job>()
+        fun subscribe(
+            onError: (t: Throwable) -> Unit = {},
+            onComplete: () -> Unit = {},
+            key: String? = null,
+            block: suspend CoroutineScope.() -> Unit
+        ): Job {
+            val oldJob = if (key.isNullOrEmpty()) null else jobCollection[key]
+            return mainScope.launch {
+                try {
+                    oldJob?.cancelAndJoin()
+                    block.invoke(this)
+                } catch (_: CancellationException) {
+                } catch (t: Throwable) {
+                    Toast.makeText(App.app.host, t.message, Toast.LENGTH_SHORT).show()
+                    t.printStackTrace()
+                    onError(t)
+                }
+                if (isActive) onComplete()
+            }.also {
+                if (!key.isNullOrEmpty()) jobCollection[key] = it
+            }
         }
 
         fun createThemeContext(activityRef: WeakReference<Activity>): Context {

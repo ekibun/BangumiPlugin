@@ -71,7 +71,7 @@ class MusicScriptTest {
 
     @Test
     fun writeProvider() {
-        val file = File("${ScriptTest.SCRIPT_PATH}/videos.json")
+        val file = File("${ScriptTest.SCRIPT_PATH}/musics.json")
         file.writeText(JsonUtil.toJson(scriptList.map {
             it.info.code = JsonUtil.toJson(ScriptTest.getProvider<VideoProvider>(it.info.site))
             it.info

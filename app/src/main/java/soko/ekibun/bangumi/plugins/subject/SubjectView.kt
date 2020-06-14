@@ -6,6 +6,7 @@ import kotlinx.android.synthetic.main.subject_episode.view.*
 import soko.ekibun.bangumi.plugins.R
 import soko.ekibun.bangumi.plugins.bean.Episode
 import soko.ekibun.bangumi.plugins.bean.Subject
+import java.text.DecimalFormat
 
 class SubjectView(private val linePresenter: LinePresenter, private val detail: View) {
     val episodeAdapter = SmallEpisodeAdapter(linePresenter)
@@ -23,10 +24,13 @@ class SubjectView(private val linePresenter: LinePresenter, private val detail: 
                 eps?.size?:0
             ) else
                 eps?.lastOrNull()?.let {
-                    if (it.type == Episode.TYPE_MAIN) linePresenter.pluginContext.getString(
+                    linePresenter.pluginContext.getString(
                         R.string.parse_update_to,
-                        it.parseSort(linePresenter.pluginContext)
-                    ) else "所有章节"
+                        linePresenter.pluginContext.getString(
+                            R.string.parse_sort_ep,
+                            DecimalFormat("#.##").format(it.sort)
+                        )
+                    )
                 }
                     ?: linePresenter.pluginContext.getString(R.string.hint_air_nothing)
 
@@ -36,8 +40,8 @@ class SubjectView(private val linePresenter: LinePresenter, private val detail: 
             maps[key] = (maps[key] ?: ArrayList()).plus(it)
         }
         val lastEpisodeSize = episodeDetailAdapter.data.size
-        episodeAdapter.setNewData(null)
-        episodeDetailAdapter.setNewData(null)
+        episodeAdapter.setNewInstance(null)
+        episodeDetailAdapter.setNewInstance(null)
         maps.forEach {
             episodeDetailAdapter.addData(EpisodeAdapter.EpisodeSection(true, it.key))
             it.value.forEach { ep ->

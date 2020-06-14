@@ -9,10 +9,10 @@ import soko.ekibun.bangumi.plugins.bean.Subject
 interface ISubjectActivity {
     val subjectPresenter: ISubjectPresenter
 
+    var onStartListener: () -> Unit
     var onStopListener: () -> Unit
     var onPauseListener: () -> Unit
     var onResumeListener: () -> Unit
-    var onDestroyListener: () -> Unit
     var onActivityResultListener: (Int, Int, Intent?) -> Unit
     var onUserLeaveHintListener: () -> Unit
     var onBackListener: () -> Boolean
