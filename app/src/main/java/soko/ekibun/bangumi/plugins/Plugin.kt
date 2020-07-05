@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.util.Log
 import androidx.annotation.Keep
+import soko.ekibun.bangumi.plugins.action.ActionActivityPlugin
 import soko.ekibun.bangumi.plugins.main.MainActivityPlugin
 import soko.ekibun.bangumi.plugins.subject.SubjectActivityPlugin
 import java.lang.ref.WeakReference
@@ -12,7 +13,8 @@ import java.lang.ref.WeakReference
 class Plugin : BasePlugin() {
     private val pluginList: Map<String, PluginPresenter.Builder> = mapOf(
         "soko.ekibun.bangumi.ui.subject.SubjectActivity" to SubjectActivityPlugin(),
-        "soko.ekibun.bangumi.ui.main.MainActivity" to MainActivityPlugin()
+        "soko.ekibun.bangumi.ui.main.MainActivity" to MainActivityPlugin(),
+        "soko.ekibun.bangumi.ui.action.ActionActivity" to ActionActivityPlugin()
     )
 
     @Keep

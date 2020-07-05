@@ -23,7 +23,7 @@ object ReflectUtil {
     private fun getLoaderClasses(classLoader: ClassLoader, classes: Array<out Class<*>>): Array<Class<*>> {
         return classes.map {
             if (it.isPrimitive || it.classLoader == classLoader) it
-            else classLoader.loadClass(it.name)
+            else classLoader.loadClass(it.getAnnotation(ReflectClass::class.java)?.name ?: it.name)
         }.toTypedArray()
     }
 
@@ -47,12 +47,27 @@ object ReflectUtil {
         return ret
     }
 
+    @Target(AnnotationTarget.CLASS)
+    annotation class ReflectClass(val name: String)
+
+    /**
+     * 判断是不是Data类型
+     */
+    private fun isDataClass(clazz: Class<*>?): Boolean {
+        return try {
+            clazz?.classLoader == ReflectUtil::class.java.classLoader && clazz?.kotlin?.isData ?: false
+        } catch (e: Throwable) {
+            false
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
-    private fun <T> proxyObject(objRef: () -> Any?, clazz: Class<T>): T? {
-        if ((clazz as? Class<Any>)?.kotlin?.isData == true)
-            return JsonUtil.toEntity(JsonUtil.toJson(objRef()), clazz) as? T
-        if (clazz.classLoader == null || objRef() == null || objRef()?.javaClass == clazz || !clazz.isInterface)
-            return objRef() as? T
+    private fun <T> proxyObjectInternal(objRef: () -> Any?, clazz: Class<T>): T? {
+        val refObj = objRef()
+        if (isDataClass(clazz) || isDataClass(refObj?.javaClass))
+            return JsonUtil.toEntity(JsonUtil.toJson(refObj), clazz)
+        if (clazz.classLoader == null || refObj == null || refObj.javaClass == clazz || !clazz.isInterface)
+            return refObj as? T
         val objectCache = HashMap<Method, Any>()
         return Proxy.newProxyInstance(
             clazz.classLoader, arrayOf(clazz)
@@ -73,11 +88,11 @@ object ReflectUtil {
     }
 
     fun <T> proxyObject(obj: Any?, clazz: Class<T>): T? {
-        return proxyObject({ obj }, clazz)
+        return proxyObjectInternal({ obj }, clazz)
     }
 
     fun <T> proxyObjectWeak(objRef: WeakReference<*>, clazz: Class<T>): T? {
-        return proxyObject({ objRef.get() }, clazz)
+        return proxyObjectInternal({ objRef.get() }, clazz)
     }
 
     fun <T : View> findViewById(view: View, id: String): T = view.findViewById(ResourceUtil.getId(view.context, id))

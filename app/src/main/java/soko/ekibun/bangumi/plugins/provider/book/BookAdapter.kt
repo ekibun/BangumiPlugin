@@ -206,11 +206,13 @@ class BookAdapter(private val recyclerView: RecyclerView, data: MutableList<Page
     private fun loadData(helper: BaseViewHolder, item: PageInfo) {
         helper.itemView.item_image.setImageDrawable(null)
         helper.itemView.content_container.visibility = View.GONE
+        helper.itemView.item_blank.visibility = View.VISIBLE
         helper.itemView.item_loading.visibility = View.VISIBLE
         helper.itemView.loading_progress.visibility = View.VISIBLE
         helper.itemView.loading_text.visibility = View.GONE
         helper.itemView.loading_progress.isIndeterminate = true
         if (!item.content.isNullOrEmpty()) {
+            helper.itemView.item_blank.visibility = View.GONE
             helper.itemView.item_loading.visibility = View.GONE
             helper.itemView.content_container.visibility = View.VISIBLE
             helper.itemView.item_title.visibility = if (item.index <= 1) View.VISIBLE else View.GONE
@@ -250,13 +252,15 @@ class BookAdapter(private val recyclerView: RecyclerView, data: MutableList<Page
             if (helper.itemView.tag == item) helper.itemView.loading_progress.progress = (it * 100).toInt()
         }, {
             if (helper.itemView.tag == item) {
+                helper.itemView.item_blank.visibility = View.GONE
                 helper.itemView.item_loading.visibility = View.GONE
             }
         }, { e ->
-            val httpException = e.rootCauses.find { it is HttpException } as? HttpException
             showError(
                 helper, "加载出错\n${
-                httpException?.let { "${it.statusCode} ${it.message}".trim() } ?: e.message
+                e.rootCauses?.joinToString {
+                    if (it is HttpException) "${it.statusCode} ${it.message}" else it.localizedMessage ?: ""
+                } ?: e.message
                 }"
             )
         })

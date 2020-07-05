@@ -45,9 +45,7 @@ object GlideUtil {
                 onProgress(bytesRead * 1f / expectedLength)
             }
 
-            override fun getGranualityPercentage(): Float {
-                return 1.0f
-            }
+            override val granualityPercentage: Float = 1.0f
         })
         return request.asDrawable()
             .load(GlideUrl(req.url) {

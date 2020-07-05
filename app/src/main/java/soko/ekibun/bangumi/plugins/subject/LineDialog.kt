@@ -12,6 +12,7 @@ import android.widget.Toast
 import com.google.gson.JsonObject
 import kotlinx.android.synthetic.main.dialog_add_line.view.*
 import soko.ekibun.bangumi.plugins.R
+import soko.ekibun.bangumi.plugins.action.ActionPresenter
 import soko.ekibun.bangumi.plugins.model.LineProvider
 import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
@@ -119,43 +120,42 @@ class LineDialog(private val linePresenter: LinePresenter) :
                         clipboardManager.setPrimaryClip(
                             ClipData.newPlainText(
                                 "videoplayer.providerInfo",
-                                JsonUtil.toJson(providers)
+                                ProviderInfo.toUrl(providers)
                             )
                         )
                         Toast.makeText(view.context, "数据已导出至剪贴板", Toast.LENGTH_SHORT).show()
                     }
-                    providerList.size - 1 -> {
-                        val addProvider = { obj: JsonObject ->
-                            val providerInfo =
-                                JsonUtil.toEntity<ProviderInfo>(JsonUtil.toJson(obj))!!.also { info ->
-                                    if (!obj.has("type")) {
-                                        info.code = JsonUtil.toJson(obj)
-                                        info.type = linePresenter.type
-                                    }
+                    providerList.size - 1 -> linePresenter.subscribe {
+                        val data = clipboardManager.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
+                        if (!ActionPresenter.importProvider(context, data)) {
+                            //import
+                            JsonUtil.toEntity<List<JsonObject>>(data)?.let { list ->
+                                list.forEach { obj ->
+                                    ActionPresenter.addProvider(
+                                        context,
+                                        JsonUtil.toEntity<ProviderInfo>(JsonUtil.toJson(obj))!!.also { info ->
+                                            if (!obj.has("type")) {
+                                                info.code = JsonUtil.toJson(obj)
+                                                info.type = linePresenter.type
+                                            }
+                                        })
                                 }
-                            val oldProvider = LineProvider.getProvider(linePresenter.type, providerInfo.site)
-                            if (oldProvider != null)
-                                AlertDialog.Builder(context)
-                                    .setMessage("接口 ${providerInfo.title}(${providerInfo.site}) 与现有接口 ${oldProvider.title}(${oldProvider.site}) 重复")
-                                    .setPositiveButton("替换") { _: DialogInterface, _: Int ->
-                                        LineProvider.addProvider(providerInfo)
-                                    }.setNegativeButton("取消") { _: DialogInterface, _: Int -> }.show()
-                            else LineProvider.addProvider(providerInfo)
+                                Toast.makeText(view.context, "已添加${list.size}个接口", Toast.LENGTH_SHORT).show()
+                            } ?: JsonUtil.toEntity<JsonObject>(data)?.let { obj ->
+                                ActionPresenter.addProvider(
+                                    context,
+                                    JsonUtil.toEntity<ProviderInfo>(JsonUtil.toJson(obj))!!.also { info ->
+                                        if (!obj.has("type")) {
+                                            info.code = JsonUtil.toJson(obj)
+                                            info.type = linePresenter.type
+                                        }
+                                    })
+                                Toast.makeText(view.context, "已添加1个接口", Toast.LENGTH_SHORT).show()
+                            } ?: {
+                                Toast.makeText(view.context, "剪贴板没有数据", Toast.LENGTH_SHORT).show()
+                            }()
                         }
-                        //inport
-                        JsonUtil.toEntity<List<JsonObject>>(
-                            clipboardManager.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
-                        )?.let { list ->
-                            list.forEach { addProvider(it) }
-                            Toast.makeText(view.context, "已添加${list.size}个接口", Toast.LENGTH_SHORT).show()
-                        } ?: JsonUtil.toEntity<JsonObject>(
-                            clipboardManager.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
-                        )?.let {
-                            addProvider(it)
-                            Toast.makeText(view.context, "已添加1个接口", Toast.LENGTH_SHORT).show()
-                        } ?: {
-                            Toast.makeText(view.context, "剪贴板没有数据", Toast.LENGTH_SHORT).show()
-                        }()
+
                     }
                     else -> {
                         val provider = providerList[position]

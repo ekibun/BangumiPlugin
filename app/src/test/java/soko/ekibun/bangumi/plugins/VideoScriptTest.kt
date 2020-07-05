@@ -9,19 +9,18 @@ import soko.ekibun.bangumi.plugins.model.line.LineInfo
 import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.video.VideoProvider
 import soko.ekibun.bangumi.plugins.util.JsonUtil
-import java.io.File
 
 /**
  * 视频测试
  */
 class VideoScriptTest {
 
-    abstract class VideoTestData {
+    abstract class VideoTestData : ScriptTest.BaseTestData<VideoProvider> {
         @ExperimentalCoroutinesApi
         @get:Rule
         var mainCoroutineRule = MainCoroutineRule()
+        override val providerClass = VideoProvider::class.java
 
-        abstract val info: ProviderInfo
         open val searchKey: String? = null
         open val lineInfo: LineInfo? = null
         open val episode: Episode = Episode(
@@ -30,7 +29,7 @@ class VideoScriptTest {
         open val video: VideoProvider.VideoInfo? = null
         open val danmakuKey: String = JsonUtil.toJson("")
 
-        val provider by lazy { ScriptTest.getProvider<VideoProvider>(info.site) }
+        val provider by lazy { ScriptTest.getProvider(this) }
 
         @Test
         @ExperimentalCoroutinesApi
@@ -81,30 +80,9 @@ class VideoScriptTest {
 
         @Test
         fun printProvider() {
-            println(JsonUtil.toJson(info.also {
-                it.code = JsonUtil.toJson(ScriptTest.getProvider<VideoProvider>(it.site))
-            }))
+            println(ProviderInfo.toUrl(listOf(info.also {
+                it.code = JsonUtil.toJson(ScriptTest.getProvider(this))
+            })))
         }
     }
-
-    @Test
-    fun writeProvider() {
-        val file = File("${ScriptTest.SCRIPT_PATH}/videos.json")
-        file.writeText(JsonUtil.toJson(scriptList.map {
-            it.info.code = JsonUtil.toJson(ScriptTest.getProvider<VideoProvider>(it.info.site))
-            it.info
-        }))
-    }
-
-    val scriptList = arrayOf(
-        soko.ekibun.bangumi.plugins.scripts.video.acfun.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.video.agefans.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.video.bilibili.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.video.fodm.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.video.iqiyi.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.video.nicotv.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.video.ningmoe.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.video.tencent.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.video.webpage.TestData()
-    )
 }

@@ -62,7 +62,6 @@ class MainPresenter(activityRef: WeakReference<Activity>) : PluginPresenter(acti
 
     private fun updateAirInfo() {
         LineProvider.getProviderList(Provider.TYPE_BOOK).forEach { line ->
-            if (airInfo[line.site]?.isNotEmpty() == true) return@forEach
             val provider = line.provider as? BookProvider
             if (provider == null || provider.getUpdate.isNullOrEmpty()) return@forEach
             subscribe(key = "update_${line.site}") {

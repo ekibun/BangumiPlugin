@@ -7,7 +7,7 @@
     <item android:id="@+id/action_submit"
           android:title="应用"
           app:showAsAction="always"/>
-    <item android:id="@+id/action_inport"
+    <item android:id="@+id/action_import"
           android:title="导入"/>
     <item android:id="@+id/action_export"
           android:title="导出"/>

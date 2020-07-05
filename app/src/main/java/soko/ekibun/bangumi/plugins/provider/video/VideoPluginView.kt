@@ -426,6 +426,7 @@ class VideoPluginView(val linePresenter: LinePresenter) : Provider.PluginView(li
 
         linePresenter.subscribe({
             if (loadVideoInfo != true) loadVideoInfo = false
+            else loadVideo = false
             exception = it
         }, key = "play") {
             val data = VideoModel.getVideo("play", linePresenter.subject, episode, info, { videoInfo ->

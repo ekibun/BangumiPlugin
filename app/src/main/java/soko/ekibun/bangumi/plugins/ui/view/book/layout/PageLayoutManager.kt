@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.LinearSmoothScroller
 import androidx.recyclerview.widget.RecyclerView
 import soko.ekibun.bangumi.plugins.ui.view.SelectableRecyclerView
 import soko.ekibun.bangumi.plugins.ui.view.book.ScalableLayoutManager
+import kotlin.math.ceil
 
 class PageLayoutManager(recyclerView: RecyclerView, context: Context, val rtl: Boolean = false) :
     ScalableLayoutManager(recyclerView, context) {
@@ -58,7 +59,7 @@ class PageLayoutManager(recyclerView: RecyclerView, context: Context, val rtl: B
             val nextView = recycler.getViewForPosition(currentIndex - 1)
             addView(nextView)
             nextView.translationX = width * scale * (if (rtl) 1 else -1)
-            nextView.translationZ = 100f
+            nextView.translationZ = 0f
             measureChildWithMargins(nextView, 0, 0)
             layoutDecoratedWithMargins(nextView, 0, 0, nextView.measuredWidth, nextView.measuredHeight)
         }
@@ -208,8 +209,16 @@ class PageLayoutManager(recyclerView: RecyclerView, context: Context, val rtl: B
         )
         currentPos = Math.max(0f, Math.min(currentPos, itemCount - 1f))
         view.translationX = Math.max((currentPos - downPage) * width, 0f) * (if (rtl) 1 else -1)
+        val prevPage = findViewByPosition(downPage - 1)
         if (currentPos < downPage) findViewByPosition(downPage - 1)?.translationX =
             (currentPos - downPage + 1) * width * (if (rtl) 1 else -1)
+        if ((ceil(currentPos) - currentPos) * width < 5) {
+            prevPage?.translationZ = 0f
+            view.translationZ = 0f
+        } else {
+            view.translationZ = 50f
+            if (currentPos < downPage) prevPage?.translationZ = 100f
+        }
 
         (recyclerView as? SelectableRecyclerView)?.clearSelect()
         return dx

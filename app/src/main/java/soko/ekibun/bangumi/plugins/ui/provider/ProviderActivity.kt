@@ -63,7 +63,10 @@ class ProviderActivity : AppCompatActivity(), ColorPickerDialogListener {
         adapter.setHeaderView(header)
 
         header.item_provider_color_hex.text = colorToString(0)
-        setProvider(intent?.getStringExtra(EXTRA_PROVIDER_INFO))
+        setProvider(
+            JsonUtil.toEntity<ProviderInfo>(intent?.getStringExtra(EXTRA_PROVIDER_INFO) ?: "")
+                ?: ProviderInfo("", 0, "", type)
+        )
 
         header.item_provider_color.setOnClickListener {
             ColorPickerDialog.newBuilder().setColor(color)
@@ -81,9 +84,7 @@ class ProviderActivity : AppCompatActivity(), ColorPickerDialogListener {
     }
     val type by lazy { intent.getStringExtra(EXTRA_PROVIDER_TYPE)!! }
     val typeClass by lazy { Provider.providers[type]!! }
-    private fun setProvider(info: String?) {
-        val provider = JsonUtil.toEntity<ProviderInfo>(info ?: "")
-            ?: ProviderInfo("", 0, "", type)
+    private fun setProvider(provider: ProviderInfo) {
         adapter.provider = JsonUtil.toEntity(provider.code, typeClass) ?: typeClass.newInstance()
         adapter.notifyDataSetChanged()
 
@@ -141,9 +142,9 @@ class ProviderActivity : AppCompatActivity(), ColorPickerDialogListener {
             R.id.action_submit -> {
                 setResult(getProvider())
             }
-            R.id.action_inport -> {
-                clipboardManager.primaryClip?.getItemAt(0)?.text?.toString()?.let {
-                    setProvider(it)
+            R.id.action_import -> {
+                clipboardManager.primaryClip?.getItemAt(0)?.text?.toString()?.let { data ->
+                    ProviderInfo.fromUrl(data)?.get(0)?.let { setProvider(it) }
                 } ?: {
                     Snackbar.make(root_layout, "剪贴板没有数据", Snackbar.LENGTH_LONG).show()
                 }()

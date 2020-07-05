@@ -9,25 +9,24 @@ import soko.ekibun.bangumi.plugins.model.provider.ProviderInfo
 import soko.ekibun.bangumi.plugins.provider.Provider
 import soko.ekibun.bangumi.plugins.provider.book.BookProvider
 import soko.ekibun.bangumi.plugins.util.JsonUtil
-import java.io.File
 
 /**
  * 漫画测试
  */
 class BookScriptTest {
 
-    abstract class BookTestData {
+    abstract class BookTestData : ScriptTest.BaseTestData<BookProvider> {
         @ExperimentalCoroutinesApi
         @get:Rule
         var mainCoroutineRule = MainCoroutineRule()
+        override val providerClass = BookProvider::class.java
 
-        abstract val info: ProviderInfo
         open val searchKey: String? = null
         open val lineInfo: LineInfo? = null
         open val episode: Provider.ProviderEpisode? = null
         open val page: BookProvider.PageInfo? = null
 
-        val provider by lazy { ScriptTest.getProvider<BookProvider>(info.site) }
+        val provider by lazy { ScriptTest.getProvider(this) }
 
         @Test
         @ExperimentalCoroutinesApi
@@ -78,30 +77,9 @@ class BookScriptTest {
 
         @Test
         fun printProvider() {
-            println(JsonUtil.toJson(info.also {
-                it.code = JsonUtil.toJson(ScriptTest.getProvider<BookProvider>(it.site))
-            }))
+            println(ProviderInfo.toUrl(listOf(info.also {
+                it.code = JsonUtil.toJson(ScriptTest.getProvider(this))
+            })))
         }
     }
-
-    @Test
-    fun writeProvider() {
-        val file = File("${ScriptTest.SCRIPT_PATH}/books.json")
-        file.writeText(JsonUtil.toJson(scriptList.map {
-            it.info.code = JsonUtil.toJson(ScriptTest.getProvider<BookProvider>(it.info.site))
-            it.info
-        }))
-    }
-
-    val scriptList = arrayOf(
-        soko.ekibun.bangumi.plugins.scripts.book.dmzj.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.book.hanhan.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.book.mangabz.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.book.manhua123.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.book.manhuabei.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.book.manhuagui.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.book.mh177.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.book.pica.TestData(),
-        soko.ekibun.bangumi.plugins.scripts.book.wenku8.TestData()
-    )
 }
