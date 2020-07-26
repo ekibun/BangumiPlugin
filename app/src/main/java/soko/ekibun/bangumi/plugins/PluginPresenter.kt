@@ -28,7 +28,7 @@ open class PluginPresenter(activityWeak: WeakReference<Activity>) : CoroutineSco
                 block.invoke(this)
             } catch (_: CancellationException) {
             } catch (t: Throwable) {
-                Toast.makeText(App.app.host, t.message, Toast.LENGTH_SHORT).show()
+                Toast.makeText(App.app.host, t.localizedMessage, Toast.LENGTH_SHORT).show()
                 onError(t)
             }
             if (isActive) onComplete()

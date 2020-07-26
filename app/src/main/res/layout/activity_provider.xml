@@ -25,99 +25,103 @@
                 app:contentInsetStartWithNavigation="0dp"
                 app:layout_collapseMode="pin"/>
     </com.google.android.material.appbar.AppBarLayout>
-    <LinearLayout
+    <soko.ekibun.bangumi.plugins.ui.view.NoFocusScrollView
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:layout_behavior="@string/appbar_scrolling_view_behavior"
-            android:orientation="vertical">
+            app:layout_behavior="@string/appbar_scrolling_view_behavior">
         <LinearLayout
-                android:id="@+id/item_header"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:focusable="false"
                 android:orientation="vertical">
             <LinearLayout
+                    android:id="@+id/item_header"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                <TextView
-                        android:layout_margin="8dp"
-                        android:layout_gravity="center_vertical"
-                        android:textAlignment="center"
-                        android:layout_width="wrap_content"
+                    android:orientation="vertical">
+                <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingStart="6dp"
-                        android:paddingEnd="6dp"
-                        android:textAppearance="@android:style/TextAppearance.Material.Subhead"
-                        android:text="id"/>
-                <soko.ekibun.bangumi.plugins.ui.view.CleanableEditText
-                        android:id="@+id/item_provider_site"
-                        android:layout_width="0dp"
-                        android:layout_weight="2"
-                        android:layout_height="wrap_content"/>
+                        android:orientation="horizontal">
+                    <TextView
+                            android:layout_margin="8dp"
+                            android:layout_gravity="center_vertical"
+                            android:textAlignment="center"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="6dp"
+                            android:paddingEnd="6dp"
+                            android:textAppearance="@android:style/TextAppearance.Material.Subhead"
+                            android:text="id"/>
+                    <soko.ekibun.bangumi.plugins.ui.view.CleanableEditText
+                            android:id="@+id/item_provider_site"
+                            android:layout_width="0dp"
+                            android:layout_weight="2"
+                            android:layout_height="wrap_content"/>
+                </LinearLayout>
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                    <TextView
+                            android:layout_margin="8dp"
+                            android:layout_gravity="center_vertical"
+                            android:textAlignment="center"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="6dp"
+                            android:paddingEnd="6dp"
+                            android:textAppearance="@android:style/TextAppearance.Material.Subhead"
+                            android:text="标题"/>
+                    <soko.ekibun.bangumi.plugins.ui.view.CleanableEditText
+                            android:id="@+id/item_provider_title"
+                            android:layout_width="0dp"
+                            android:layout_weight="2"
+                            android:layout_height="wrap_content"/>
+                </LinearLayout>
+                <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clickable="true"
+                        android:background="?android:attr/selectableItemBackground"
+                        android:focusable="true"
+                        android:id="@+id/item_provider_color"
+                        android:orientation="horizontal">
+                    <TextView
+                            android:layout_margin="8dp"
+                            android:layout_gravity="center_vertical"
+                            android:textAlignment="center"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="6dp"
+                            android:paddingEnd="6dp"
+                            android:textAppearance="@android:style/TextAppearance.Material.Subhead"
+                            android:text="颜色"/>
+                    <TextView
+                            android:layout_margin="8dp"
+                            android:layout_gravity="center_vertical"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="6dp"
+                            android:paddingEnd="6dp"
+                            android:id="@+id/item_provider_color_hex"
+                            android:text="#ffffff"/>
+                    <View android:layout_width="32dp"
+                          android:layout_height="32dp"
+                          android:background="@drawable/bg_round_rect"
+                          tools:backgroundTint="@color/colorAccent"
+                          android:id="@+id/item_provider_color_prev"
+                          android:layout_margin="5dp"/>
+                </LinearLayout>
             </LinearLayout>
-            <LinearLayout
+            <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/item_codes"
+                    android:overScrollMode="never"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                <TextView
-                        android:layout_margin="8dp"
-                        android:layout_gravity="center_vertical"
-                        android:textAlignment="center"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:paddingStart="6dp"
-                        android:paddingEnd="6dp"
-                        android:textAppearance="@android:style/TextAppearance.Material.Subhead"
-                        android:text="标题"/>
-                <soko.ekibun.bangumi.plugins.ui.view.CleanableEditText
-                        android:id="@+id/item_provider_title"
-                        android:layout_width="0dp"
-                        android:layout_weight="2"
-                        android:layout_height="wrap_content"/>
-            </LinearLayout>
-            <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:clickable="true"
-                    android:background="?android:attr/selectableItemBackground"
-                    android:focusable="true"
-                    android:id="@+id/item_provider_color"
-                    android:orientation="horizontal">
-                <TextView
-                        android:layout_margin="8dp"
-                        android:layout_gravity="center_vertical"
-                        android:textAlignment="center"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:paddingStart="6dp"
-                        android:paddingEnd="6dp"
-                        android:textAppearance="@android:style/TextAppearance.Material.Subhead"
-                        android:text="颜色"/>
-                <TextView
-                        android:layout_margin="8dp"
-                        android:layout_gravity="center_vertical"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:layout_height="wrap_content"
-                        android:paddingStart="6dp"
-                        android:paddingEnd="6dp"
-                        android:id="@+id/item_provider_color_hex"
-                        android:text="#ffffff"/>
-                <View android:layout_width="32dp"
-                      android:layout_height="32dp"
-                      android:background="@drawable/bg_round_rect"
-                      tools:backgroundTint="@color/colorAccent"
-                      android:id="@+id/item_provider_color_prev"
-                      android:layout_margin="5dp"/>
-            </LinearLayout>
+                    android:nestedScrollingEnabled="false"
+                    tools:listitem="@layout/item_code_panel"/>
         </LinearLayout>
-        <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/item_codes"
-                android:overScrollMode="never"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:nestedScrollingEnabled="false"
-                tools:listitem="@layout/item_code_panel"/>
-    </LinearLayout>
+    </soko.ekibun.bangumi.plugins.ui.view.NoFocusScrollView>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
