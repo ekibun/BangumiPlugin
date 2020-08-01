@@ -24,7 +24,7 @@ object AppUtil {
         return intent
     }
 
-    fun saveDrawableToPath(drawable: Drawable, path: String) {
+    private fun saveDrawableToPath(drawable: Drawable, path: String) {
         try {
             File(path).parentFile?.mkdirs()
             val stream = FileOutputStream(path, false) // overwrites this image every time
@@ -55,15 +55,38 @@ object AppUtil {
         context.startActivity(Intent.createChooser(intent, "分享"))
     }
 
+    private fun deleteAllFiles(root: File) {
+        val files = root.listFiles()
+        if (files != null) for (f in files) {
+            if (f.isDirectory) { // 判断是否为文件夹
+                deleteAllFiles(f)
+                try {
+                    f.delete()
+                } catch (e: java.lang.Exception) {
+                }
+            } else {
+                if (f.exists()) { // 判断是否存在
+                    deleteAllFiles(f)
+                    try {
+                        f.delete()
+                    } catch (e: java.lang.Exception) {
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * 分享图片
      */
     fun shareDrawable(context: Context, drawable: Drawable) {
         try {
             val cachePath = File(context.cacheDir, "images")
-            saveDrawableToPath(drawable, "$cachePath/image")
-
-            val imageFile = File(cachePath, "image")
+            cachePath.mkdirs() // don't forget to make the directory
+            deleteAllFiles(cachePath)
+            val fileName = "image_${System.currentTimeMillis()}"
+            saveDrawableToPath(drawable, "$cachePath/$fileName")
+            val imageFile = File(cachePath, fileName)
             val contentUri = FileProvider.getUriForFile(context, "soko.ekibun.bangumi.fileprovider", imageFile)
 
             if (contentUri != null) {
