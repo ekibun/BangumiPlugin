@@ -12,7 +12,7 @@ class BackgroundWebView(context: Context): WebView(context) {
 
     var uiHandler: Handler = Handler{true}
 
-    override fun loadUrl(url: String?) {
+    override fun loadUrl(url: String) {
         Log.v("BGWebView", "load url: $url")
         super.loadUrl(url)
     }

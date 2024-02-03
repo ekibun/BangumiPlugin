@@ -1,5 +1,5 @@
 var getUpdate = async((page)=>{
-    var doc = Jsoup.parse(http.fetch("https://m.manhuabei.com/update/?page="+ page).body().string());
+    var doc = Jsoup.parse(http.fetch(host+"/update/?page="+ page).body().string());
     return doc.select("#update_list a.coll").toArray().map(it => {
         var id = /manhua\/([^/]+)/.exec(it.attr("href"))[1];
         return {

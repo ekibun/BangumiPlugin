@@ -24,6 +24,6 @@ class TestData : BookScriptTest.BookTestData() {
         id = "/10263/1/1.html",
         sort = 1f,
         title = "1.姐姐1",
-        url = "https://www.ohmanhua.com/10263/1/1.html"
+        url = "https://www.cocomanhua.com/10263/1/1.html"
     )
 }

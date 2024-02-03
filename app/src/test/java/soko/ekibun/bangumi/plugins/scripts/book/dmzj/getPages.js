@@ -1,10 +1,5 @@
-var doc = Jsoup.parse(http.fetch(episode.url).body().string())
-var $ = () => ({ ready: (a) => a() })
-var document = {}
-var mReader = { initData: (a) => { throw a } }
-try { eval(doc.select("script").toArray().map((v) => v.html()).find((v) => v.includes("mReader.initData"))) }
-catch(e){ data = e.page_url }
-return data.map(it => ({
+var data = JSON.parse(http.fetch(episode.url.replace("/view/", "/chapinfo/")).body().string())
+return data.page_url.map(it => ({
     image: {
         url: it,
         header: {

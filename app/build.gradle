@@ -11,8 +11,8 @@ static def getAlphaVersionName() {
 }
 
 android {
-    compileSdkVersion 29
-    buildToolsVersion "29.0.3"
+    compileSdkVersion 30
+    buildToolsVersion '30.0.3'
     defaultConfig {
         applicationId "soko.ekibun.bangumi.plugins"
         minSdkVersion 22
@@ -34,8 +34,20 @@ android {
     aaptOptions {
         additionalParameters "--allow-reserved-package-id", "--package-id", "0x70"
     }
+    signingConfigs {
+        debug {
+            keyAlias 'ekibun'
+            keyPassword 'ekibun'
+            storeFile file('D:/OneDrive/ekibun.jks')
+            storePassword 'ekibun'
+        }
+    }
     buildTypes {
         release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+        debug {
             minifyEnabled false
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }

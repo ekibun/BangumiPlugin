@@ -1,4 +1,4 @@
-var doc = Jsoup.parse(http.fetch("https://m.manhuabei.com/manhua/"+line.id+"/").body().string());
+var doc = Jsoup.parse(http.fetch(host+"/manhua/"+line.id+"/").body().string());
 var data = [];
 doc.select("#list_block .comic-chapters").toArray().forEach(chap => {
     var cat = chap.selectFirst(".caption span.Title").text();
@@ -14,7 +14,7 @@ doc.select("#list_block .comic-chapters").toArray().forEach(chap => {
             sort: lastIndex,
             category: cat,
             title: it.text(),
-            url: "https://m.manhuabei.com/manhua/"+line.id+"/"+id+".html"
+            url: host+"/manhua/"+line.id+"/"+id+".html"
         }
     }))
 })

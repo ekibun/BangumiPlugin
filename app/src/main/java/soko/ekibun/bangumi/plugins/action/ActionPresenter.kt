@@ -18,7 +18,7 @@ class ActionPresenter(activityRef: WeakReference<Activity>) : PluginPresenter(ac
     init {
         val activity = activityRef.get()!!
         val actionUrl = activity.intent.dataString
-        Log.v("plugin", actionUrl)
+        Log.v("plugin", actionUrl!!)
         if (actionUrl?.startsWith("ekibun://bangumi/plugin") == true)
             subscribe {
                 importProvider(activity, actionUrl)

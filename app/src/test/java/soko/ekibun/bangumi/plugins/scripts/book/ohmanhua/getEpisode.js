@@ -1,4 +1,4 @@
-var doc = Jsoup.parse(http.fetch("https://www.ohmanhua.com" + line.id).body().string())
+var doc = Jsoup.parse(http.fetch("https://www.cocomanhua.com" + line.id).body().string())
 var category = doc.select("a[lineId]").toArray().map(it => it.text())
 var data = []
 doc.select(".all_data_list").toArray().forEach((list, index) => {
