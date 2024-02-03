@@ -24,6 +24,6 @@ class TestData : BookScriptTest.BookTestData() {
         id = "279908",
         sort = 1f,
         title = "01话",
-        url = "https://m.manhuabei.com/manhua/cikeshouze/279908.html"
+        url = "http://wap.ykmh.com/manhua/yaoyebaihe/65427.html"
     )
 }

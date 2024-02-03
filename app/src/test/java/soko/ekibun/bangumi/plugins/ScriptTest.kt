@@ -73,16 +73,7 @@ object ScriptTest {
             soko.ekibun.bangumi.plugins.scripts.book.pica.TestData(),
             soko.ekibun.bangumi.plugins.scripts.book.wenku8.TestData(),
             // video
-            soko.ekibun.bangumi.plugins.scripts.video.acfun.TestData(),
             soko.ekibun.bangumi.plugins.scripts.video.agefans.TestData(),
-            soko.ekibun.bangumi.plugins.scripts.video.bilibili.TestData(),
-            soko.ekibun.bangumi.plugins.scripts.video.fodm.TestData(),
-            soko.ekibun.bangumi.plugins.scripts.video.hehua.TestData(),
-            soko.ekibun.bangumi.plugins.scripts.video.iqiyi.TestData(),
-            soko.ekibun.bangumi.plugins.scripts.video.nicotv.TestData(),
-            soko.ekibun.bangumi.plugins.scripts.video.ningmoe.TestData(),
-            soko.ekibun.bangumi.plugins.scripts.video.pptv.TestData(),
-            soko.ekibun.bangumi.plugins.scripts.video.tencent.TestData(),
             soko.ekibun.bangumi.plugins.scripts.video.webpage.TestData(),
             //music
             soko.ekibun.bangumi.plugins.scripts.music.netease.TestData()

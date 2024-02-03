@@ -2,6 +2,7 @@ package soko.ekibun.bangumi.plugins.model
 
 import android.app.Activity
 import android.content.Context
+import android.view.View
 import android.view.Window
 import soko.ekibun.bangumi.plugins.util.ReflectUtil
 
@@ -29,7 +30,7 @@ object ThemeModel {
     }
 
     fun fullScreen(window: Window) {
-        window.decorView.systemUiVisibility = 5894
+//        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
     }
 
 

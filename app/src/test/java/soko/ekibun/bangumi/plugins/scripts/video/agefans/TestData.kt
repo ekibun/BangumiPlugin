@@ -18,7 +18,7 @@ class TestData : VideoScriptTest.VideoTestData() {
     override val searchKey = "轻音少女"
     override val lineInfo = LineInfo(
         "agefans",
-        id = "55188-1",
-        title = "魔物娘的相伴日常（无修）"
+        id = "20090010/1",
+        title = "轻音少女"
     )
 }
